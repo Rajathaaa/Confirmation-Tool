@@ -1,160 +1,239 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Shield, 
-  ArrowLeft, 
-  FileCheck, 
-  UserCheck, 
-  Globe, 
-  Send, 
-  FileText, 
-  Users, 
-  Archive 
-} from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Shield, Plus, FileText, Calendar, Building2, Search, Users, Send, FileCheck, Archive } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
+import { useState } from "react";
 
 const EngagementDashboard = () => {
   const navigate = useNavigate();
   const { id } = useParams();
+  const [searchQuery, setSearchQuery] = useState("");
 
-  // Mock engagement data
-  const engagement = {
-    id: id || "ENG-2025-001",
-    clientName: "TechCorp Industries Ltd.",
-    periodEnd: "2024-12-31",
-    status: "In Progress"
-  };
-
-  const sections = [
+  // Mock data for engagements
+  const engagements = [
     {
-      id: "sample-generation",
-      title: "Confirmation Sample Generation",
-      description: "Generate confirmation samples using random or monetary unit basis",
-      icon: FileCheck,
-      color: "primary",
-      route: `/auditor/engagement/${id}/sample-generation`,
-      count: 5
+      id: "ENG-2025-001",
+      clientName: "TechCorp Industries Ltd.",
+      periodEnd: "2024-12-31",
+      status: "In Progress",
+      createdDate: "2025-01-15",
+      confirmationsCount: 24
     },
     {
-      id: "client-authorization",
-      title: "Client Authorization",
-      description: "Manage client authorization letters and approval workflow",
-      icon: UserCheck,
-      color: "accent",
-      route: `/auditor/engagement/${id}/client-authorization`,
-      count: 12
+      id: "ENG-2025-002",
+      clientName: "Global Finance Solutions",
+      periodEnd: "2024-12-31",
+      status: "Draft",
+      createdDate: "2025-01-20",
+      confirmationsCount: 0
     },
     {
-      id: "confirming-party",
-      title: "Details of Confirming Party",
-      description: "Automated domain testing and party verification",
-      icon: Globe,
-      color: "info",
-      route: `/auditor/engagement/${id}/confirming-party`,
-      count: 8
-    },
-    {
-      id: "rollout",
-      title: "Confirmation Rollout & Reminder",
-      description: "Send confirmations and manage reminders to confirming parties",
-      icon: Send,
-      color: "success",
-      route: `/auditor/engagement/${id}/rollout`,
-      count: 15
-    },
-    {
-      id: "working-paper",
-      title: "Confirmation Working Paper",
-      description: "Review and organize confirmation responses by area",
-      icon: FileText,
-      color: "warning",
-      route: `/auditor/engagement/${id}/working-paper`,
-      count: 10
-    },
-    {
-      id: "access-roles",
-      title: "Access & Roles",
-      description: "Manage user access and role assignments",
-      icon: Users,
-      color: "primary",
-      route: `/auditor/engagement/${id}/access-roles`,
-      count: 6
-    },
-    {
-      id: "archival",
-      title: "Archival",
-      description: "Archive completed engagement data",
-      icon: Archive,
-      color: "muted",
-      route: `/auditor/engagement/${id}/archival`,
-      count: null
+      id: "ENG-2024-089",
+      clientName: "Manufacturing Co.",
+      periodEnd: "2024-12-31",
+      status: "Completed",
+      createdDate: "2024-12-01",
+      confirmationsCount: 45
     }
   ];
 
+  const currentEngagement = engagements.find(eng => eng.id === id) || engagements[0];
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "In Progress":
+        return "bg-info text-info-foreground";
+      case "Draft":
+        return "bg-warning text-warning-foreground";
+      case "Completed":
+        return "bg-success text-success-foreground";
+      default:
+        return "bg-muted text-muted-foreground";
+    }
+  };
+
+  const filteredEngagements = engagements.filter(eng =>
+    eng.clientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    eng.id.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background">
-      {/* Header */}
-      <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Button 
-                variant="ghost" 
-                size="icon"
-                onClick={() => navigate("/auditor/engagements")}
-              >
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-              <Shield className="h-8 w-8 text-primary" />
-              <div>
-                <div className="flex items-center gap-3">
-                  <h1 className="text-2xl font-bold text-foreground">{engagement.clientName}</h1>
-                  <Badge className="bg-info text-info-foreground">{engagement.status}</Badge>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  Engagement: {engagement.id} • Period End: {engagement.periodEnd}
-                </p>
-              </div>
-            </div>
+    <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background flex">
+      {/* Left Panel - Engagements List */}
+      <div className="w-80 border-r bg-card/50 backdrop-blur-sm flex flex-col">
+        <div className="p-4 border-b">
+          <div className="flex items-center gap-3 mb-4">
+            <Shield className="h-6 w-6 text-primary" />
+            <h2 className="text-lg font-bold text-foreground">Engagements</h2>
+          </div>
+          <Button 
+            onClick={() => navigate("/auditor/create-engagement")} 
+            className="w-full"
+            size="sm"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            New Engagement
+          </Button>
+        </div>
+
+        <div className="p-4 border-b">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search..."
+              className="pl-10"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
           </div>
         </div>
-      </header>
 
-      <div className="container mx-auto px-4 py-8">
-        <div className="mb-8 animate-fade-in">
-          <h2 className="text-2xl font-bold text-foreground mb-2">Engagement Sections</h2>
-          <p className="text-muted-foreground">
-            Select a section to manage your audit confirmation workflow
-          </p>
-        </div>
-
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {sections.map((section, index) => (
-            <Card 
-              key={section.id}
-              className="p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 cursor-pointer group animate-fade-in"
-              style={{ animationDelay: `${index * 50}ms` }}
-              onClick={() => navigate(section.route)}
+        <div className="flex-1 overflow-y-auto p-4 space-y-2">
+          {filteredEngagements.map((engagement) => (
+            <Card
+              key={engagement.id}
+              className={`p-4 cursor-pointer transition-all hover:shadow-md ${
+                engagement.id === id ? "border-primary bg-primary/5" : ""
+              }`}
+              onClick={() => navigate(`/auditor/engagement/${engagement.id}`)}
             >
-              <div className="flex items-start justify-between mb-4">
-                <div className={`bg-${section.color}/10 p-3 rounded-lg group-hover:scale-110 transition-transform`}>
-                  <section.icon className={`h-6 w-6 text-${section.color}`} />
-                </div>
-                {section.count !== null && (
-                  <Badge variant="secondary" className="text-xs">
-                    {section.count} items
+              <div className="space-y-2">
+                <div className="flex items-start justify-between gap-2">
+                  <h3 className="font-semibold text-sm text-foreground line-clamp-2">
+                    {engagement.clientName}
+                  </h3>
+                  <Badge className={`${getStatusColor(engagement.status)} text-xs shrink-0`}>
+                    {engagement.status}
                   </Badge>
-                )}
+                </div>
+                <p className="text-xs text-muted-foreground">{engagement.id}</p>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <FileText className="h-3 w-3" />
+                  <span>{engagement.confirmationsCount} confirmations</span>
+                </div>
               </div>
-              <h3 className="text-lg font-semibold text-foreground mb-2 group-hover:text-primary transition-colors">
-                {section.title}
-              </h3>
-              <p className="text-sm text-muted-foreground">
-                {section.description}
-              </p>
             </Card>
           ))}
+        </div>
+      </div>
+
+      {/* Main Area */}
+      <div className="flex-1 flex flex-col">
+        {/* Header */}
+        <header className="border-b bg-card/50 backdrop-blur-sm p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div>
+                <h1 className="text-xl font-bold text-foreground">{currentEngagement.clientName}</h1>
+                <p className="text-sm text-muted-foreground">{currentEngagement.id} • Period End: {currentEngagement.periodEnd}</p>
+              </div>
+            </div>
+            <Badge className={getStatusColor(currentEngagement.status)}>
+              {currentEngagement.status}
+            </Badge>
+          </div>
+        </header>
+
+        {/* Main Content with Tabs */}
+        <div className="flex-1 overflow-y-auto p-6">
+          <Tabs defaultValue="sample" className="w-full">
+            <TabsList className="w-full justify-start mb-6 flex-wrap h-auto">
+              <TabsTrigger value="sample" className="gap-2">
+                <FileText className="h-4 w-4" />
+                Sample Generation
+              </TabsTrigger>
+              <TabsTrigger value="authorization" className="gap-2">
+                <FileCheck className="h-4 w-4" />
+                Client Authorization
+              </TabsTrigger>
+              <TabsTrigger value="details" className="gap-2">
+                <Building2 className="h-4 w-4" />
+                Confirming Party
+              </TabsTrigger>
+              <TabsTrigger value="rollout" className="gap-2">
+                <Send className="h-4 w-4" />
+                Rollout & Reminder
+              </TabsTrigger>
+              <TabsTrigger value="workingpaper" className="gap-2">
+                <FileText className="h-4 w-4" />
+                Working Paper
+              </TabsTrigger>
+              <TabsTrigger value="access" className="gap-2">
+                <Users className="h-4 w-4" />
+                Access & Roles
+              </TabsTrigger>
+              <TabsTrigger value="archival" className="gap-2">
+                <Archive className="h-4 w-4" />
+                Archival
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="sample" className="mt-0">
+              <Card className="p-6">
+                <h3 className="text-lg font-semibold mb-4">Confirmation Sample Generation</h3>
+                <p className="text-muted-foreground">
+                  Generate and manage confirmation samples for this engagement using random or monetary unit sampling.
+                </p>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="authorization" className="mt-0">
+              <Card className="p-6">
+                <h3 className="text-lg font-semibold mb-4">Client Authorization</h3>
+                <p className="text-muted-foreground">
+                  Manage client authorization letters and approval workflow for confirmation requests.
+                </p>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="details" className="mt-0">
+              <Card className="p-6">
+                <h3 className="text-lg font-semibold mb-4">Details of Confirming Party</h3>
+                <p className="text-muted-foreground">
+                  View and manage confirming party details with automated domain testing and verification.
+                </p>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="rollout" className="mt-0">
+              <Card className="p-6">
+                <h3 className="text-lg font-semibold mb-4">Confirmation Rollout & Reminder</h3>
+                <p className="text-muted-foreground">
+                  Send confirmation requests and manage reminder schedules to confirming parties.
+                </p>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="workingpaper" className="mt-0">
+              <Card className="p-6">
+                <h3 className="text-lg font-semibold mb-4">Confirmation Working Paper</h3>
+                <p className="text-muted-foreground">
+                  Review, organize, and document confirmation responses organized by audit area.
+                </p>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="access" className="mt-0">
+              <Card className="p-6">
+                <h3 className="text-lg font-semibold mb-4">Access & Roles</h3>
+                <p className="text-muted-foreground">
+                  Manage user access permissions and role assignments for this engagement.
+                </p>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="archival" className="mt-0">
+              <Card className="p-6">
+                <h3 className="text-lg font-semibold mb-4">Archival</h3>
+                <p className="text-muted-foreground">
+                  Archive and manage completed engagement records for long-term storage.
+                </p>
+              </Card>
+            </TabsContent>
+          </Tabs>
         </div>
       </div>
     </div>
