@@ -3,9 +3,16 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Shield, Plus, FileText, Calendar, Building2, Search, Users, Send, FileCheck, Archive } from "lucide-react";
+import { Shield, Plus, FileText, Search, Users, Send, FileCheck, Archive, Globe, UserCheck, Building2 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useState } from "react";
+import { SampleGeneration } from "./sections/SampleGeneration";
+import { ClientAuthorization } from "./sections/ClientAuthorization";
+import { ConfirmingPartyDetails } from "./sections/ConfirmingPartyDetails";
+import { RolloutReminder } from "./sections/RolloutReminder";
+import { WorkingPaper } from "./sections/WorkingPaper";
+import { AccessRoles } from "./sections/AccessRoles";
+import { Archival } from "./sections/Archival";
 
 const EngagementDashboard = () => {
   const navigate = useNavigate();
@@ -172,66 +179,31 @@ const EngagementDashboard = () => {
             </TabsList>
 
             <TabsContent value="sample" className="mt-0">
-              <Card className="p-6">
-                <h3 className="text-lg font-semibold mb-4">Confirmation Sample Generation</h3>
-                <p className="text-muted-foreground">
-                  Generate and manage confirmation samples for this engagement using random or monetary unit sampling.
-                </p>
-              </Card>
+              <SampleGeneration />
             </TabsContent>
 
             <TabsContent value="authorization" className="mt-0">
-              <Card className="p-6">
-                <h3 className="text-lg font-semibold mb-4">Client Authorization</h3>
-                <p className="text-muted-foreground">
-                  Manage client authorization letters and approval workflow for confirmation requests.
-                </p>
-              </Card>
+              <ClientAuthorization />
             </TabsContent>
 
             <TabsContent value="details" className="mt-0">
-              <Card className="p-6">
-                <h3 className="text-lg font-semibold mb-4">Details of Confirming Party</h3>
-                <p className="text-muted-foreground">
-                  View and manage confirming party details with automated domain testing and verification.
-                </p>
-              </Card>
+              <ConfirmingPartyDetails />
             </TabsContent>
 
             <TabsContent value="rollout" className="mt-0">
-              <Card className="p-6">
-                <h3 className="text-lg font-semibold mb-4">Confirmation Rollout & Reminder</h3>
-                <p className="text-muted-foreground">
-                  Send confirmation requests and manage reminder schedules to confirming parties.
-                </p>
-              </Card>
+              <RolloutReminder />
             </TabsContent>
 
             <TabsContent value="workingpaper" className="mt-0">
-              <Card className="p-6">
-                <h3 className="text-lg font-semibold mb-4">Confirmation Working Paper</h3>
-                <p className="text-muted-foreground">
-                  Review, organize, and document confirmation responses organized by audit area.
-                </p>
-              </Card>
+              <WorkingPaper />
             </TabsContent>
 
             <TabsContent value="access" className="mt-0">
-              <Card className="p-6">
-                <h3 className="text-lg font-semibold mb-4">Access & Roles</h3>
-                <p className="text-muted-foreground">
-                  Manage user access permissions and role assignments for this engagement.
-                </p>
-              </Card>
+              <AccessRoles />
             </TabsContent>
 
             <TabsContent value="archival" className="mt-0">
-              <Card className="p-6">
-                <h3 className="text-lg font-semibold mb-4">Archival</h3>
-                <p className="text-muted-foreground">
-                  Archive and manage completed engagement records for long-term storage.
-                </p>
-              </Card>
+              <Archival />
             </TabsContent>
           </Tabs>
         </div>

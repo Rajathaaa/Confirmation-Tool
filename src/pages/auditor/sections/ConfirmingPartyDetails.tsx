@@ -1,0 +1,257 @@
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Globe, CheckCircle, AlertTriangle, XCircle, Play } from "lucide-react";
+import { useState } from "react";
+
+interface ConfirmingParty {
+  id: string;
+  area: string;
+  name: string;
+  recipientEmail: string;
+  recipientName: string;
+  recipientOrg: string;
+  domainTestStatus: "not-run" | "running" | "passed" | "failed" | "general-domain";
+  domainInfo?: {
+    domain: string;
+    creationDate: string;
+    expiryDate: string;
+    status: string;
+    registrar: string;
+  };
+}
+
+const mockParties: ConfirmingParty[] = [
+  {
+    id: "CP-001",
+    area: "Trade Receivables",
+    name: "ABC Corporation Ltd.",
+    recipientEmail: "john.smith@abccorp.com",
+    recipientName: "John Smith",
+    recipientOrg: "ABC Corporation Ltd.",
+    domainTestStatus: "passed",
+    domainInfo: {
+      domain: "abccorp.com",
+      creationDate: "2010-05-15",
+      expiryDate: "2026-05-15",
+      status: "Active",
+      registrar: "GoDaddy LLC"
+    }
+  },
+  {
+    id: "CP-002",
+    area: "Trade Receivables",
+    name: "XYZ Industries",
+    recipientEmail: "e.chen@xyzind.com",
+    recipientName: "Emily Chen",
+    recipientOrg: "XYZ Industries",
+    domainTestStatus: "not-run"
+  },
+  {
+    id: "CP-003",
+    area: "Trade Payables",
+    name: "Global Supplies Inc.",
+    recipientEmail: "m.brown@gmail.com",
+    recipientName: "Michael Brown",
+    recipientOrg: "Global Supplies Inc.",
+    domainTestStatus: "general-domain"
+  }
+];
+
+export const ConfirmingPartyDetails = () => {
+  const [parties, setParties] = useState(mockParties);
+
+  const runDomainTest = (id: string) => {
+    setParties(parties.map(p => 
+      p.id === id ? { ...p, domainTestStatus: "running" as const } : p
+    ));
+    
+    // Simulate API call
+    setTimeout(() => {
+      setParties(parties.map(p => {
+        if (p.id === id) {
+          const email = p.recipientEmail;
+          const domain = email.split('@')[1];
+          const generalDomains = ['gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com'];
+          
+          if (generalDomains.includes(domain)) {
+            return { ...p, domainTestStatus: "general-domain" as const };
+          }
+          
+          return {
+            ...p,
+            domainTestStatus: "passed" as const,
+            domainInfo: {
+              domain,
+              creationDate: "2015-03-20",
+              expiryDate: "2027-03-20",
+              status: "Active",
+              registrar: "Network Solutions LLC"
+            }
+          };
+        }
+        return p;
+      }));
+    }, 2000);
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "passed":
+        return (
+          <Badge className="bg-success text-success-foreground">
+            <CheckCircle className="h-3 w-3 mr-1" />
+            Passed
+          </Badge>
+        );
+      case "failed":
+        return (
+          <Badge variant="destructive">
+            <XCircle className="h-3 w-3 mr-1" />
+            Failed
+          </Badge>
+        );
+      case "general-domain":
+        return (
+          <Badge variant="secondary">
+            <AlertTriangle className="h-3 w-3 mr-1" />
+            General Domain
+          </Badge>
+        );
+      case "running":
+        return (
+          <Badge className="bg-info text-info-foreground">
+            <Globe className="h-3 w-3 mr-1 animate-spin" />
+            Running
+          </Badge>
+        );
+      default:
+        return (
+          <Badge variant="outline">
+            Not Run
+          </Badge>
+        );
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-2xl font-bold">Details of Confirming Party</h2>
+        <p className="text-muted-foreground">
+          Verify email domains and validate confirming party information
+        </p>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Domain Testing</CardTitle>
+          <CardDescription>
+            Automated domain verification for confirming party email addresses
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Area</TableHead>
+                  <TableHead>Confirming Party</TableHead>
+                  <TableHead>Recipient Email</TableHead>
+                  <TableHead>Recipient Name</TableHead>
+                  <TableHead>Organization</TableHead>
+                  <TableHead>Test Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {parties.map((party) => (
+                  <TableRow key={party.id}>
+                    <TableCell className="font-medium">{party.area}</TableCell>
+                    <TableCell>{party.name}</TableCell>
+                    <TableCell>
+                      <code className="text-xs bg-muted px-2 py-1 rounded">
+                        {party.recipientEmail}
+                      </code>
+                    </TableCell>
+                    <TableCell>{party.recipientName}</TableCell>
+                    <TableCell>{party.recipientOrg}</TableCell>
+                    <TableCell>{getStatusBadge(party.domainTestStatus)}</TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => runDomainTest(party.id)}
+                        disabled={party.domainTestStatus === "running"}
+                      >
+                        <Play className="h-4 w-4 mr-1" />
+                        Run Test
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Domain Test Results */}
+      <div className="space-y-4">
+        {parties
+          .filter(p => p.domainTestStatus === "passed" || p.domainTestStatus === "general-domain")
+          .map((party) => (
+            <Card key={party.id}>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>{party.name}</CardTitle>
+                    <CardDescription>{party.recipientEmail}</CardDescription>
+                  </div>
+                  {getStatusBadge(party.domainTestStatus)}
+                </div>
+              </CardHeader>
+              <CardContent>
+                {party.domainTestStatus === "general-domain" ? (
+                  <div className="flex items-start gap-3 p-4 bg-warning/10 rounded-lg border border-warning">
+                    <AlertTriangle className="h-5 w-5 text-warning mt-0.5" />
+                    <div>
+                      <p className="font-semibold">General Domain Detected</p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        The domain of the confirming party is a general public email domain (e.g., gmail.com, yahoo.com). 
+                        Domain testing is not performed for general domains as they don't provide organization-specific information.
+                      </p>
+                    </div>
+                  </div>
+                ) : party.domainInfo ? (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Domain</p>
+                      <p className="font-semibold">{party.domainInfo.domain}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Creation Date</p>
+                      <p className="font-semibold">{party.domainInfo.creationDate}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Expiry Date</p>
+                      <p className="font-semibold">{party.domainInfo.expiryDate}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Status</p>
+                      <p className="font-semibold text-success">{party.domainInfo.status}</p>
+                    </div>
+                    <div className="col-span-2">
+                      <p className="text-sm text-muted-foreground">Registrar</p>
+                      <p className="font-semibold">{party.domainInfo.registrar}</p>
+                    </div>
+                  </div>
+                ) : null}
+              </CardContent>
+            </Card>
+          ))}
+      </div>
+    </div>
+  );
+};
