@@ -2,8 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Shield, Plus, FileText, Calendar, Building2, Search, Users, Send, FileCheck, Archive } from "lucide-react";
+import { Shield, Plus, FileText, Search, Users, Send, FileCheck, Archive, Globe, UserCheck } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useState } from "react";
 
@@ -59,6 +58,72 @@ const EngagementDashboard = () => {
     eng.clientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
     eng.id.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const sections = [
+    {
+      id: "sample-generation",
+      title: "Confirmation Sample Generation",
+      description: "Generate confirmation samples using random or monetary unit basis",
+      icon: FileCheck,
+      color: "primary",
+      route: `/auditor/engagement/${id}/sample-generation`,
+      count: 5
+    },
+    {
+      id: "client-authorization",
+      title: "Client Authorization",
+      description: "Manage client authorization letters and approval workflow",
+      icon: UserCheck,
+      color: "accent",
+      route: `/auditor/engagement/${id}/client-authorization`,
+      count: 12
+    },
+    {
+      id: "confirming-party",
+      title: "Details of Confirming Party",
+      description: "Automated domain testing and party verification",
+      icon: Globe,
+      color: "info",
+      route: `/auditor/engagement/${id}/confirming-party`,
+      count: 8
+    },
+    {
+      id: "rollout",
+      title: "Confirmation Rollout & Reminder",
+      description: "Send confirmations and manage reminders to confirming parties",
+      icon: Send,
+      color: "success",
+      route: `/auditor/engagement/${id}/rollout`,
+      count: 15
+    },
+    {
+      id: "working-paper",
+      title: "Confirmation Working Paper",
+      description: "Review and organize confirmation responses by area",
+      icon: FileText,
+      color: "warning",
+      route: `/auditor/engagement/${id}/working-paper`,
+      count: 10
+    },
+    {
+      id: "access-roles",
+      title: "Access & Roles",
+      description: "Manage user access and role assignments",
+      icon: Users,
+      color: "primary",
+      route: `/auditor/engagement/${id}/access-roles`,
+      count: 6
+    },
+    {
+      id: "archival",
+      title: "Archival",
+      description: "Archive completed engagement data",
+      icon: Archive,
+      color: "muted",
+      route: `/auditor/engagement/${id}/archival`,
+      count: null
+    }
+  ];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background flex">
@@ -137,103 +202,42 @@ const EngagementDashboard = () => {
           </div>
         </header>
 
-        {/* Main Content with Tabs */}
+        {/* Main Content - Section Cards */}
         <div className="flex-1 overflow-y-auto p-6">
-          <Tabs defaultValue="sample" className="w-full">
-            <TabsList className="w-full justify-start mb-6 flex-wrap h-auto">
-              <TabsTrigger value="sample" className="gap-2">
-                <FileText className="h-4 w-4" />
-                Sample Generation
-              </TabsTrigger>
-              <TabsTrigger value="authorization" className="gap-2">
-                <FileCheck className="h-4 w-4" />
-                Client Authorization
-              </TabsTrigger>
-              <TabsTrigger value="details" className="gap-2">
-                <Building2 className="h-4 w-4" />
-                Confirming Party
-              </TabsTrigger>
-              <TabsTrigger value="rollout" className="gap-2">
-                <Send className="h-4 w-4" />
-                Rollout & Reminder
-              </TabsTrigger>
-              <TabsTrigger value="workingpaper" className="gap-2">
-                <FileText className="h-4 w-4" />
-                Working Paper
-              </TabsTrigger>
-              <TabsTrigger value="access" className="gap-2">
-                <Users className="h-4 w-4" />
-                Access & Roles
-              </TabsTrigger>
-              <TabsTrigger value="archival" className="gap-2">
-                <Archive className="h-4 w-4" />
-                Archival
-              </TabsTrigger>
-            </TabsList>
+          <div className="mb-6 animate-fade-in">
+            <h2 className="text-2xl font-bold text-foreground mb-2">Engagement Sections</h2>
+            <p className="text-muted-foreground">
+              Select a section to manage your audit confirmation workflow
+            </p>
+          </div>
 
-            <TabsContent value="sample" className="mt-0">
-              <Card className="p-6">
-                <h3 className="text-lg font-semibold mb-4">Confirmation Sample Generation</h3>
-                <p className="text-muted-foreground">
-                  Generate and manage confirmation samples for this engagement using random or monetary unit sampling.
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {sections.map((section, index) => (
+              <Card 
+                key={section.id}
+                className="p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 cursor-pointer group animate-fade-in"
+                style={{ animationDelay: `${index * 50}ms` }}
+                onClick={() => navigate(section.route)}
+              >
+                <div className="flex items-start justify-between mb-4">
+                  <div className={`bg-${section.color}/10 p-3 rounded-lg group-hover:scale-110 transition-transform`}>
+                    <section.icon className={`h-6 w-6 text-${section.color}`} />
+                  </div>
+                  {section.count !== null && (
+                    <Badge variant="secondary" className="text-xs">
+                      {section.count} items
+                    </Badge>
+                  )}
+                </div>
+                <h3 className="text-lg font-semibold text-foreground mb-2 group-hover:text-primary transition-colors">
+                  {section.title}
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  {section.description}
                 </p>
               </Card>
-            </TabsContent>
-
-            <TabsContent value="authorization" className="mt-0">
-              <Card className="p-6">
-                <h3 className="text-lg font-semibold mb-4">Client Authorization</h3>
-                <p className="text-muted-foreground">
-                  Manage client authorization letters and approval workflow for confirmation requests.
-                </p>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="details" className="mt-0">
-              <Card className="p-6">
-                <h3 className="text-lg font-semibold mb-4">Details of Confirming Party</h3>
-                <p className="text-muted-foreground">
-                  View and manage confirming party details with automated domain testing and verification.
-                </p>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="rollout" className="mt-0">
-              <Card className="p-6">
-                <h3 className="text-lg font-semibold mb-4">Confirmation Rollout & Reminder</h3>
-                <p className="text-muted-foreground">
-                  Send confirmation requests and manage reminder schedules to confirming parties.
-                </p>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="workingpaper" className="mt-0">
-              <Card className="p-6">
-                <h3 className="text-lg font-semibold mb-4">Confirmation Working Paper</h3>
-                <p className="text-muted-foreground">
-                  Review, organize, and document confirmation responses organized by audit area.
-                </p>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="access" className="mt-0">
-              <Card className="p-6">
-                <h3 className="text-lg font-semibold mb-4">Access & Roles</h3>
-                <p className="text-muted-foreground">
-                  Manage user access permissions and role assignments for this engagement.
-                </p>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="archival" className="mt-0">
-              <Card className="p-6">
-                <h3 className="text-lg font-semibold mb-4">Archival</h3>
-                <p className="text-muted-foreground">
-                  Archive and manage completed engagement records for long-term storage.
-                </p>
-              </Card>
-            </TabsContent>
-          </Tabs>
+            ))}
+          </div>
         </div>
       </div>
     </div>
