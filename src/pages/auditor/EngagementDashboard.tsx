@@ -69,97 +69,28 @@ const EngagementDashboard = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background flex">
-      {/* Left Panel - Section Navigation */}
+      {/* Left Panel - Engagements List */}
       <div className="w-80 border-r bg-card/50 backdrop-blur-sm flex flex-col">
         <div className="p-4 border-b">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 mb-4">
             <Shield className="h-6 w-6 text-primary" />
-            <h2 className="text-lg font-bold text-foreground">Sections</h2>
+            <h2 className="text-lg font-bold text-foreground">Engagements</h2>
           </div>
+          <Button 
+            onClick={() => navigate("/auditor/create-engagement")} 
+            className="w-full"
+            size="sm"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            New Engagement
+          </Button>
         </div>
 
-        <Tabs defaultValue="sample" className="flex-1 flex flex-col" orientation="vertical">
-          <TabsList className="flex flex-col h-auto w-full bg-transparent p-2 gap-1">
-            <TabsTrigger value="sample" className="w-full justify-start gap-2 data-[state=active]:bg-primary/10">
-              <FileText className="h-4 w-4" />
-              Sample Generation
-            </TabsTrigger>
-            <TabsTrigger value="authorization" className="w-full justify-start gap-2 data-[state=active]:bg-primary/10">
-              <FileCheck className="h-4 w-4" />
-              Client Authorization
-            </TabsTrigger>
-            <TabsTrigger value="details" className="w-full justify-start gap-2 data-[state=active]:bg-primary/10">
-              <Building2 className="h-4 w-4" />
-              Confirming Party
-            </TabsTrigger>
-            <TabsTrigger value="rollout" className="w-full justify-start gap-2 data-[state=active]:bg-primary/10">
-              <Send className="h-4 w-4" />
-              Rollout & Reminder
-            </TabsTrigger>
-            <TabsTrigger value="workingpaper" className="w-full justify-start gap-2 data-[state=active]:bg-primary/10">
-              <FileText className="h-4 w-4" />
-              Working Paper
-            </TabsTrigger>
-            <TabsTrigger value="access" className="w-full justify-start gap-2 data-[state=active]:bg-primary/10">
-              <Users className="h-4 w-4" />
-              Access & Roles
-            </TabsTrigger>
-            <TabsTrigger value="archival" className="w-full justify-start gap-2 data-[state=active]:bg-primary/10">
-              <Archive className="h-4 w-4" />
-              Archival
-            </TabsTrigger>
-          </TabsList>
-
-          {/* Main Area */}
-          <div className="flex-1 flex flex-col">
-            <TabsContent value="sample" className="flex-1 m-0 data-[state=active]:flex data-[state=active]:flex-col">
-              <SampleGeneration />
-            </TabsContent>
-
-            <TabsContent value="authorization" className="flex-1 m-0 data-[state=active]:flex data-[state=active]:flex-col">
-              <ClientAuthorization />
-            </TabsContent>
-
-            <TabsContent value="details" className="flex-1 m-0 data-[state=active]:flex data-[state=active]:flex-col">
-              <ConfirmingPartyDetails />
-            </TabsContent>
-
-            <TabsContent value="rollout" className="flex-1 m-0 data-[state=active]:flex data-[state=active]:flex-col">
-              <RolloutReminder />
-            </TabsContent>
-
-            <TabsContent value="workingpaper" className="flex-1 m-0 data-[state=active]:flex data-[state=active]:flex-col">
-              <WorkingPaper />
-            </TabsContent>
-
-            <TabsContent value="access" className="flex-1 m-0 data-[state=active]:flex data-[state=active]:flex-col">
-              <AccessRoles />
-            </TabsContent>
-
-            <TabsContent value="archival" className="flex-1 m-0 data-[state=active]:flex data-[state=active]:flex-col">
-              <Archival />
-            </TabsContent>
-          </div>
-        </Tabs>
-      </div>
-
-      {/* Right Panel - Engagements List */}
-      <div className="flex-1 flex flex-col bg-background">
-        <div className="p-4 border-b bg-card/50 backdrop-blur-sm">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-bold text-foreground">Engagements</h2>
-            <Button 
-              onClick={() => navigate("/auditor/create-engagement")} 
-              size="sm"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              New Engagement
-            </Button>
-          </div>
+        <div className="p-4 border-b">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search engagements..."
+              placeholder="Search..."
               className="pl-10"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -167,37 +98,114 @@ const EngagementDashboard = () => {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {filteredEngagements.map((engagement) => (
-              <Card
-                key={engagement.id}
-                className={`p-6 cursor-pointer transition-all hover:shadow-md ${
-                  engagement.id === id ? "border-primary bg-primary/5" : ""
-                }`}
-                onClick={() => navigate(`/auditor/engagement/${engagement.id}`)}
-              >
-                <div className="space-y-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <h3 className="font-semibold text-foreground line-clamp-2">
-                      {engagement.clientName}
-                    </h3>
-                    <Badge className={getStatusColor(engagement.status)}>
-                      {engagement.status}
-                    </Badge>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-sm text-muted-foreground">{engagement.id}</p>
-                    <p className="text-sm text-muted-foreground">Period End: {engagement.periodEnd}</p>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground pt-2 border-t">
-                    <FileText className="h-4 w-4" />
-                    <span>{engagement.confirmationsCount} confirmations</span>
-                  </div>
+        <div className="flex-1 overflow-y-auto p-4 space-y-2">
+          {filteredEngagements.map((engagement) => (
+            <Card
+              key={engagement.id}
+              className={`p-4 cursor-pointer transition-all hover:shadow-md ${
+                engagement.id === id ? "border-primary bg-primary/5" : ""
+              }`}
+              onClick={() => navigate(`/auditor/engagement/${engagement.id}`)}
+            >
+              <div className="space-y-2">
+                <div className="flex items-start justify-between gap-2">
+                  <h3 className="font-semibold text-sm text-foreground line-clamp-2">
+                    {engagement.clientName}
+                  </h3>
+                  <Badge className={`${getStatusColor(engagement.status)} text-xs shrink-0`}>
+                    {engagement.status}
+                  </Badge>
                 </div>
-              </Card>
-            ))}
+                <p className="text-xs text-muted-foreground">{engagement.id}</p>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <FileText className="h-3 w-3" />
+                  <span>{engagement.confirmationsCount} confirmations</span>
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
+      </div>
+
+      {/* Main Area */}
+      <div className="flex-1 flex flex-col">
+        {/* Header */}
+        <header className="border-b bg-card/50 backdrop-blur-sm p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div>
+                <h1 className="text-xl font-bold text-foreground">{currentEngagement.clientName}</h1>
+                <p className="text-sm text-muted-foreground">{currentEngagement.id} • Period End: {currentEngagement.periodEnd}</p>
+              </div>
+            </div>
+            <Badge className={getStatusColor(currentEngagement.status)}>
+              {currentEngagement.status}
+            </Badge>
           </div>
+        </header>
+
+        {/* Main Content with Tabs */}
+        <div className="flex-1 overflow-y-auto p-6">
+          <Tabs defaultValue="sample" className="w-full">
+            <TabsList className="w-full justify-start mb-6 flex-wrap h-auto">
+              <TabsTrigger value="sample" className="gap-2">
+                <FileText className="h-4 w-4" />
+                Sample Generation
+              </TabsTrigger>
+              <TabsTrigger value="authorization" className="gap-2">
+                <FileCheck className="h-4 w-4" />
+                Client Authorization
+              </TabsTrigger>
+              <TabsTrigger value="details" className="gap-2">
+                <Building2 className="h-4 w-4" />
+                Confirming Party
+              </TabsTrigger>
+              <TabsTrigger value="rollout" className="gap-2">
+                <Send className="h-4 w-4" />
+                Rollout & Reminder
+              </TabsTrigger>
+              <TabsTrigger value="workingpaper" className="gap-2">
+                <FileText className="h-4 w-4" />
+                Working Paper
+              </TabsTrigger>
+              <TabsTrigger value="access" className="gap-2">
+                <Users className="h-4 w-4" />
+                Access & Roles
+              </TabsTrigger>
+              <TabsTrigger value="archival" className="gap-2">
+                <Archive className="h-4 w-4" />
+                Archival
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="sample" className="mt-0">
+              <SampleGeneration />
+            </TabsContent>
+
+            <TabsContent value="authorization" className="mt-0">
+              <ClientAuthorization />
+            </TabsContent>
+
+            <TabsContent value="details" className="mt-0">
+              <ConfirmingPartyDetails />
+            </TabsContent>
+
+            <TabsContent value="rollout" className="mt-0">
+              <RolloutReminder />
+            </TabsContent>
+
+            <TabsContent value="workingpaper" className="mt-0">
+              <WorkingPaper />
+            </TabsContent>
+
+            <TabsContent value="access" className="mt-0">
+              <AccessRoles />
+            </TabsContent>
+
+            <TabsContent value="archival" className="mt-0">
+              <Archival />
+            </TabsContent>
+          </Tabs>
         </div>
       </div>
     </div>
