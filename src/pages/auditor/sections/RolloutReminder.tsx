@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Send, Bell, Lock, CheckCircle, Clock, Upload } from "lucide-react";
+import { Send, Bell, Lock, CheckCircle, Clock, Upload, Eye, FileText } from "lucide-react";
 import { useState } from "react";
 
 interface Confirmation {
@@ -21,6 +21,8 @@ interface Confirmation {
   confirmedBy?: string;
   confirmedIP?: string;
   lockedDate?: string;
+  remarks?: string;
+  attachments?: string[];
 }
 
 const mockConfirmations: Confirmation[] = [
@@ -35,7 +37,9 @@ const mockConfirmations: Confirmation[] = [
     sentDate: "2025-01-15 10:30:00",
     confirmedDate: "2025-01-18 14:22:15",
     confirmedBy: "John Smith",
-    confirmedIP: "203.45.67.89"
+    confirmedIP: "203.45.67.89",
+    remarks: "We confirm the outstanding balance as of December 31, 2024. All invoices have been reviewed and verified.",
+    attachments: ["invoice_summary.pdf", "payment_schedule.xlsx"]
   },
   {
     id: "CNF-002",
@@ -146,6 +150,99 @@ export const RolloutReminder = () => {
                     <TableCell>{getStatusBadge(confirmation.status)}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex gap-2 justify-end">
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button size="sm" variant="outline" onClick={() => setSelectedConfirmation(confirmation)}>
+                              <Eye className="h-4 w-4 mr-1" />
+                              View
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="max-w-3xl">
+                            <DialogHeader>
+                              <DialogTitle>Confirmation Details - {confirmation.id}</DialogTitle>
+                              <DialogDescription>
+                                View complete confirmation information and response
+                              </DialogDescription>
+                            </DialogHeader>
+                            <div className="space-y-4 py-4">
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm font-medium">Status:</span>
+                                {getStatusBadge(confirmation.status)}
+                              </div>
+                              <div className="grid grid-cols-2 gap-4 text-sm">
+                                <div>
+                                  <p className="text-muted-foreground">Area</p>
+                                  <p className="font-medium">{confirmation.area}</p>
+                                </div>
+                                <div>
+                                  <p className="text-muted-foreground">Confirming Party</p>
+                                  <p className="font-medium">{confirmation.confirmingParty}</p>
+                                </div>
+                                <div>
+                                  <p className="text-muted-foreground">Recipient Name</p>
+                                  <p className="font-medium">{confirmation.recipientName}</p>
+                                </div>
+                                <div>
+                                  <p className="text-muted-foreground">Recipient Email</p>
+                                  <p className="font-medium">{confirmation.recipientEmail}</p>
+                                </div>
+                                <div>
+                                  <p className="text-muted-foreground">Organization</p>
+                                  <p className="font-medium">{confirmation.recipientOrg}</p>
+                                </div>
+                                {confirmation.sentDate && (
+                                  <div>
+                                    <p className="text-muted-foreground">Sent Date</p>
+                                    <p className="font-medium">{confirmation.sentDate}</p>
+                                  </div>
+                                )}
+                                {confirmation.confirmedDate && (
+                                  <div>
+                                    <p className="text-muted-foreground">Confirmed Date</p>
+                                    <p className="font-medium">{confirmation.confirmedDate}</p>
+                                  </div>
+                                )}
+                                {confirmation.confirmedBy && (
+                                  <div>
+                                    <p className="text-muted-foreground">Confirmed By</p>
+                                    <p className="font-medium">{confirmation.confirmedBy}</p>
+                                  </div>
+                                )}
+                                {confirmation.confirmedIP && (
+                                  <div>
+                                    <p className="text-muted-foreground">IP Address</p>
+                                    <p className="font-medium">{confirmation.confirmedIP}</p>
+                                  </div>
+                                )}
+                              </div>
+                              
+                              {confirmation.remarks && (
+                                <div className="pt-4 border-t">
+                                  <p className="text-sm font-medium mb-2">Remarks from Confirming Party</p>
+                                  <div className="bg-muted p-3 rounded-md">
+                                    <p className="text-sm">{confirmation.remarks}</p>
+                                  </div>
+                                </div>
+                              )}
+                              
+                              {confirmation.attachments && confirmation.attachments.length > 0 && (
+                                <div className="pt-4 border-t">
+                                  <p className="text-sm font-medium mb-2">Attachments from Confirming Party</p>
+                                  <div className="space-y-2">
+                                    {confirmation.attachments.map((file, index) => (
+                                      <div key={index} className="flex items-center gap-2 p-2 bg-muted rounded-md">
+                                        <FileText className="h-4 w-4" />
+                                        <span className="text-sm flex-1">{file}</span>
+                                        <Button size="sm" variant="ghost">Download</Button>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </DialogContent>
+                        </Dialog>
+                        
                         {confirmation.status === "not-sent" && (
                           <Dialog>
                             <DialogTrigger asChild>
