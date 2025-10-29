@@ -8,6 +8,15 @@ import { Label } from "@/components/ui/label";
 import { Send, Bell, Lock, CheckCircle, Clock, Upload, Eye, FileText } from "lucide-react";
 import { useState } from "react";
 
+interface ActivityLogEntry {
+  timestamp: string;
+  stage: string;
+  action: string;
+  performedBy: string;
+  details: string;
+  status: "completed" | "in-progress" | "pending";
+}
+
 interface Confirmation {
   id: string;
   area: string;
@@ -23,6 +32,7 @@ interface Confirmation {
   lockedDate?: string;
   remarks?: string;
   attachments?: string[];
+  activityLog: ActivityLogEntry[];
 }
 
 const mockConfirmations: Confirmation[] = [
@@ -39,7 +49,49 @@ const mockConfirmations: Confirmation[] = [
     confirmedBy: "John Smith",
     confirmedIP: "203.45.67.89",
     remarks: "We confirm the outstanding balance as of December 31, 2024. All invoices have been reviewed and verified.",
-    attachments: ["invoice_summary.pdf", "payment_schedule.xlsx"]
+    attachments: ["invoice_summary.pdf", "payment_schedule.xlsx"],
+    activityLog: [
+      {
+        timestamp: "2025-01-10 09:00:00",
+        stage: "Creation",
+        action: "Confirmation request created",
+        performedBy: "Sarah Johnson (Auditor)",
+        details: "Initial confirmation request generated for Trade Receivables",
+        status: "completed"
+      },
+      {
+        timestamp: "2025-01-12 14:30:00",
+        stage: "Client Authorization",
+        action: "Client authorization received",
+        performedBy: "David Miller (Client Finance Director)",
+        details: "Client approved sending confirmation to ABC Corporation Ltd.",
+        status: "completed"
+      },
+      {
+        timestamp: "2025-01-14 11:20:00",
+        stage: "Domain Testing",
+        action: "Email domain verified",
+        performedBy: "System",
+        details: "Domain abccorp.com verified and email deliverability confirmed",
+        status: "completed"
+      },
+      {
+        timestamp: "2025-01-15 10:30:00",
+        stage: "Rollout",
+        action: "Confirmation request sent",
+        performedBy: "Sarah Johnson (Auditor)",
+        details: "Email sent to john.smith@abccorp.com with confirmation request",
+        status: "completed"
+      },
+      {
+        timestamp: "2025-01-18 14:22:15",
+        stage: "Response",
+        action: "Confirmation received",
+        performedBy: "John Smith (ABC Corporation)",
+        details: "Confirming party submitted response with 2 attachments. IP: 203.45.67.89",
+        status: "completed"
+      }
+    ]
   },
   {
     id: "CNF-002",
@@ -49,7 +101,49 @@ const mockConfirmations: Confirmation[] = [
     recipientName: "Emily Chen",
     recipientOrg: "XYZ Industries",
     status: "sent",
-    sentDate: "2025-01-20 09:15:00"
+    sentDate: "2025-01-20 09:15:00",
+    activityLog: [
+      {
+        timestamp: "2025-01-18 10:00:00",
+        stage: "Creation",
+        action: "Confirmation request created",
+        performedBy: "Sarah Johnson (Auditor)",
+        details: "Initial confirmation request generated for Trade Receivables",
+        status: "completed"
+      },
+      {
+        timestamp: "2025-01-19 15:45:00",
+        stage: "Client Authorization",
+        action: "Client authorization received",
+        performedBy: "David Miller (Client Finance Director)",
+        details: "Client approved sending confirmation to XYZ Industries",
+        status: "completed"
+      },
+      {
+        timestamp: "2025-01-20 08:30:00",
+        stage: "Domain Testing",
+        action: "Email domain verified",
+        performedBy: "System",
+        details: "Domain xyzind.com verified and email deliverability confirmed",
+        status: "completed"
+      },
+      {
+        timestamp: "2025-01-20 09:15:00",
+        stage: "Rollout",
+        action: "Confirmation request sent",
+        performedBy: "Sarah Johnson (Auditor)",
+        details: "Email sent to e.chen@xyzind.com with confirmation request",
+        status: "completed"
+      },
+      {
+        timestamp: "2025-01-20 09:15:00",
+        stage: "Response",
+        action: "Awaiting confirmation",
+        performedBy: "System",
+        details: "Waiting for confirming party response",
+        status: "in-progress"
+      }
+    ]
   },
   {
     id: "CNF-003",
@@ -58,7 +152,49 @@ const mockConfirmations: Confirmation[] = [
     recipientEmail: "m.brown@globalsupplies.com",
     recipientName: "Michael Brown",
     recipientOrg: "Global Supplies Inc.",
-    status: "not-sent"
+    status: "not-sent",
+    activityLog: [
+      {
+        timestamp: "2025-01-22 11:00:00",
+        stage: "Creation",
+        action: "Confirmation request created",
+        performedBy: "Sarah Johnson (Auditor)",
+        details: "Initial confirmation request generated for Trade Payables",
+        status: "completed"
+      },
+      {
+        timestamp: "2025-01-22 11:00:00",
+        stage: "Client Authorization",
+        action: "Pending client approval",
+        performedBy: "System",
+        details: "Awaiting client authorization to proceed",
+        status: "pending"
+      },
+      {
+        timestamp: "2025-01-22 11:00:00",
+        stage: "Domain Testing",
+        action: "Not started",
+        performedBy: "System",
+        details: "Domain testing will begin after client authorization",
+        status: "pending"
+      },
+      {
+        timestamp: "2025-01-22 11:00:00",
+        stage: "Rollout",
+        action: "Not started",
+        performedBy: "System",
+        details: "Confirmation will be sent after all validations complete",
+        status: "pending"
+      },
+      {
+        timestamp: "2025-01-22 11:00:00",
+        stage: "Response",
+        action: "Not started",
+        performedBy: "System",
+        details: "Awaiting confirmation rollout",
+        status: "pending"
+      }
+    ]
   }
 ];
 
@@ -157,14 +293,14 @@ export const RolloutReminder = () => {
                               View
                             </Button>
                           </DialogTrigger>
-                          <DialogContent className="max-w-3xl">
+                          <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
                             <DialogHeader>
                               <DialogTitle>Confirmation Details - {confirmation.id}</DialogTitle>
                               <DialogDescription>
-                                View complete confirmation information and response
+                                View complete confirmation information, response, and activity log
                               </DialogDescription>
                             </DialogHeader>
-                            <div className="space-y-4 py-4">
+                            <div className="space-y-6 py-4">
                               <div className="flex items-center justify-between">
                                 <span className="text-sm font-medium">Status:</span>
                                 {getStatusBadge(confirmation.status)}
@@ -239,6 +375,56 @@ export const RolloutReminder = () => {
                                   </div>
                                 </div>
                               )}
+
+                              {/* Activity Log Section */}
+                              <div className="pt-4 border-t">
+                                <h3 className="text-lg font-semibold mb-4">Activity Log</h3>
+                                <div className="rounded-md border">
+                                  <Table>
+                                    <TableHeader>
+                                      <TableRow>
+                                        <TableHead>Timestamp</TableHead>
+                                        <TableHead>Stage</TableHead>
+                                        <TableHead>Action</TableHead>
+                                        <TableHead>Performed By</TableHead>
+                                        <TableHead>Details</TableHead>
+                                        <TableHead>Status</TableHead>
+                                      </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                      {confirmation.activityLog.map((log, index) => (
+                                        <TableRow key={index}>
+                                          <TableCell className="font-mono text-xs">{log.timestamp}</TableCell>
+                                          <TableCell className="font-medium">{log.stage}</TableCell>
+                                          <TableCell>{log.action}</TableCell>
+                                          <TableCell>{log.performedBy}</TableCell>
+                                          <TableCell className="text-sm text-muted-foreground">{log.details}</TableCell>
+                                          <TableCell>
+                                            {log.status === "completed" && (
+                                              <Badge className="bg-success text-success-foreground">
+                                                <CheckCircle className="h-3 w-3 mr-1" />
+                                                Completed
+                                              </Badge>
+                                            )}
+                                            {log.status === "in-progress" && (
+                                              <Badge className="bg-info text-info-foreground">
+                                                <Clock className="h-3 w-3 mr-1" />
+                                                In Progress
+                                              </Badge>
+                                            )}
+                                            {log.status === "pending" && (
+                                              <Badge variant="outline">
+                                                <Clock className="h-3 w-3 mr-1" />
+                                                Pending
+                                              </Badge>
+                                            )}
+                                          </TableCell>
+                                        </TableRow>
+                                      ))}
+                                    </TableBody>
+                                  </Table>
+                                </div>
+                              </div>
                             </div>
                           </DialogContent>
                         </Dialog>
@@ -307,56 +493,6 @@ export const RolloutReminder = () => {
         </CardContent>
       </Card>
 
-      {/* Confirmation Log */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Confirmation Activity Log</CardTitle>
-          <CardDescription>Detailed tracking of confirmation responses</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {confirmations
-              .filter(c => c.status === "confirmed" || c.status === "locked")
-              .map((confirmation) => (
-                <div key={confirmation.id} className="border rounded-lg p-4">
-                  <div className="flex items-start justify-between mb-3">
-                    <div>
-                      <p className="font-semibold">{confirmation.id} - {confirmation.confirmingParty}</p>
-                      <p className="text-sm text-muted-foreground">{confirmation.area}</p>
-                    </div>
-                    {getStatusBadge(confirmation.status)}
-                  </div>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <p className="text-muted-foreground">Confirming Party Name</p>
-                      <p className="font-medium">{confirmation.confirmingParty}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Point of Contact</p>
-                      <p className="font-medium">{confirmation.recipientName}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Contact Email</p>
-                      <p className="font-medium">{confirmation.recipientEmail}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Confirmed Date & Time</p>
-                      <p className="font-medium">{confirmation.confirmedDate}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Confirmed By</p>
-                      <p className="font-medium">{confirmation.confirmedBy}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">IP Address</p>
-                      <p className="font-medium">{confirmation.confirmedIP}</p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 };
