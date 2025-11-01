@@ -1,9 +1,8 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Shield, Plus, FileText, Search, Users, Send, FileCheck, Archive, Globe, UserCheck, Building2 } from "lucide-react";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { Shield, FileText, Users, Send, FileCheck, Archive, Building2 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useState } from "react";
 import { SampleGeneration } from "./sections/SampleGeneration";
@@ -17,7 +16,7 @@ import { Archival } from "./sections/Archival";
 const EngagementDashboard = () => {
   const navigate = useNavigate();
   const { id } = useParams();
-  const [searchQuery, setSearchQuery] = useState("");
+  const [activeTab, setActiveTab] = useState("sample");
 
   // Mock data for engagements
   const engagements = [
@@ -62,68 +61,47 @@ const EngagementDashboard = () => {
     }
   };
 
-  const filteredEngagements = engagements.filter(eng =>
-    eng.clientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    eng.id.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const navItems = [
+    { id: "sample", label: "Sample Generation", icon: FileText },
+    { id: "authorization", label: "Client Authorization", icon: FileCheck },
+    { id: "details", label: "Confirming Party", icon: Building2 },
+    { id: "rollout", label: "Rollout & Reminder", icon: Send },
+    { id: "workingpaper", label: "Working Paper", icon: FileText },
+    { id: "access", label: "Access & Roles", icon: Users },
+    { id: "archival", label: "Archival", icon: Archive },
+  ];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background flex">
-      {/* Left Panel - Engagements List */}
-      <div className="w-80 border-r bg-card/50 backdrop-blur-sm flex flex-col">
+      {/* Left Panel - Navigation */}
+      <div className="w-64 border-r bg-card/50 backdrop-blur-sm flex flex-col">
         <div className="p-4 border-b">
-          <div className="flex items-center gap-3 mb-4">
+          <div className="flex items-center gap-3">
             <Shield className="h-6 w-6 text-primary" />
-            <h2 className="text-lg font-bold text-foreground">Engagements</h2>
-          </div>
-          <Button 
-            onClick={() => navigate("/auditor/create-engagement")} 
-            className="w-full"
-            size="sm"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            New Engagement
-          </Button>
-        </div>
-
-        <div className="p-4 border-b">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search..."
-              className="pl-10"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
+            <h2 className="text-lg font-bold text-foreground">Navigation</h2>
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4 space-y-2">
-          {filteredEngagements.map((engagement) => (
-            <Card
-              key={engagement.id}
-              className={`p-4 cursor-pointer transition-all hover:shadow-md ${
-                engagement.id === id ? "border-primary bg-primary/5" : ""
-              }`}
-              onClick={() => navigate(`/auditor/engagement/${engagement.id}`)}
-            >
-              <div className="space-y-2">
-                <div className="flex items-start justify-between gap-2">
-                  <h3 className="font-semibold text-sm text-foreground line-clamp-2">
-                    {engagement.clientName}
-                  </h3>
-                  <Badge className={`${getStatusColor(engagement.status)} text-xs shrink-0`}>
-                    {engagement.status}
-                  </Badge>
-                </div>
-                <p className="text-xs text-muted-foreground">{engagement.id}</p>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <FileText className="h-3 w-3" />
-                  <span>{engagement.confirmationsCount} confirmations</span>
-                </div>
-              </div>
-            </Card>
-          ))}
+        <div className="flex-1 overflow-y-auto p-2">
+          <div className="space-y-1">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = activeTab === item.id;
+              return (
+                <Button
+                  key={item.id}
+                  variant={isActive ? "default" : "ghost"}
+                  className={`w-full justify-start gap-2 ${
+                    isActive ? "bg-primary text-primary-foreground" : ""
+                  }`}
+                  onClick={() => setActiveTab(item.id)}
+                >
+                  <Icon className="h-4 w-4" />
+                  <span className="text-sm">{item.label}</span>
+                </Button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
@@ -144,68 +122,15 @@ const EngagementDashboard = () => {
           </div>
         </header>
 
-        {/* Main Content with Tabs */}
+        {/* Main Content */}
         <div className="flex-1 overflow-y-auto p-6">
-          <Tabs defaultValue="sample" className="w-full">
-            <TabsList className="w-full justify-start mb-6 flex-wrap h-auto">
-              <TabsTrigger value="sample" className="gap-2">
-                <FileText className="h-4 w-4" />
-                Sample Generation
-              </TabsTrigger>
-              <TabsTrigger value="authorization" className="gap-2">
-                <FileCheck className="h-4 w-4" />
-                Client Authorization
-              </TabsTrigger>
-              <TabsTrigger value="details" className="gap-2">
-                <Building2 className="h-4 w-4" />
-                Confirming Party
-              </TabsTrigger>
-              <TabsTrigger value="rollout" className="gap-2">
-                <Send className="h-4 w-4" />
-                Rollout & Reminder
-              </TabsTrigger>
-              <TabsTrigger value="workingpaper" className="gap-2">
-                <FileText className="h-4 w-4" />
-                Working Paper
-              </TabsTrigger>
-              <TabsTrigger value="access" className="gap-2">
-                <Users className="h-4 w-4" />
-                Access & Roles
-              </TabsTrigger>
-              <TabsTrigger value="archival" className="gap-2">
-                <Archive className="h-4 w-4" />
-                Archival
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="sample" className="mt-0">
-              <SampleGeneration />
-            </TabsContent>
-
-            <TabsContent value="authorization" className="mt-0">
-              <ClientAuthorization />
-            </TabsContent>
-
-            <TabsContent value="details" className="mt-0">
-              <ConfirmingPartyDetails />
-            </TabsContent>
-
-            <TabsContent value="rollout" className="mt-0">
-              <RolloutReminder />
-            </TabsContent>
-
-            <TabsContent value="workingpaper" className="mt-0">
-              <WorkingPaper />
-            </TabsContent>
-
-            <TabsContent value="access" className="mt-0">
-              <AccessRoles />
-            </TabsContent>
-
-            <TabsContent value="archival" className="mt-0">
-              <Archival />
-            </TabsContent>
-          </Tabs>
+          {activeTab === "sample" && <SampleGeneration />}
+          {activeTab === "authorization" && <ClientAuthorization />}
+          {activeTab === "details" && <ConfirmingPartyDetails />}
+          {activeTab === "rollout" && <RolloutReminder />}
+          {activeTab === "workingpaper" && <WorkingPaper />}
+          {activeTab === "access" && <AccessRoles />}
+          {activeTab === "archival" && <Archival />}
         </div>
       </div>
     </div>

@@ -1,10 +1,78 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { CheckCircle, FileCheck, Shield, Users } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { useState, useEffect } from "react";
 
 const Index = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const [userRole, setUserRole] = useState<string | null>(null);
+
+  // Get user role from URL parameter or localStorage
+  useEffect(() => {
+    const roleFromUrl = searchParams.get("role");
+    const roleFromStorage = localStorage.getItem("userRole");
+    
+    if (roleFromUrl) {
+      setUserRole(roleFromUrl);
+      localStorage.setItem("userRole", roleFromUrl);
+    } else if (roleFromStorage) {
+      setUserRole(roleFromStorage);
+    }
+  }, [searchParams]);
+
+  // Define all roles
+  const allRoles = [
+    {
+      id: "auditor",
+      title: "Auditor",
+      icon: FileCheck,
+      description: "Access full engagement management, sample generation, and working papers",
+      color: "primary",
+      route: "/auditor/engagements"
+    },
+    {
+      id: "client",
+      title: "Client",
+      icon: Shield,
+      description: "Review and authorize confirmation letters for your organization",
+      color: "accent",
+      route: "/client/dashboard"
+    },
+    {
+      id: "confirming-party",
+      title: "Confirming Party",
+      icon: Users,
+      description: "Respond to confirmation requests from auditors",
+      color: "success",
+      route: "/confirming-party/confirmations"
+    }
+  ];
+
+  // Filter roles based on current user type
+  const getAvailableRoles = () => {
+    if (!userRole) {
+      // If no user role is set, show all roles (default/landing state)
+      return allRoles;
+    }
+    
+    switch (userRole) {
+      case "auditor":
+        // Auditor sees all 3 roles
+        return allRoles;
+      case "client":
+        // Client sees Client and Confirming Party
+        return allRoles.filter(role => role.id === "client" || role.id === "confirming-party");
+      case "confirming-party":
+        // Confirming Party sees Client and Confirming Party
+        return allRoles.filter(role => role.id === "client" || role.id === "confirming-party");
+      default:
+        return allRoles;
+    }
+  };
+
+  const availableRoles = getAvailableRoles();
 
   const features = [
     {
@@ -38,29 +106,94 @@ const Index = () => {
             <Shield className="h-8 w-8 text-primary" />
             <h1 className="text-2xl font-bold text-foreground">Confirmation Tool</h1>
           </div>
-          <Button onClick={() => navigate("/role-selection")} size="lg">
-            Get Started
-          </Button>
+          {userRole && (
+            <div className="flex items-center gap-4">
+              <span className="text-sm text-muted-foreground">
+                Logged in as: <span className="font-semibold capitalize">{userRole.replace("-", " ")}</span>
+              </span>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => {
+                  localStorage.removeItem("userRole");
+                  setUserRole(null);
+                  navigate("/");
+                }}
+              >
+                Logout
+              </Button>
+            </div>
+          )}
         </div>
       </header>
 
-      {/* Hero Section */}
-      <section className="container mx-auto px-4 py-20 text-center">
-        <div className="max-w-4xl mx-auto space-y-6 animate-fade-in">
-          <h2 className="text-5xl font-bold text-foreground leading-tight">
-            Professional Audit Confirmation Platform
-          </h2>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Streamline your audit confirmation process with automated sample generation, 
-            digital authorization, and comprehensive working papers. Built for modern audit teams.
-          </p>
-          <div className="flex gap-4 justify-center pt-4">
-            <Button onClick={() => navigate("/role-selection")} size="lg" className="h-12 px-8">
-              Start New Engagement
-            </Button>
-            <Button onClick={() => navigate("/role-selection")} variant="outline" size="lg" className="h-12 px-8">
-              View Demo
-            </Button>
+      {/* Hero Section with Role Selection */}
+      <section className="container mx-auto px-4 py-20">
+        <div className="max-w-6xl mx-auto space-y-12 animate-fade-in">
+          <div className="text-center space-y-6">
+            <h2 className="text-5xl font-bold text-foreground leading-tight">
+              Professional Audit Confirmation Platform
+            </h2>
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+              Streamline your audit confirmation process with automated sample generation, 
+              digital authorization, and comprehensive working papers. Built for modern audit teams.
+            </p>
+          </div>
+
+          {/* Role Selection Cards */}
+          <div className="space-y-6">
+            <div className="text-center">
+              <h3 className="text-2xl font-bold text-foreground mb-2">
+                {userRole ? "Select Role to Access" : "Select Your Role"}
+              </h3>
+              <p className="text-muted-foreground">
+                {userRole 
+                  ? "Choose how you want to access the Confirmation Tool"
+                  : "Choose your role to get started"}
+              </p>
+            </div>
+
+            <div className={`grid gap-6 ${availableRoles.length === 3 ? 'md:grid-cols-3' : 'md:grid-cols-2'} max-w-5xl mx-auto`}>
+              {availableRoles.map((role, index) => {
+                const Icon = role.icon;
+                return (
+                  <Card 
+                    key={role.id}
+                    className="p-8 hover:shadow-xl transition-all duration-300 hover:-translate-y-2 cursor-pointer group"
+                    style={{ animationDelay: `${index * 100}ms` }}
+                    onClick={() => navigate(role.route)}
+                  >
+                    <div className={`bg-${role.color}/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform`}>
+                      <Icon className={`h-8 w-8 text-${role.color}`} />
+                    </div>
+                    <h3 className="text-2xl font-semibold text-foreground text-center mb-3">
+                      {role.title}
+                    </h3>
+                    <p className="text-muted-foreground text-center mb-6">
+                      {role.description}
+                    </p>
+                    <Button 
+                      className="w-full"
+                      variant={role.id === "auditor" ? "default" : "outline"}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(role.route);
+                      }}
+                    >
+                      Continue as {role.title}
+                    </Button>
+                  </Card>
+                );
+              })}
+            </div>
+
+            {!userRole && (
+              <div className="text-center pt-4">
+                <p className="text-sm text-muted-foreground">
+                  Don't have an account? Contact your administrator to set up access.
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </section>
@@ -82,7 +215,7 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Three Roles Section */}
+      {/* Three Roles Section - Keep this for informational purposes */}
       <section className="container mx-auto px-4 py-16">
         <div className="text-center mb-12">
           <h3 className="text-3xl font-bold text-foreground mb-4">Three Integrated Roles</h3>
@@ -149,14 +282,16 @@ const Index = () => {
           <p className="text-lg mb-8 max-w-2xl mx-auto opacity-90">
             Join leading audit firms using our platform to streamline confirmations and enhance audit quality
           </p>
-          <Button 
-            onClick={() => navigate("/role-selection")}
-            size="lg" 
-            variant="secondary"
-            className="h-12 px-8"
-          >
-            Get Started Now
-          </Button>
+          {!userRole && (
+            <Button 
+              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+              size="lg" 
+              variant="secondary"
+              className="h-12 px-8"
+            >
+              Get Started Now
+            </Button>
+          )}
         </Card>
       </section>
 

@@ -10,6 +10,7 @@ import Engagements from "./pages/auditor/Engagements";
 import EngagementDashboard from "./pages/auditor/EngagementDashboard";
 import ClientDashboard from "./pages/client/Dashboard";
 import ConfirmingPartyConfirmations from "./pages/confirming-party/Confirmations";
+import ConfirmationForm from "./pages/confirming-party/ConfirmationForm";
 
 const queryClient = new QueryClient();
 
@@ -26,6 +27,7 @@ const App = () => (
           <Route path="/auditor/engagement/:id" element={<EngagementDashboard />} />
           <Route path="/client/dashboard" element={<ClientDashboard />} />
           <Route path="/confirming-party/confirmations" element={<ConfirmingPartyConfirmations />} />
+          <Route path="/confirming-party/confirmation/:id" element={<ConfirmationForm />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

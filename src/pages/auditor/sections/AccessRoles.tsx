@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { UserPlus, Trash2, Shield, Users, Building2 } from "lucide-react";
+import { UserPlus, Trash2, Shield, Users, Building2, ChevronDown, ChevronUp } from "lucide-react";
 import { useState } from "react";
 
 interface AuditorUser {
@@ -98,6 +98,7 @@ export const AccessRoles = () => {
   const [auditors, setAuditors] = useState(mockAuditors);
   const [clients, setClients] = useState(mockClients);
   const [confirmingParties, setConfirmingParties] = useState(mockConfirmingParties);
+  const [expandedClientAreas, setExpandedClientAreas] = useState<Set<string>>(new Set());
 
   const getRoleBadge = (role: string) => {
     if (role === "Engagement Partner") {
@@ -110,6 +111,18 @@ export const AccessRoles = () => {
       return <Badge variant="secondary">Viewer</Badge>;
     }
     return <Badge variant="outline">{role}</Badge>;
+  };
+
+  const toggleClientAreas = (clientId: string) => {
+    setExpandedClientAreas(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(clientId)) {
+        newSet.delete(clientId);
+      } else {
+        newSet.add(clientId);
+      }
+      return newSet;
+    });
   };
 
   return (
@@ -310,28 +323,74 @@ export const AccessRoles = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {clients.map((client) => (
-                      <TableRow key={client.id}>
-                        <TableCell className="font-medium">{client.name}</TableCell>
-                        <TableCell>{client.email}</TableCell>
-                        <TableCell>{client.designation}</TableCell>
-                        <TableCell>{getRoleBadge(client.role)}</TableCell>
-                        <TableCell>
-                          <div className="flex flex-wrap gap-1">
-                            {client.areas.map((area, idx) => (
-                              <Badge key={idx} variant="outline" className="text-xs">
-                                {area}
-                              </Badge>
-                            ))}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button size="sm" variant="ghost">
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {clients.map((client) => {
+                      const isExpanded = expandedClientAreas.has(client.id);
+                      const firstArea = client.areas[0] || "";
+                      const remainingCount = client.areas.length - 1;
+
+                      return (
+                        <TableRow key={client.id}>
+                          <TableCell className="font-medium">{client.name}</TableCell>
+                          <TableCell>{client.email}</TableCell>
+                          <TableCell>{client.designation}</TableCell>
+                          <TableCell>{getRoleBadge(client.role)}</TableCell>
+                          <TableCell>
+                            {client.areas.length > 0 ? (
+                              <div className="space-y-2">
+                                {/* Collapsed view */}
+                                {!isExpanded && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-auto p-1 text-left justify-start hover:bg-muted"
+                                    onClick={() => toggleClientAreas(client.id)}
+                                  >
+                                    <span className="text-sm font-medium">
+                                      {firstArea}
+                                      {remainingCount > 0 && (
+                                        <span className="text-muted-foreground font-normal ml-1">
+                                          +{remainingCount}
+                                        </span>
+                                      )}
+                                    </span>
+                                    <ChevronDown className="h-4 w-4 ml-2 text-muted-foreground" />
+                                  </Button>
+                                )}
+
+                                {/* Expanded view */}
+                                {isExpanded && (
+                                  <div className="space-y-1">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-auto p-1 text-left justify-start hover:bg-muted mb-1"
+                                      onClick={() => toggleClientAreas(client.id)}
+                                    >
+                                      <ChevronUp className="h-4 w-4 mr-2 text-muted-foreground" />
+                                      <span className="text-xs text-muted-foreground">Hide areas</span>
+                                    </Button>
+                                    <div className="flex flex-col gap-1 pl-6">
+                                      {client.areas.map((area, idx) => (
+                                        <Badge key={idx} variant="outline" className="text-xs w-fit">
+                                          {area}
+                                        </Badge>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-sm text-muted-foreground">No areas</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button size="sm" variant="ghost">
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>

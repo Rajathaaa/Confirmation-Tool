@@ -3,6 +3,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Upload, Download, Eye, FileText } from "lucide-react";
 import { useState } from "react";
 
@@ -15,6 +16,7 @@ interface ConfirmedData {
   amountConfirmed: string;
   remarks: string;
   hasAttachment: boolean;
+  attachments?: string[]; // Add attachments array
   confirmedDate: string;
 }
 
@@ -37,6 +39,7 @@ const mockData: Record<string, ConfirmedData[]> = {
       amountConfirmed: "$125,450.00",
       remarks: "Balance confirmed as of December 31, 2024",
       hasAttachment: true,
+      attachments: ["confirmation_cnf001.pdf", "supporting_docs_cnf001.zip"], // Add attachment files
       confirmedDate: "2025-01-18"
     },
     {
@@ -61,6 +64,7 @@ const mockData: Record<string, ConfirmedData[]> = {
       amountConfirmed: "$45,890.00",
       remarks: "Balance confirmed, payment terms 30 days",
       hasAttachment: true,
+      attachments: ["confirmation_cnf003.pdf"], // Add attachment files
       confirmedDate: "2025-01-20"
     }
   ],
@@ -153,9 +157,91 @@ export const WorkingPaper = () => {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex gap-2 justify-end">
-                          <Button size="sm" variant="outline">
-                            <Eye className="h-4 w-4" />
-                          </Button>
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <Button size="sm" variant="outline">
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                              <DialogHeader>
+                                <DialogTitle>Confirmation Details - {item.id}</DialogTitle>
+                                <DialogDescription>
+                                  View confirmation information, remarks, and attachments from confirming party
+                                </DialogDescription>
+                              </DialogHeader>
+                              <div className="space-y-6 py-4">
+                                {/* Confirmation Details */}
+                                <div className="grid grid-cols-2 gap-4 text-sm">
+                                  <div>
+                                    <p className="text-muted-foreground">Confirmation ID</p>
+                                    <p className="font-medium">{item.id}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-muted-foreground">Confirming Party</p>
+                                    <p className="font-medium">{item.confirmingParty}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-muted-foreground">Recipient Name</p>
+                                    <p className="font-medium">{item.recipientName}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-muted-foreground">Recipient Email</p>
+                                    <p className="font-medium">{item.recipientEmail}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-muted-foreground">Balance Type</p>
+                                    <p className="font-medium">{item.balanceType}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-muted-foreground">Amount Confirmed</p>
+                                    <p className="font-semibold text-lg">{item.amountConfirmed}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-muted-foreground">Confirmed Date</p>
+                                    <p className="font-medium">{item.confirmedDate}</p>
+                                  </div>
+                                </div>
+
+                                {/* Remarks from Confirming Party */}
+                                {item.remarks && (
+                                  <div className="pt-4 border-t">
+                                    <p className="text-sm font-medium mb-2">Remarks from Confirming Party</p>
+                                    <div className="bg-muted p-3 rounded-md">
+                                      <p className="text-sm whitespace-pre-wrap">{item.remarks}</p>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Attachments from Confirming Party */}
+                                {item.attachments && item.attachments.length > 0 && (
+                                  <div className="pt-4 border-t">
+                                    <p className="text-sm font-medium mb-2">Attachments from Confirming Party</p>
+                                    <div className="space-y-2">
+                                      {item.attachments.map((file, index) => (
+                                        <div key={index} className="flex items-center gap-2 p-2 bg-muted rounded-md">
+                                          <FileText className="h-4 w-4" />
+                                          <span className="text-sm flex-1">{file}</span>
+                                          <Button size="sm" variant="ghost">
+                                            <Download className="h-4 w-4 mr-1" />
+                                            Download
+                                          </Button>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Show message if no attachments */}
+                                {(!item.attachments || item.attachments.length === 0) && (
+                                  <div className="pt-4 border-t">
+                                    <p className="text-sm font-medium mb-2">Attachments from Confirming Party</p>
+                                    <p className="text-sm text-muted-foreground">No attachments provided</p>
+                                  </div>
+                                )}
+                              </div>
+                            </DialogContent>
+                          </Dialog>
                           {item.hasAttachment && (
                             <Button size="sm" variant="outline">
                               <Download className="h-4 w-4" />

@@ -2,6 +2,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Globe, CheckCircle, AlertTriangle, XCircle, Play } from "lucide-react";
 import { useState } from "react";
 
@@ -61,6 +62,7 @@ const mockParties: ConfirmingParty[] = [
 
 export const ConfirmingPartyDetails = () => {
   const [parties, setParties] = useState(mockParties);
+  const [selectedPartyId, setSelectedPartyId] = useState<string | null>(null);
 
   const runDomainTest = (id: string) => {
     setParties(parties.map(p => 
@@ -96,9 +98,96 @@ export const ConfirmingPartyDetails = () => {
     }, 2000);
   };
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: string, partyId: string, isClickable: boolean = false) => {
     switch (status) {
       case "passed":
+        if (isClickable && parties.find(p => p.id === partyId)?.domainInfo) {
+          return (
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="ghost" className="h-auto p-0 hover:bg-transparent">
+                  <Badge className="bg-success text-success-foreground cursor-pointer hover:bg-success/90">
+                    <CheckCircle className="h-3 w-3 mr-1" />
+                    Passed
+                  </Badge>
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>Domain Test Results</DialogTitle>
+                  <DialogDescription>
+                    Domain verification details for {parties.find(p => p.id === partyId)?.recipientEmail}
+                  </DialogDescription>
+                </DialogHeader>
+                {(() => {
+                  const party = parties.find(p => p.id === partyId);
+                  if (!party?.domainInfo) return null;
+                  
+                  return (
+                    <div className="space-y-6 py-4">
+                      <div className="flex items-center gap-3 p-4 bg-success/10 rounded-lg border border-success">
+                        <CheckCircle className="h-5 w-5 text-success" />
+                        <div>
+                          <p className="font-semibold text-success">Domain Test Passed</p>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            The domain has been successfully verified and is valid for confirmation requests.
+                          </p>
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-sm text-muted-foreground mb-1">Domain</p>
+                          <p className="font-semibold text-lg">{party.domainInfo.domain}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground mb-1">Status</p>
+                          <p className="font-semibold text-success">{party.domainInfo.status}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground mb-1">Creation Date</p>
+                          <p className="font-semibold">{party.domainInfo.creationDate}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground mb-1">Expiry Date</p>
+                          <p className="font-semibold">{party.domainInfo.expiryDate}</p>
+                        </div>
+                        <div className="col-span-2">
+                          <p className="text-sm text-muted-foreground mb-1">Registrar</p>
+                          <p className="font-semibold">{party.domainInfo.registrar}</p>
+                        </div>
+                      </div>
+
+                      <div className="border-t pt-4">
+                        <div className="space-y-2">
+                          <p className="text-sm font-medium">Confirming Party Details</p>
+                          <div className="grid grid-cols-2 gap-4 text-sm">
+                            <div>
+                              <p className="text-muted-foreground">Organization</p>
+                              <p className="font-medium">{party.recipientOrg}</p>
+                            </div>
+                            <div>
+                              <p className="text-muted-foreground">Recipient Name</p>
+                              <p className="font-medium">{party.recipientName}</p>
+                            </div>
+                            <div>
+                              <p className="text-muted-foreground">Area</p>
+                              <p className="font-medium">{party.area}</p>
+                            </div>
+                            <div>
+                              <p className="text-muted-foreground">Email Address</p>
+                              <p className="font-medium">{party.recipientEmail}</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </DialogContent>
+            </Dialog>
+          );
+        }
         return (
           <Badge className="bg-success text-success-foreground">
             <CheckCircle className="h-3 w-3 mr-1" />
@@ -177,7 +266,9 @@ export const ConfirmingPartyDetails = () => {
                     </TableCell>
                     <TableCell>{party.recipientName}</TableCell>
                     <TableCell>{party.recipientOrg}</TableCell>
-                    <TableCell>{getStatusBadge(party.domainTestStatus)}</TableCell>
+                    <TableCell>
+                      {getStatusBadge(party.domainTestStatus, party.id, party.domainTestStatus === "passed")}
+                    </TableCell>
                     <TableCell className="text-right">
                       <Button
                         size="sm"
@@ -197,7 +288,7 @@ export const ConfirmingPartyDetails = () => {
         </CardContent>
       </Card>
 
-      {/* Domain Test Results */}
+      {/* Domain Test Results - Keep existing if needed for reference */}
       <div className="space-y-4">
         {parties
           .filter(p => p.domainTestStatus === "passed" || p.domainTestStatus === "general-domain")
@@ -209,7 +300,7 @@ export const ConfirmingPartyDetails = () => {
                     <CardTitle>{party.name}</CardTitle>
                     <CardDescription>{party.recipientEmail}</CardDescription>
                   </div>
-                  {getStatusBadge(party.domainTestStatus)}
+                  {getStatusBadge(party.domainTestStatus, party.id)}
                 </div>
               </CardHeader>
               <CardContent>
