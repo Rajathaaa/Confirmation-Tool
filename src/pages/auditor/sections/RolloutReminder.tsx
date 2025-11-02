@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Send, Bell, Lock, CheckCircle, Clock, Upload, Eye, FileText } from "lucide-react";
+import { Send, Bell, Lock, CheckCircle, Clock, Upload, Eye, FileText, RotateCcw } from "lucide-react";
 import { useState } from "react";
+import { formatIndianDate, formatIndianDateTime } from "@/lib/utils";
 
 interface ActivityLogEntry {
   timestamp: string;
@@ -33,6 +34,7 @@ interface Confirmation {
   remarks?: string;
   attachments?: string[];
   activityLog: ActivityLogEntry[];
+  formData?: any; // Stores the filled form data from confirming party
 }
 
 const mockConfirmations: Confirmation[] = [
@@ -50,6 +52,16 @@ const mockConfirmations: Confirmation[] = [
     confirmedIP: "203.45.67.89",
     remarks: "We confirm the outstanding balance as of December 31, 2024. All invoices have been reviewed and verified.",
     attachments: ["invoice_summary.pdf", "payment_schedule.xlsx"],
+    formData: {
+      amounts: [
+        { amount: "125450.00", currency: "USD" },
+        { amount: "89500.00", currency: "EUR" }
+      ],
+      organizationName: "ABC Corporation Ltd.",
+      name: "John Smith",
+      designation: "Finance Director",
+      isCertified: true
+    },
     activityLog: [
       {
         timestamp: "2025-01-10 09:00:00",
@@ -198,9 +210,251 @@ const mockConfirmations: Confirmation[] = [
   }
 ];
 
+// Component to render confirmation form template in read-only mode
+const ConfirmationFormView = ({ confirmation }: { confirmation: Confirmation }) => {
+  if (!confirmation.formData) {
+    return (
+      <div className="text-center py-8 text-muted-foreground">
+        <p>No form data submitted yet.</p>
+      </div>
+    );
+  }
+
+  const renderFormByArea = () => {
+    switch (confirmation.area) {
+      case "Trade Receivables":
+      case "Trade Payables":
+        return (
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground mb-4">
+              Kindly confirm to us the following information in respect of amounts {confirmation.area === "Trade Receivables" ? "receivable from" : "payable to"} you as on [Period-end Date]:
+            </p>
+            {confirmation.formData.amounts && confirmation.formData.amounts.length > 0 && (
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Amount</TableHead>
+                      <TableHead>Currency</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {confirmation.formData.amounts.map((row: any, index: number) => (
+                      <TableRow key={index}>
+                        <TableCell className="font-medium">{row.amount || "-"}</TableCell>
+                        <TableCell>{row.currency || "-"}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </div>
+        );
+
+      case "Cash & Cash Equivalents":
+      case "Borrowings":
+        return (
+          <div className="space-y-6">
+            <p className="text-sm text-muted-foreground mb-6">
+              Kindly confirm the below balances to us pertaining to the account balances of [Client Organization] as are held with you as on [Period-end Date]:
+            </p>
+            
+            {confirmation.formData.currentAccounts && confirmation.formData.currentAccounts.length > 0 && (
+              <div className="space-y-2">
+                <h4 className="font-semibold">1. Current Accounts</h4>
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Designation of Account</TableHead>
+                        <TableHead>Currency</TableHead>
+                        <TableHead>Balance [Credit/(Debit)]</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {confirmation.formData.currentAccounts.map((row: any, index: number) => (
+                        <TableRow key={index}>
+                          <TableCell>{row.designation || "-"}</TableCell>
+                          <TableCell>{row.currency || "-"}</TableCell>
+                          <TableCell>{row.balance || "-"}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            )}
+
+            {confirmation.formData.overdrawnAccounts && confirmation.formData.overdrawnAccounts.length > 0 && (
+              <div className="space-y-2">
+                <h4 className="font-semibold">2. Overdrawn Current Accounts</h4>
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Designation of Account</TableHead>
+                        <TableHead>Currency</TableHead>
+                        <TableHead>Balance (Debit)</TableHead>
+                        <TableHead>Security Held</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {confirmation.formData.overdrawnAccounts.map((row: any, index: number) => (
+                        <TableRow key={index}>
+                          <TableCell>{row.designation || "-"}</TableCell>
+                          <TableCell>{row.currency || "-"}</TableCell>
+                          <TableCell>{row.balance || "-"}</TableCell>
+                          <TableCell>{row.security || "-"}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            )}
+
+            {/* Add similar sections for other account types if needed */}
+            {confirmation.formData.interestAccrued && (
+              <div className="space-y-2 pt-4 border-t">
+                <Label>11. Interest Accrued</Label>
+                <p className="font-medium">{confirmation.formData.interestAccrued}</p>
+              </div>
+            )}
+
+            {confirmation.formData.isWilfulDefaulter && (
+              <div className="space-y-2 pt-4 border-t">
+                <Label>13. Wilful Defaulter Status</Label>
+                <p className="font-medium">{confirmation.formData.isWilfulDefaulter === "Yes" ? "Yes" : "No"}</p>
+                {confirmation.formData.wilfulDefaulterRemarks && (
+                  <p className="text-sm text-muted-foreground">{confirmation.formData.wilfulDefaulterRemarks}</p>
+                )}
+              </div>
+            )}
+          </div>
+        );
+
+      case "Litigations & Claims":
+        return (
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground mb-4">
+              Kindly furnish a list that describes and evaluates pending or threatened litigations, claims, and assessments with respect to which you have been engaged and to which you have devoted substantive attention on behalf of [Client Organization] in the form of legal consultation or representation.
+            </p>
+            {confirmation.formData.details && (
+              <div className="bg-muted p-4 rounded-md">
+                <p className="text-sm whitespace-pre-wrap">{confirmation.formData.details}</p>
+              </div>
+            )}
+          </div>
+        );
+
+      case "Related Party Disclosure":
+        return (
+          <div className="space-y-6">
+            {confirmation.formData.relationshipType && (
+              <div className="space-y-2">
+                <Label>Nature of Relationship</Label>
+                <p className="font-medium">{confirmation.formData.relationshipType}</p>
+              </div>
+            )}
+            {confirmation.formData.transactions && confirmation.formData.transactions.length > 0 && (
+              <div className="space-y-2">
+                <Label>Details of Transactions</Label>
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Nature of Transaction</TableHead>
+                        <TableHead>Currency</TableHead>
+                        <TableHead>Amount Involved</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {confirmation.formData.transactions.map((row: any, index: number) => (
+                        <TableRow key={index}>
+                          <TableCell>{row.nature || "-"}</TableCell>
+                          <TableCell>{row.currency || "-"}</TableCell>
+                          <TableCell>{row.amount || "-"}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+
+      default:
+        return (
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Form template for {confirmation.area}
+            </p>
+            {confirmation.formData && Object.keys(confirmation.formData).length > 0 && (
+              <div className="bg-muted p-4 rounded-md">
+                <pre className="text-xs overflow-auto">
+                  {JSON.stringify(confirmation.formData, null, 2)}
+                </pre>
+              </div>
+            )}
+          </div>
+        );
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Letter Header */}
+      <div className="space-y-2 border-b pb-4">
+        <p className="text-sm text-muted-foreground">
+          Dear {confirmation.recipientName},
+        </p>
+        {renderFormByArea()}
+      </div>
+
+      {/* Certification */}
+      {confirmation.formData.isCertified && (
+        <div className="space-y-2 pt-4 border-t">
+          <div className="flex items-start gap-2">
+            <CheckCircle className="h-4 w-4 text-success mt-0.5" />
+            <p className="text-sm">
+              We certify that the above particulars (read alongwith the attachments if any) are full and correct.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Signatory Information */}
+      {confirmation.formData.name && (
+        <div className="grid grid-cols-2 gap-4 pt-4 border-t">
+          {confirmation.formData.organizationName && (
+            <div>
+              <p className="text-sm text-muted-foreground">Organization Name</p>
+              <p className="font-medium">{confirmation.formData.organizationName}</p>
+            </div>
+          )}
+          <div>
+            <p className="text-sm text-muted-foreground">Name</p>
+            <p className="font-medium">{confirmation.formData.name}</p>
+          </div>
+          {confirmation.formData.designation && (
+            <div>
+              <p className="text-sm text-muted-foreground">Designation</p>
+              <p className="font-medium">{confirmation.formData.designation}</p>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
 export const RolloutReminder = () => {
   const [confirmations, setConfirmations] = useState(mockConfirmations);
   const [selectedConfirmation, setSelectedConfirmation] = useState<Confirmation | null>(null);
+  const [resendDialogOpen, setResendDialogOpen] = useState(false);
+  const [resendRemarks, setResendRemarks] = useState("");
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -239,6 +493,46 @@ export const RolloutReminder = () => {
     setConfirmations(confirmations.map(c =>
       c.id === id ? { ...c, status: "locked" as const, lockedDate: new Date().toISOString() } : c
     ));
+  };
+
+  const handleResendConfirmation = (id: string) => {
+    const confirmation = confirmations.find(c => c.id === id);
+    if (!confirmation) return;
+
+    const now = new Date();
+    const formattedNow = formatIndianDateTime(now.toISOString());
+    
+    setConfirmations(confirmations.map(c => {
+      if (c.id === id) {
+        // Add resend activity log entry
+        const resendLogEntry: ActivityLogEntry = {
+          timestamp: formattedNow,
+          stage: "Rollout",
+          action: "Confirmation request resent",
+          performedBy: "Sarah Johnson (Auditor)",
+          details: resendRemarks 
+            ? `Confirmation resent to ${c.recipientEmail} due to issues with previous confirmation. Remarks: ${resendRemarks}`
+            : `Confirmation resent to ${c.recipientEmail} due to issues with previous confirmation.`,
+          status: "completed"
+        };
+
+        return {
+          ...c,
+          status: "sent" as const,
+          sentDate: formattedNow,
+          confirmedDate: undefined,
+          confirmedBy: undefined,
+          confirmedIP: undefined,
+          activityLog: [...c.activityLog, resendLogEntry]
+        };
+      }
+      return c;
+    }));
+
+    // Reset dialog state
+    setResendRemarks("");
+    setResendDialogOpen(false);
+    setSelectedConfirmation(null);
   };
 
   return (
@@ -293,7 +587,7 @@ export const RolloutReminder = () => {
                               View
                             </Button>
                           </DialogTrigger>
-                          <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+                          <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
                             <DialogHeader>
                               <DialogTitle>Confirmation Details - {confirmation.id}</DialogTitle>
                               <DialogDescription>
@@ -329,13 +623,13 @@ export const RolloutReminder = () => {
                                 {confirmation.sentDate && (
                                   <div>
                                     <p className="text-muted-foreground">Sent Date</p>
-                                    <p className="font-medium">{confirmation.sentDate}</p>
+                                    <p className="font-medium">{formatIndianDateTime(confirmation.sentDate)}</p>
                                   </div>
                                 )}
                                 {confirmation.confirmedDate && (
                                   <div>
                                     <p className="text-muted-foreground">Confirmed Date</p>
-                                    <p className="font-medium">{confirmation.confirmedDate}</p>
+                                    <p className="font-medium">{formatIndianDateTime(confirmation.confirmedDate)}</p>
                                   </div>
                                 )}
                                 {confirmation.confirmedBy && (
@@ -375,6 +669,16 @@ export const RolloutReminder = () => {
                                   </div>
                                 </div>
                               )}
+
+                              {/* Add Confirmation Form Template Section */}
+                              <div className="pt-4 border-t">
+                                <h3 className="text-lg font-semibold mb-4">Confirmation Form Template & Response</h3>
+                                <Card>
+                                  <CardContent className="pt-6">
+                                    <ConfirmationFormView confirmation={confirmation} />
+                                  </CardContent>
+                                </Card>
+                              </div>
 
                               {/* Activity Log Section */}
                               <div className="pt-4 border-t">
@@ -467,21 +771,88 @@ export const RolloutReminder = () => {
                             </DialogContent>
                           </Dialog>
                         )}
-                        {confirmation.status === "sent" && (
-                          <Button size="sm" variant="outline">
-                            <Bell className="h-4 w-4 mr-1" />
-                            Reminder
-                          </Button>
-                        )}
+                        
                         {confirmation.status === "confirmed" && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => lockConfirmation(confirmation.id)}
-                          >
-                            <Lock className="h-4 w-4 mr-1" />
-                            Lock
-                          </Button>
+                          <>
+                            <Dialog open={resendDialogOpen && selectedConfirmation?.id === confirmation.id} onOpenChange={(open) => {
+                              setResendDialogOpen(open);
+                              if (open) {
+                                setSelectedConfirmation(confirmation);
+                              } else {
+                                setSelectedConfirmation(null);
+                                setResendRemarks("");
+                              }
+                            }}>
+                              <DialogTrigger asChild>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => {
+                                    setSelectedConfirmation(confirmation);
+                                    setResendDialogOpen(true);
+                                  }}
+                                >
+                                  <RotateCcw className="h-4 w-4 mr-1" />
+                                  Resend
+                                </Button>
+                              </DialogTrigger>
+                              <DialogContent>
+                                <DialogHeader>
+                                  <DialogTitle>Resend Confirmation Request</DialogTitle>
+                                  <DialogDescription>
+                                    Resend the confirmation request to {confirmation.recipientName} at {confirmation.recipientEmail}. 
+                                    The previous confirmation will be voided and a new request will be sent.
+                                  </DialogDescription>
+                                </DialogHeader>
+                                <div className="space-y-4 py-4">
+                                  <div>
+                                    <Label>Reason for Resend (Optional)</Label>
+                                    <Textarea
+                                      placeholder="Please specify the reason for resending (e.g., issues with previous confirmation, missing information, etc.)..."
+                                      className="mt-2"
+                                      value={resendRemarks}
+                                      onChange={(e) => setResendRemarks(e.target.value)}
+                                      rows={4}
+                                    />
+                                  </div>
+                                  <div className="bg-warning/10 border border-warning rounded-md p-3">
+                                    <p className="text-sm text-warning-foreground">
+                                      <strong>Note:</strong> This action will reset the confirmation status to "Sent" and the previous confirmation response will be voided.
+                                    </p>
+                                  </div>
+                                  <div className="flex gap-2">
+                                    <Button
+                                      variant="outline"
+                                      className="flex-1"
+                                      onClick={() => {
+                                        setResendDialogOpen(false);
+                                        setSelectedConfirmation(null);
+                                        setResendRemarks("");
+                                      }}
+                                    >
+                                      Cancel
+                                    </Button>
+                                    <Button
+                                      className="flex-1"
+                                      onClick={() => handleResendConfirmation(confirmation.id)}
+                                    >
+                                      <RotateCcw className="h-4 w-4 mr-2" />
+                                      Resend Confirmation
+                                    </Button>
+                                  </div>
+                                </div>
+                              </DialogContent>
+                            </Dialog>
+                            
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => lockConfirmation(confirmation.id)}
+                            >
+                              <Lock className="h-4 w-4 mr-1" />
+                              Lock
+                            </Button>
+                          </>
                         )}
                       </div>
                     </TableCell>

@@ -2,10 +2,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Shield, CheckCircle, Download, XCircle, AlertCircle } from "lucide-react";
+import { Shield, CheckCircle, Download, XCircle, AlertCircle, Eye, Clock, FileText } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { formatIndianDateTime, formatIndianNumber, formatIndianDate } from "@/lib/utils";
 
 interface AuthorizationRequest {
   id: string;
@@ -18,6 +20,11 @@ interface AuthorizationRequest {
   status: "pending" | "authorized" | "rejected";
   authorizedBy?: string;
   authorizedDate?: string;
+  confirmationStatus?: "pending" | "confirmed" | "not-confirmed"; // New field
+  confirmedDate?: string; // New field
+  formData?: any; // New field - stores filled confirmation form data
+  remarks?: string; // Remarks from confirming party
+  attachments?: string[]; // Attachments from confirming party
 }
 
 // Mock client user - in real app, this would come from authentication context
@@ -61,7 +68,23 @@ const mockAuthorizationRequests: AuthorizationRequest[] = [
     recipientName: "John Smith",
     remarksByAuditor: "Please confirm the outstanding balance as of December 31, 2024.",
     attachmentByAuditor: ["authorization_letter_001.pdf"],
-    status: "pending"
+    status: "authorized",
+    authorizedBy: "Sarah Johnson",
+    authorizedDate: "2025-01-20 14:35:22",
+    confirmationStatus: "confirmed",
+    confirmedDate: "2025-01-22 10:30:00",
+    formData: {
+      amounts: [
+        { amount: "125450.00", currency: "USD" },
+        { amount: "89500.00", currency: "EUR" }
+      ],
+      organizationName: "ABC Corporation Ltd.",
+      name: "John Smith",
+      designation: "Finance Director",
+      isCertified: true
+    },
+    remarks: "We confirm the outstanding balance as of December 31, 2024.",
+    attachments: ["confirmation_response_001.pdf"]
   },
   {
     id: "AUTH-002",
@@ -71,7 +94,10 @@ const mockAuthorizationRequests: AuthorizationRequest[] = [
     recipientName: "Michael Brown",
     remarksByAuditor: "Kindly review and authorize this confirmation request.",
     attachmentByAuditor: ["authorization_letter_002.pdf"],
-    status: "pending"
+    status: "authorized",
+    authorizedBy: "Sarah Johnson",
+    authorizedDate: "2025-01-19 15:00:00",
+    confirmationStatus: "pending",
   },
   {
     id: "AUTH-003",
@@ -83,7 +109,8 @@ const mockAuthorizationRequests: AuthorizationRequest[] = [
     attachmentByAuditor: [],
     status: "authorized",
     authorizedBy: "Sarah Johnson",
-    authorizedDate: "2025-01-20 14:35:22"
+    authorizedDate: "2025-01-20 14:35:22",
+    confirmationStatus: "not-confirmed",
   },
   {
     id: "AUTH-004",
@@ -95,9 +122,178 @@ const mockAuthorizationRequests: AuthorizationRequest[] = [
     attachmentByAuditor: ["authorization_letter_004.pdf"],
     status: "rejected",
     authorizedBy: "Sarah Johnson",
-    authorizedDate: "2025-01-21 10:15:00"
+    authorizedDate: "2025-01-21 10:15:00",
+    confirmationStatus: "not-confirmed",
   }
 ];
+
+// Component to render confirmation form template in read-only mode (for client view)
+const ConfirmationFormView = ({ request }: { request: AuthorizationRequest }) => {
+  if (!request.formData) {
+    return (
+      <div className="text-center py-8 text-muted-foreground">
+        <p>No confirmation data submitted yet.</p>
+      </div>
+    );
+  }
+
+  const renderFormByArea = () => {
+    switch (request.area) {
+      case "Trade Receivables":
+      case "Trade Payables":
+        return (
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground mb-4">
+              Kindly confirm to us the following information in respect of amounts {request.area === "Trade Receivables" ? "receivable from" : "payable to"} you as on [Period-end Date]:
+            </p>
+            {request.formData.amounts && request.formData.amounts.length > 0 && (
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Amount</TableHead>
+                      <TableHead>Currency</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {request.formData.amounts.map((row: any, index: number) => (
+                      <TableRow key={index}>
+                        <TableCell className="font-medium">
+                          {row.amount ? formatIndianNumber(row.amount) : "-"}
+                        </TableCell>
+                        <TableCell>{row.currency || "-"}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </div>
+        );
+
+      case "Cash & Cash Equivalents":
+      case "Borrowings":
+        return (
+          <div className="space-y-6">
+            <p className="text-sm text-muted-foreground mb-6">
+              Kindly confirm the below balances to us pertaining to the account balances of [Client Organization] as are held with you as on [Period-end Date]:
+            </p>
+            
+            {request.formData.currentAccounts && request.formData.currentAccounts.length > 0 && (
+              <div className="space-y-2">
+                <h4 className="font-semibold">1. Current Accounts</h4>
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Designation of Account</TableHead>
+                        <TableHead>Currency</TableHead>
+                        <TableHead>Balance [Credit/(Debit)]</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {request.formData.currentAccounts.map((row: any, index: number) => (
+                        <TableRow key={index}>
+                          <TableCell>{row.designation || "-"}</TableCell>
+                          <TableCell>{row.currency || "-"}</TableCell>
+                          <TableCell>
+                            {row.balance ? formatIndianNumber(row.balance) : "-"}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            )}
+
+            {/* Add other sections as needed */}
+            {request.formData.interestAccrued && (
+              <div className="space-y-2 pt-4 border-t">
+                <Label>11. Interest Accrued</Label>
+                <p className="font-medium">
+                  {request.formData.interestAccrued ? formatIndianNumber(request.formData.interestAccrued) : "-"}
+                </p>
+              </div>
+            )}
+          </div>
+        );
+
+      case "Litigations & Claims":
+        return (
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground mb-4">
+              Kindly furnish a list that describes and evaluates pending or threatened litigations, claims, and assessments...
+            </p>
+            {request.formData.mattersDetails && (
+              <div className="bg-muted p-4 rounded-md">
+                <p className="text-sm whitespace-pre-wrap">{request.formData.mattersDetails}</p>
+              </div>
+            )}
+          </div>
+        );
+
+      default:
+        return (
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Form template for {request.area}
+            </p>
+            {request.formData && Object.keys(request.formData).length > 0 && (
+              <div className="bg-muted p-4 rounded-md">
+                <pre className="text-xs overflow-auto">
+                  {JSON.stringify(request.formData, null, 2)}
+                </pre>
+              </div>
+            )}
+          </div>
+        );
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="space-y-2 border-b pb-4">
+        <p className="text-sm text-muted-foreground">
+          Dear {request.recipientName},
+        </p>
+        {renderFormByArea()}
+      </div>
+
+      {request.formData.isCertified && (
+        <div className="space-y-2 pt-4 border-t">
+          <div className="flex items-start gap-2">
+            <CheckCircle className="h-4 w-4 text-success mt-0.5" />
+            <p className="text-sm">
+              We certify that the above particulars (read alongwith the attachments if any) are full and correct.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {request.formData.name && (
+        <div className="grid grid-cols-2 gap-4 pt-4 border-t">
+          {request.formData.organizationName && (
+            <div>
+              <p className="text-sm text-muted-foreground">Organization Name</p>
+              <p className="font-medium">{request.formData.organizationName}</p>
+            </div>
+          )}
+          <div>
+            <p className="text-sm text-muted-foreground">Name</p>
+            <p className="font-medium">{request.formData.name}</p>
+          </div>
+          {request.formData.designation && (
+            <div>
+              <p className="text-sm text-muted-foreground">Designation</p>
+              <p className="font-medium">{request.formData.designation}</p>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
 
 const ClientDashboard = () => {
   const navigate = useNavigate();
@@ -158,6 +354,32 @@ const ClientDashboard = () => {
       default:
         return (
           <Badge variant="outline">
+            Pending
+          </Badge>
+        );
+    }
+  };
+
+  const getConfirmationStatusBadge = (status?: string) => {
+    switch (status) {
+      case "confirmed":
+        return (
+          <Badge className="bg-success text-success-foreground">
+            <CheckCircle className="h-3 w-3 mr-1" />
+            Confirmed
+          </Badge>
+        );
+      case "not-confirmed":
+        return (
+          <Badge variant="destructive">
+            <XCircle className="h-3 w-3 mr-1" />
+            Not Confirmed
+          </Badge>
+        );
+      default:
+        return (
+          <Badge variant="outline">
+            <Clock className="h-3 w-3 mr-1" />
             Pending
           </Badge>
         );
@@ -242,6 +464,7 @@ const ClientDashboard = () => {
                     <TableHead>Recipient Name</TableHead>
                     <TableHead>Remarks by Auditor</TableHead>
                     <TableHead>Attachment by Auditor</TableHead>
+                    <TableHead>Confirmation Status</TableHead>
                     <TableHead className="text-right">Authorize?</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -307,6 +530,103 @@ const ClientDashboard = () => {
                           <span className="text-sm text-muted-foreground">No attachments</span>
                         )}
                       </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          {getConfirmationStatusBadge(request.confirmationStatus)}
+                          {request.formData && (
+                            <Dialog>
+                              <DialogTrigger asChild>
+                                <Button size="sm" variant="ghost">
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                              </DialogTrigger>
+                              <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+                                <DialogHeader>
+                                  <DialogTitle>Confirmation Response - {request.id}</DialogTitle>
+                                  <DialogDescription>
+                                    View confirmation details submitted by {request.confirmingParty}
+                                  </DialogDescription>
+                                </DialogHeader>
+                                <div className="space-y-6 py-4">
+                                  {/* Confirmation Metadata */}
+                                  <div className="grid grid-cols-2 gap-4 text-sm">
+                                    <div>
+                                      <p className="text-muted-foreground">Area</p>
+                                      <p className="font-medium">{request.area}</p>
+                                    </div>
+                                    <div>
+                                      <p className="text-muted-foreground">Confirming Party</p>
+                                      <p className="font-medium">{request.confirmingParty}</p>
+                                    </div>
+                                    <div>
+                                      <p className="text-muted-foreground">Recipient Name</p>
+                                      <p className="font-medium">{request.recipientName}</p>
+                                    </div>
+                                    <div>
+                                      <p className="text-muted-foreground">Recipient Email</p>
+                                      <p className="font-medium">{request.recipientEmail}</p>
+                                    </div>
+                                    {request.confirmedDate && (
+                                      <div>
+                                        <p className="text-muted-foreground">Confirmed Date</p>
+                                        <p className="font-medium">{formatIndianDateTime(request.confirmedDate)}</p>
+                                      </div>
+                                    )}
+                                    <div>
+                                      <p className="text-muted-foreground">Status</p>
+                                      {getConfirmationStatusBadge(request.confirmationStatus)}
+                                    </div>
+                                  </div>
+
+                                  {/* Confirmation Form Template Section */}
+                                  <div className="pt-4 border-t">
+                                    <h3 className="text-lg font-semibold mb-4">Confirmation Form Template & Response</h3>
+                                    <Card>
+                                      <CardContent className="pt-6">
+                                        <ConfirmationFormView request={request} />
+                                      </CardContent>
+                                    </Card>
+                                  </div>
+
+                                  {/* Remarks from Confirming Party */}
+                                  {request.remarks && (
+                                    <div className="pt-4 border-t">
+                                      <p className="text-sm font-medium mb-2">Remarks from Confirming Party</p>
+                                      <div className="bg-muted p-3 rounded-md">
+                                        <p className="text-sm">{request.remarks}</p>
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {/* Attachments from Confirming Party */}
+                                  {request.attachments && request.attachments.length > 0 ? (
+                                    <div className="pt-4 border-t">
+                                      <p className="text-sm font-medium mb-2">Attachments from Confirming Party</p>
+                                      <div className="space-y-2">
+                                        {request.attachments.map((file, index) => (
+                                          <div key={index} className="flex items-center gap-2 p-2 bg-muted rounded-md">
+                                            <FileText className="h-4 w-4" />
+                                            <span className="text-sm flex-1">{file}</span>
+                                            <Button size="sm" variant="ghost">
+                                              <Download className="h-4 w-4 mr-1" />
+                                              Download
+                                            </Button>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div className="pt-4 border-t">
+                                      <p className="text-sm font-medium mb-2">Attachments from Confirming Party</p>
+                                      <p className="text-sm text-muted-foreground">No attachments provided</p>
+                                    </div>
+                                  )}
+                                </div>
+                              </DialogContent>
+                            </Dialog>
+                          )}
+                        </div>
+                      </TableCell>
                       <TableCell className="text-right">
                         {/* For Authorizer: Show buttons for pending, status for completed */}
                         {userRole === "Authorizer" ? (
@@ -314,20 +634,19 @@ const ClientDashboard = () => {
                             <div className="flex gap-2 justify-end">
                               <Button
                                 size="sm"
-                                variant="outline"
-                                className="bg-success text-success-foreground hover:bg-success/90"
+                                className="bg-success text-success-foreground hover:bg-success/90 min-w-[100px]"
                                 onClick={() => handleAuthorize(request.id)}
                               >
-                                <CheckCircle className="h-3 w-3 mr-1" />
+                                <CheckCircle className="h-3 w-3 mr-1.5" />
                                 Authorize
                               </Button>
                               <Button
                                 size="sm"
-                                variant="outline"
-                                className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                                variant="destructive"
+                                className="min-w-[100px]"
                                 onClick={() => handleReject(request.id)}
                               >
-                                <XCircle className="h-3 w-3 mr-1" />
+                                <XCircle className="h-3 w-3 mr-1.5" />
                                 Reject
                               </Button>
                             </div>
@@ -341,7 +660,7 @@ const ClientDashboard = () => {
                               )}
                               {request.authorizedDate && (
                                 <span className="text-xs text-muted-foreground">
-                                  {new Date(request.authorizedDate).toLocaleString()}
+                                  {formatIndianDateTime(request.authorizedDate)}
                                 </span>
                               )}
                             </div>
@@ -357,7 +676,7 @@ const ClientDashboard = () => {
                             )}
                             {request.authorizedDate && (
                               <span className="text-xs text-muted-foreground">
-                                {new Date(request.authorizedDate).toLocaleString()}
+                                {formatIndianDateTime(request.authorizedDate)}
                               </span>
                             )}
                           </div>

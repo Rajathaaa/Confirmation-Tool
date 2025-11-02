@@ -288,61 +288,7 @@ export const ConfirmingPartyDetails = () => {
         </CardContent>
       </Card>
 
-      {/* Domain Test Results - Keep existing if needed for reference */}
-      <div className="space-y-4">
-        {parties
-          .filter(p => p.domainTestStatus === "passed" || p.domainTestStatus === "general-domain")
-          .map((party) => (
-            <Card key={party.id}>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle>{party.name}</CardTitle>
-                    <CardDescription>{party.recipientEmail}</CardDescription>
-                  </div>
-                  {getStatusBadge(party.domainTestStatus, party.id)}
-                </div>
-              </CardHeader>
-              <CardContent>
-                {party.domainTestStatus === "general-domain" ? (
-                  <div className="flex items-start gap-3 p-4 bg-warning/10 rounded-lg border border-warning">
-                    <AlertTriangle className="h-5 w-5 text-warning mt-0.5" />
-                    <div>
-                      <p className="font-semibold">General Domain Detected</p>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        The domain of the confirming party is a general public email domain (e.g., gmail.com, yahoo.com). 
-                        Domain testing is not performed for general domains as they don't provide organization-specific information.
-                      </p>
-                    </div>
-                  </div>
-                ) : party.domainInfo ? (
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div>
-                      <p className="text-sm text-muted-foreground">Domain</p>
-                      <p className="font-semibold">{party.domainInfo.domain}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Creation Date</p>
-                      <p className="font-semibold">{party.domainInfo.creationDate}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Expiry Date</p>
-                      <p className="font-semibold">{party.domainInfo.expiryDate}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Status</p>
-                      <p className="font-semibold text-success">{party.domainInfo.status}</p>
-                    </div>
-                    <div className="col-span-2">
-                      <p className="text-sm text-muted-foreground">Registrar</p>
-                      <p className="font-semibold">{party.domainInfo.registrar}</p>
-                    </div>
-                  </div>
-                ) : null}
-              </CardContent>
-            </Card>
-          ))}
-      </div>
+      {/* Remove lines 291-345 - the Domain Test Results cards section */}
     </div>
   );
 };

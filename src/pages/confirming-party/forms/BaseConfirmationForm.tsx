@@ -6,19 +6,22 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Upload, Save, Send } from "lucide-react";
 import { useState } from "react";
+import { formatIndianDate, formatIndianDateTime, formatIndianNumber, formatNumberInput, parseIndianNumber } from "@/lib/utils";
 
 interface BaseConfirmationFormProps {
   confirmation: any;
   children?: React.ReactNode;
   certificationText?: string;
   onSubmit: (data: any) => void;
+  hideRemarks?: boolean; // Add this prop
 }
 
 export const BaseConfirmationForm = ({
   confirmation,
   children,
   certificationText = "We certify that the above particulars (read alongwith the attachments if any) are full and correct.",
-  onSubmit
+  onSubmit,
+  hideRemarks = false // Add default value
 }: BaseConfirmationFormProps) => {
   const [formData, setFormData] = useState<any>({});
   const [remarks, setRemarks] = useState("");
@@ -91,16 +94,18 @@ export const BaseConfirmationForm = ({
           {children}
         </div>
 
-        {/* Remarks */}
-        <div className="space-y-2">
-          <Label>Remarks</Label>
-          <Textarea
-            placeholder="Enter any remarks or additional information..."
-            value={remarks}
-            onChange={(e) => setRemarks(e.target.value)}
-            rows={4}
-          />
-        </div>
+        {/* Remarks - Conditionally render */}
+        {!hideRemarks && (
+          <div className="space-y-2">
+            <Label>Remarks</Label>
+            <Textarea
+              placeholder="Enter any remarks or additional information..."
+              value={remarks}
+              onChange={(e) => setRemarks(e.target.value)}
+              rows={4}
+            />
+          </div>
+        )}
 
         {/* Attachments */}
         <div className="space-y-2">
@@ -140,7 +145,7 @@ export const BaseConfirmationForm = ({
               checked={isCertified}
               onCheckedChange={(checked) => setIsCertified(checked as boolean)}
             />
-            <Label htmlFor="certification" className="text-sm font-normal cursor-pointer">
+            <Label htmlFor="certification" className="text-sm font-normal cursor-pointer whitespace-pre-line">
               {certificationText}
             </Label>
           </div>

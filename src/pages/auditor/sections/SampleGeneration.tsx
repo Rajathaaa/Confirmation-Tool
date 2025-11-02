@@ -7,6 +7,30 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Upload, FileText, Trash2, Download } from "lucide-react";
 import { useState } from "react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Textarea } from "@/components/ui/textarea";
+import { Copy } from "lucide-react";
+
+// Add template interfaces
+interface AuthorizationTemplate {
+  id: string;
+  name: string;
+  content: string;
+  type: "inbuilt" | "custom";
+  engagementId?: string; // For custom templates, tied to engagement
+}
+
+interface Sample {
+  id: string;
+  sampleSetId: string;
+  confirmingParty: string;
+  amount: string;
+  recipientName: string;
+  recipientEmail: string;
+  selectedTemplateId?: string;
+}
 
 interface SampleSet {
   id: string;
@@ -16,7 +40,30 @@ interface SampleSet {
   sampleSize: number;
   populationSize: number;
   status: "pending" | "generated";
+  samples?: Sample[]; // Individual samples within the set
 }
+
+// Inbuilt templates (static)
+const INBUILT_TEMPLATES: AuthorizationTemplate[] = [
+  {
+    id: "TMPL-001",
+    name: "Standard Authorization Template",
+    content: "This is a standard authorization letter template for confirmation requests...",
+    type: "inbuilt"
+  },
+  {
+    id: "TMPL-002",
+    name: "Formal Authorization Template",
+    content: "This is a formal authorization letter template...",
+    type: "inbuilt"
+  },
+  {
+    id: "TMPL-003",
+    name: "Brief Authorization Template",
+    content: "This is a brief authorization letter template...",
+    type: "inbuilt"
+  }
+];
 
 const AUDIT_AREAS = [
   "Trade Receivables",
@@ -49,6 +96,16 @@ export const SampleGeneration = () => {
   const [newSetName, setNewSetName] = useState("");
   const [showNewSetForm, setShowNewSetForm] = useState(false);
 
+  // New state for templates and template selection
+  const [customTemplates, setCustomTemplates] = useState<AuthorizationTemplate[]>([]);
+  const [templateSelectionDialogOpen, setTemplateSelectionDialogOpen] = useState(false);
+  const [selectedSampleSetId, setSelectedSampleSetId] = useState<string | null>(null);
+  const [selectedSampleId, setSelectedSampleId] = useState<string | null>(null);
+  const [sampleTemplateSelections, setSampleTemplateSelections] = useState<Record<string, string>>({});
+  const [showCustomTemplateForm, setShowCustomTemplateForm] = useState(false);
+  const [newTemplateName, setNewTemplateName] = useState("");
+  const [newTemplateContent, setNewTemplateContent] = useState("");
+
   const addArea = (area: string) => {
     if (!selectedAreas.includes(area)) {
       setSelectedAreas([...selectedAreas, area]);
@@ -74,6 +131,130 @@ export const SampleGeneration = () => {
       setNewSetName("");
       setShowNewSetForm(false);
     }
+  };
+
+  // Generate mock samples for a sample set when it's generated
+  const generateSamplesForSet = (sampleSet: SampleSet): Sample[] => {
+    if (sampleSet.status !== "generated") return [];
+    // Mock sample generation - in real app, this would come from actual sample data
+    const samples: Sample[] = [];
+    for (let i = 0; i < sampleSet.sampleSize; i++) {
+      samples.push({
+        id: `SMPL-${sampleSet.id}-${i + 1}`,
+        sampleSetId: sampleSet.id,
+        confirmingParty: `Sample Party ${i + 1}`,
+        amount: `$${(Math.random() * 100000).toFixed(2)}`,
+        recipientName: `Recipient ${i + 1}`,
+        recipientEmail: `recipient${i + 1}@example.com`
+      });
+    }
+    return samples;
+  };
+
+  // Get all available templates (inbuilt + custom for this engagement)
+  const getAllTemplates = (): AuthorizationTemplate[] => {
+    // In real app, filter custom templates by engagement ID
+    return [...INBUILT_TEMPLATES, ...customTemplates];
+  };
+
+  // Handle "Generate Authorization Letter" button click
+  const handleGenerateAuthorizationLetter = (sampleSetId: string) => {
+    setSelectedSampleSetId(sampleSetId);
+    setTemplateSelectionDialogOpen(true);
+    
+    // Ensure samples are generated for this set
+    const sampleSet = Object.values(sampleSets)
+      .flat()
+      .find(set => set.id === sampleSetId);
+    
+    if (sampleSet && sampleSet.status === "generated") {
+      const samples = generateSamplesForSet(sampleSet);
+      // Update sample sets with generated samples
+      setSampleSets(prev => {
+        const updated = { ...prev };
+        Object.keys(updated).forEach(area => {
+          updated[area] = updated[area].map(set => 
+            set.id === sampleSetId 
+              ? { ...set, samples }
+              : set
+          );
+        });
+        return updated;
+      });
+    }
+  };
+
+  // Get samples for a sample set
+  const getSamplesForSet = (sampleSetId: string): Sample[] => {
+    const sampleSet = Object.values(sampleSets)
+      .flat()
+      .find(set => set.id === sampleSetId);
+    return sampleSet?.samples || [];
+  };
+
+  // Handle template selection for a sample
+  const handleTemplateSelection = (sampleId: string, templateId: string) => {
+    setSampleTemplateSelections(prev => ({
+      ...prev,
+      [sampleId]: templateId
+    }));
+  };
+
+  // Handle autofill template to all samples in the sample set
+  const handleAutofillTemplate = (templateId: string) => {
+    if (!selectedSampleSetId) return;
+    const samples = getSamplesForSet(selectedSampleSetId);
+    const newSelections: Record<string, string> = {};
+    samples.forEach(sample => {
+      newSelections[sample.id] = templateId;
+    });
+    setSampleTemplateSelections(prev => ({
+      ...prev,
+      ...newSelections
+    }));
+  };
+
+  // Create custom template
+  const handleCreateCustomTemplate = () => {
+    if (newTemplateName && newTemplateContent) {
+      const newTemplate: AuthorizationTemplate = {
+        id: `TMPL-CUSTOM-${Date.now()}`,
+        name: newTemplateName,
+        content: newTemplateContent,
+        type: "custom",
+        engagementId: "ENG-001" // In real app, get from engagement context
+      };
+      setCustomTemplates(prev => [...prev, newTemplate]);
+      setNewTemplateName("");
+      setNewTemplateContent("");
+      setShowCustomTemplateForm(false);
+    }
+  };
+
+  // Generate authorization letters after template selection
+  const handleGenerateLetters = () => {
+    if (!selectedSampleSetId) return;
+    
+    const samples = getSamplesForSet(selectedSampleSetId);
+    const templates = getAllTemplates();
+    
+    // Validate all samples have templates selected
+    const samplesWithoutTemplates = samples.filter(
+      sample => !sampleTemplateSelections[sample.id]
+    );
+    
+    if (samplesWithoutTemplates.length > 0) {
+      alert("Please select a template for all samples before generating letters.");
+      return;
+    }
+
+    // Generate authorization letters (in real app, this would create the letters)
+    console.log("Generating authorization letters with templates:", sampleTemplateSelections);
+    
+    // Close dialog and reset
+    setTemplateSelectionDialogOpen(false);
+    setSelectedSampleSetId(null);
+    setSampleTemplateSelections({});
   };
 
   return (
@@ -212,10 +393,214 @@ export const SampleGeneration = () => {
                         <Download className="h-4 w-4 mr-2" />
                         Download Sample
                       </Button>
-                      <Button className="flex-1">
-                        <FileText className="h-4 w-4 mr-2" />
-                        Generate Authorization Letter
-                      </Button>
+                      <Dialog 
+                        open={templateSelectionDialogOpen && selectedSampleSetId === set.id}
+                        onOpenChange={(open) => {
+                          setTemplateSelectionDialogOpen(open);
+                          if (!open) {
+                            setSelectedSampleSetId(null);
+                            setSampleTemplateSelections({});
+                            setShowCustomTemplateForm(false);
+                          }
+                        }}
+                      >
+                        <DialogTrigger asChild>
+                          <Button 
+                            className="flex-1"
+                            onClick={() => handleGenerateAuthorizationLetter(set.id)}
+                          >
+                            <FileText className="h-4 w-4 mr-2" />
+                            Generate Authorization Letter
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+                          <DialogHeader>
+                            <DialogTitle>Select Authorization Letter Templates</DialogTitle>
+                            <DialogDescription>
+                              Choose templates for each sample in "{set.name}". 
+                              You can select individually or autofill to all samples in this set.
+                            </DialogDescription>
+                          </DialogHeader>
+                          
+                          <div className="space-y-6 py-4">
+                            {/* Template Selection Section */}
+                            <div className="space-y-4">
+                              <div className="flex items-center justify-between">
+                                <h3 className="text-lg font-semibold">Available Templates</h3>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setShowCustomTemplateForm(!showCustomTemplateForm)}
+                                >
+                                  <Plus className="h-4 w-4 mr-2" />
+                                  Create Custom Template
+                                </Button>
+                              </div>
+
+                              {/* Custom Template Creation Form */}
+                              {showCustomTemplateForm && (
+                                <Card className="border-2 border-primary">
+                                  <CardHeader>
+                                    <CardTitle className="text-base">Create Custom Template</CardTitle>
+                                    <CardDescription>
+                                      This template will be available for all confirmations in this engagement.
+                                    </CardDescription>
+                                  </CardHeader>
+                                  <CardContent className="space-y-4">
+                                    <div>
+                                      <Label>Template Name</Label>
+                                      <Input
+                                        value={newTemplateName}
+                                        onChange={(e) => setNewTemplateName(e.target.value)}
+                                        placeholder="e.g., Formal Bank Confirmation Template"
+                                      />
+                                    </div>
+                                    <div>
+                                      <Label>Template Content</Label>
+                                      <Textarea
+                                        value={newTemplateContent}
+                                        onChange={(e) => setNewTemplateContent(e.target.value)}
+                                        placeholder="Enter the template content here..."
+                                        rows={8}
+                                      />
+                                    </div>
+                                    <div className="flex gap-2">
+                                      <Button onClick={handleCreateCustomTemplate}>
+                                        Create Template
+                                      </Button>
+                                      <Button 
+                                        variant="outline"
+                                        onClick={() => {
+                                          setShowCustomTemplateForm(false);
+                                          setNewTemplateName("");
+                                          setNewTemplateContent("");
+                                        }}
+                                      >
+                                        Cancel
+                                      </Button>
+                                    </div>
+                                  </CardContent>
+                                </Card>
+                              )}
+
+                              {/* Templates List */}
+                              <div className="grid grid-cols-1 gap-2 max-h-60 overflow-y-auto border rounded-md p-4">
+                                {getAllTemplates().map((template) => (
+                                  <div 
+                                    key={template.id}
+                                    className="flex items-start gap-3 p-3 border rounded-md hover:bg-muted"
+                                  >
+                                    <RadioGroup
+                                      value={selectedSampleId && sampleTemplateSelections[selectedSampleId] === template.id ? template.id : undefined}
+                                      onValueChange={(value) => {
+                                        if (selectedSampleId) {
+                                          handleTemplateSelection(selectedSampleId, value);
+                                        }
+                                      }}
+                                    >
+                                      <div className="flex items-center space-x-2">
+                                        <RadioGroupItem value={template.id} id={template.id} />
+                                        <Label htmlFor={template.id} className="cursor-pointer flex-1">
+                                          <div>
+                                            <div className="flex items-center gap-2">
+                                              <span className="font-medium">{template.name}</span>
+                                              <Badge variant={template.type === "inbuilt" ? "default" : "secondary"}>
+                                                {template.type === "inbuilt" ? "Inbuilt" : "Custom"}
+                                              </Badge>
+                                            </div>
+                                            <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                                              {template.content}
+                                            </p>
+                                          </div>
+                                        </Label>
+                                      </div>
+                                    </RadioGroup>
+                                    {!selectedSampleId && (
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handleAutofillTemplate(template.id)}
+                                      >
+                                        <Copy className="h-4 w-4 mr-1" />
+                                        Autofill to All
+                                      </Button>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* Samples List */}
+                            <div className="space-y-4">
+                              <h3 className="text-lg font-semibold">Samples in This Set</h3>
+                              <div className="rounded-md border">
+                                <Table>
+                                  <TableHeader>
+                                    <TableRow>
+                                      <TableHead>Sample ID</TableHead>
+                                      <TableHead>Confirming Party</TableHead>
+                                      <TableHead>Recipient</TableHead>
+                                      <TableHead>Amount</TableHead>
+                                      <TableHead>Selected Template</TableHead>
+                                    </TableRow>
+                                  </TableHeader>
+                                  <TableBody>
+                                    {getSamplesForSet(set.id).map((sample) => {
+                                      const selectedTemplateId = sampleTemplateSelections[sample.id];
+                                      const selectedTemplate = selectedTemplateId 
+                                        ? getAllTemplates().find(t => t.id === selectedTemplateId)
+                                        : null;
+                                      
+                                      return (
+                                        <TableRow 
+                                          key={sample.id}
+                                          className={selectedSampleId === sample.id ? "bg-muted" : ""}
+                                          onClick={() => setSelectedSampleId(sample.id)}
+                                        >
+                                          <TableCell className="font-medium">{sample.id}</TableCell>
+                                          <TableCell>{sample.confirmingParty}</TableCell>
+                                          <TableCell>
+                                            <div>
+                                              <p className="font-medium">{sample.recipientName}</p>
+                                              <p className="text-xs text-muted-foreground">{sample.recipientEmail}</p>
+                                            </div>
+                                          </TableCell>
+                                          <TableCell>{sample.amount}</TableCell>
+                                          <TableCell>
+                                            {selectedTemplate ? (
+                                              <Badge variant="outline">{selectedTemplate.name}</Badge>
+                                            ) : (
+                                              <span className="text-sm text-muted-foreground">Not selected</span>
+                                            )}
+                                          </TableCell>
+                                        </TableRow>
+                                      );
+                                    })}
+                                  </TableBody>
+                                </Table>
+                              </div>
+                            </div>
+
+                            {/* Action Buttons */}
+                            <div className="flex justify-end gap-2 pt-4 border-t">
+                              <Button
+                                variant="outline"
+                                onClick={() => {
+                                  setTemplateSelectionDialogOpen(false);
+                                  setSelectedSampleSetId(null);
+                                  setSampleTemplateSelections({});
+                                  setShowCustomTemplateForm(false);
+                                }}
+                              >
+                                Cancel
+                              </Button>
+                              <Button onClick={handleGenerateLetters}>
+                                Generate Authorization Letters
+                              </Button>
+                            </div>
+                          </div>
+                        </DialogContent>
+                      </Dialog>
                       <Button variant="outline" size="icon">
                         <Trash2 className="h-4 w-4" />
                       </Button>

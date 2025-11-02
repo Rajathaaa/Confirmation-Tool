@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
+import { formatNumberInput, parseIndianNumber } from "@/lib/utils";
 
 const TradeReceivablesForm = ({ confirmation }: { confirmation: any }) => {
   const [rows, setRows] = useState([{ amount: "", currency: "" }]);
@@ -58,9 +59,12 @@ const TradeReceivablesForm = ({ confirmation }: { confirmation: any }) => {
                 <TableRow key={index}>
                   <TableCell>
                     <Input
-                      type="number"
-                      value={row.amount}
-                      onChange={(e) => updateRow(index, "amount", e.target.value)}
+                      type="text"
+                      value={formatNumberInput(row.amount)}
+                      onChange={(e) => {
+                        const numericValue = parseIndianNumber(e.target.value);
+                        updateRow(index, "amount", numericValue.toString());
+                      }}
                       placeholder="Enter amount"
                     />
                   </TableCell>
