@@ -124,6 +124,16 @@ const mockAuthorizationRequests: AuthorizationRequest[] = [
     authorizedBy: "Sarah Johnson",
     authorizedDate: "2025-01-21 10:15:00",
     confirmationStatus: "not-confirmed",
+  },
+  {
+    id: "AUTH-005",
+    area: "Trade Receivables",
+    confirmingParty: "New Company Ltd.",
+    recipientEmail: "contact@newcompany.com",
+    recipientName: "John Doe",
+    remarksByAuditor: "Please review and authorize this confirmation request.",
+    attachmentByAuditor: ["authorization_letter_005.pdf"],
+    status: "pending", // This will show the Accept/Reject buttons
   }
 ];
 
@@ -628,29 +638,29 @@ const ClientDashboard = () => {
                         </div>
                       </TableCell>
                       <TableCell className="text-right">
-                        {/* For Authorizer: Show buttons for pending, status for completed */}
+                        {/* For Authorizer: Show buttons only for pending, status badge for completed */}
                         {userRole === "Authorizer" ? (
                           request.status === "pending" ? (
-                            <div className="flex gap-2 justify-end">
+                            <div className="flex gap-3 justify-end">
                               <Button
-                                size="sm"
-                                className="bg-success text-success-foreground hover:bg-success/90 min-w-[100px]"
+                                size="default"
+                                className="bg-gradient-to-br from-emerald-500 via-green-600 to-emerald-700 hover:from-emerald-600 hover:via-green-700 hover:to-emerald-800 text-white font-semibold shadow-md hover:shadow-lg transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] px-7 py-2.5 rounded-xl border-0 hover:border-green-400/30 border-2"
                                 onClick={() => handleAuthorize(request.id)}
                               >
-                                <CheckCircle className="h-3 w-3 mr-1.5" />
-                                Authorize
+                                <CheckCircle className="h-4 w-4 mr-2 stroke-[2.5]" />
+                                Accept
                               </Button>
                               <Button
-                                size="sm"
-                                variant="destructive"
-                                className="min-w-[100px]"
+                                size="default"
+                                className="bg-gradient-to-br from-rose-500 via-red-600 to-rose-700 hover:from-rose-600 hover:via-red-700 hover:to-rose-800 text-white font-semibold shadow-md hover:shadow-lg transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] px-7 py-2.5 rounded-xl border-0 hover:border-red-400/30 border-2"
                                 onClick={() => handleReject(request.id)}
                               >
-                                <XCircle className="h-3 w-3 mr-1.5" />
+                                <XCircle className="h-4 w-4 mr-2 stroke-[2.5]" />
                                 Reject
                               </Button>
                             </div>
                           ) : (
+                            /* Show status badge only after action is taken */
                             <div className="flex flex-col items-end gap-1">
                               {getStatusBadge(request.status)}
                               {request.authorizedBy && (
@@ -666,7 +676,7 @@ const ClientDashboard = () => {
                             </div>
                           )
                         ) : (
-                          /* For Viewer: Always show only status - same format as Authorizer's completed status */
+                          /* For Viewer: Always show only status */
                           <div className="flex flex-col items-end gap-1">
                             {getStatusBadge(request.status)}
                             {request.authorizedBy && (
