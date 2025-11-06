@@ -39,6 +39,7 @@ interface Confirmation {
   formData?: any;
   balanceType?: string;
   amountConfirmed?: string;
+  periodEndDate?: string; // Add this
 }
 
 const AUDIT_AREAS = [
@@ -64,6 +65,7 @@ const mockConfirmations: Record<string, Confirmation[]> = {
       confirmedDate: "2025-01-18 14:22:15",
       confirmedBy: "John Smith",
       confirmedIP: "203.45.67.89",
+      periodEndDate: "2024-12-31", // Add this
       balanceType: "Accounts Receivable",
       amountConfirmed: "$125,450.00",
       remarks: "Balance confirmed as of December 31, 2024. All invoices have been reviewed and verified.",
@@ -85,6 +87,22 @@ const mockConfirmations: Record<string, Confirmation[]> = {
           action: "Confirmation request created",
           performedBy: "Sarah Johnson (Auditor)",
           details: "Initial confirmation request generated for Trade Receivables",
+          status: "completed"
+        },
+        {
+          timestamp: "2025-01-12 14:30:00",
+          stage: "Client Authorization",
+          action: "Client authorization received",
+          performedBy: "David Miller (Client Finance Director)",
+          details: "Client approved sending confirmation to ABC Corporation Ltd.",
+          status: "completed"
+        },
+        {
+          timestamp: "2025-01-14 11:20:00",
+          stage: "Domain Testing",
+          action: "Email domain verified",
+          performedBy: "System",
+          details: "Domain abccorp.com verified and email deliverability confirmed",
           status: "completed"
         },
         {
@@ -117,6 +135,7 @@ const mockConfirmations: Record<string, Confirmation[]> = {
       confirmedDate: "2025-01-19 09:15:00",
       confirmedBy: "Lisa Wong",
       confirmedIP: "198.51.100.42",
+      periodEndDate: "2024-12-31", // Add this
       balanceType: "Accounts Receivable",
       amountConfirmed: "$87,230.50",
       remarks: "Confirmed with minor variance of $150",
@@ -137,6 +156,22 @@ const mockConfirmations: Record<string, Confirmation[]> = {
           action: "Confirmation request created",
           performedBy: "Sarah Johnson (Auditor)",
           details: "Initial confirmation request generated for Trade Receivables",
+          status: "completed"
+        },
+        {
+          timestamp: "2025-01-16 15:20:00",
+          stage: "Client Authorization",
+          action: "Client authorization received",
+          performedBy: "David Miller (Client Finance Director)",
+          details: "Client approved sending confirmation to DEF Solutions Ltd.",
+          status: "completed"
+        },
+        {
+          timestamp: "2025-01-17 08:45:00",
+          stage: "Domain Testing",
+          action: "Email domain verified",
+          performedBy: "System",
+          details: "Domain defsolutions.com verified and email deliverability confirmed",
           status: "completed"
         },
         {
@@ -171,6 +206,7 @@ const mockConfirmations: Record<string, Confirmation[]> = {
       confirmedDate: "2025-01-20 16:30:00",
       confirmedBy: "Michael Brown",
       confirmedIP: "192.168.1.200",
+      periodEndDate: "2024-12-31", // Add this
       balanceType: "Accounts Payable",
       amountConfirmed: "$45,890.00",
       remarks: "Balance confirmed, payment terms 30 days",
@@ -191,6 +227,22 @@ const mockConfirmations: Record<string, Confirmation[]> = {
           action: "Confirmation request created",
           performedBy: "Sarah Johnson (Auditor)",
           details: "Initial confirmation request generated for Trade Payables",
+          status: "completed"
+        },
+        {
+          timestamp: "2025-01-17 11:15:00",
+          stage: "Client Authorization",
+          action: "Client authorization received",
+          performedBy: "David Miller (Client Finance Director)",
+          details: "Client approved sending confirmation to Global Supplies Inc.",
+          status: "completed"
+        },
+        {
+          timestamp: "2025-01-18 10:30:00",
+          stage: "Domain Testing",
+          action: "Email domain verified",
+          performedBy: "System",
+          details: "Domain globalsupplies.com verified and email deliverability confirmed",
           status: "completed"
         },
         {
@@ -234,7 +286,7 @@ const ConfirmationFormView = ({ confirmation }: { confirmation: Confirmation }) 
         return (
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground mb-4">
-              Kindly confirm to us the following information in respect of amounts {confirmation.area === "Trade Receivables" ? "receivable from" : "payable to"} you as on [Period-end Date]:
+              Kindly confirm to us the following information in respect of amounts {confirmation.area === "Trade Receivables" ? "receivable from" : "payable to"} you as on {confirmation.periodEndDate ? formatIndianDate(confirmation.periodEndDate) : "[Period-end Date]"}:
             </p>
             {confirmation.formData.amounts && confirmation.formData.amounts.length > 0 && (
               <div className="rounded-md border">
@@ -264,7 +316,7 @@ const ConfirmationFormView = ({ confirmation }: { confirmation: Confirmation }) 
         return (
           <div className="space-y-6">
             <p className="text-sm text-muted-foreground mb-6">
-              Kindly confirm the below balances to us pertaining to the account balances of [Client Organization] as are held with you as on [Period-end Date]:
+              Kindly confirm the below balances to us pertaining to the account balances of [Client Organization] as are held with you as on {confirmation.periodEndDate ? formatIndianDate(confirmation.periodEndDate) : "[Period-end Date]"}:
             </p>
             
             {confirmation.formData.currentAccounts && confirmation.formData.currentAccounts.length > 0 && (
@@ -582,6 +634,12 @@ export const WorkingPaper = () => {
                                     <p className="text-muted-foreground">Organization</p>
                                     <p className="font-medium">{confirmation.recipientOrg}</p>
                                   </div>
+                                  {confirmation.periodEndDate && (
+                                    <div>
+                                      <p className="text-muted-foreground">Period End Date</p>
+                                      <p className="font-medium">{formatIndianDate(confirmation.periodEndDate)}</p>
+                                    </div>
+                                  )}
                                   {confirmation.sentDate && (
                                     <div>
                                       <p className="text-muted-foreground">Sent Date</p>

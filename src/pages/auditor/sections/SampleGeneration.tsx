@@ -76,6 +76,27 @@ const AUDIT_AREAS = [
   "Other Current Assets",
 ];
 
+// Add a constant for all confirmation form names
+const CONFIRMATION_FORM_NAMES = [
+  "Cash & Cash Equivalents",
+  "Trade Receivables",
+  "Trade Payables",
+  "Borrowings",
+  "Inventory",
+  "Fixed Assets",
+  "Investments",
+  "Litigations & Claims",
+  "Related Party Disclosure",
+  "Other Assets - Security Deposits",
+  "Other Liabilities - Security Deposits",
+  "Other Receivables - Advance to Supplier",
+  "Other Receivables - Capital Advances",
+  "Other Liabilities - Advance from Customer",
+  "Other Liabilities - Capex Vendors",
+  "Plan Assets",
+  "Trustee"
+];
+
 export const SampleGeneration = () => {
   const [selectedAreas, setSelectedAreas] = useState<string[]>(["Trade Receivables"]);
   const [activeArea, setActiveArea] = useState("Trade Receivables");
@@ -105,6 +126,12 @@ export const SampleGeneration = () => {
   const [showCustomTemplateForm, setShowCustomTemplateForm] = useState(false);
   const [newTemplateName, setNewTemplateName] = useState("");
   const [newTemplateContent, setNewTemplateContent] = useState("");
+
+  // Update the state to track selected form name instead of template
+  const [selectedFormName, setSelectedFormName] = useState<string>("");
+
+  // Add state for custom form names (if not already present)
+  const [customFormNames, setCustomFormNames] = useState<string[]>([]);
 
   const addArea = (area: string) => {
     if (!selectedAreas.includes(area)) {
@@ -200,17 +227,25 @@ export const SampleGeneration = () => {
     }));
   };
 
-  // Handle autofill template to all samples in the sample set
-  const handleAutofillTemplate = (templateId: string) => {
+  // Update handleAutofillTemplate to handle form name
+  const handleAutofillFormName = (formName: string) => {
     if (!selectedSampleSetId) return;
     const samples = getSamplesForSet(selectedSampleSetId);
     const newSelections: Record<string, string> = {};
     samples.forEach(sample => {
-      newSelections[sample.id] = templateId;
+      newSelections[sample.id] = formName;
     });
     setSampleTemplateSelections(prev => ({
       ...prev,
       ...newSelections
+    }));
+  };
+
+  // Update handleTemplateSelection to handle form name
+  const handleFormNameSelection = (sampleId: string, formName: string) => {
+    setSampleTemplateSelections(prev => ({
+      ...prev,
+      [sampleId]: formName
     }));
   };
 
@@ -423,36 +458,37 @@ export const SampleGeneration = () => {
                           </DialogHeader>
                           
                           <div className="space-y-6 py-4">
-                            {/* Template Selection Section */}
+                            {/* Form Name Selection Section */}
                             <div className="space-y-4">
                               <div className="flex items-center justify-between">
-                                <h3 className="text-lg font-semibold">Available Templates</h3>
+                                <h3 className="text-lg font-semibold">Select Confirmation Form</h3>
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => setShowCustomTemplateForm(!showCustomTemplateForm)}
+                                  onClick={() => setShowCustomTemplateForm(true)}
                                 >
                                   <Plus className="h-4 w-4 mr-2" />
                                   Create Custom Template
                                 </Button>
                               </div>
 
-                              {/* Custom Template Creation Form */}
-                              {showCustomTemplateForm && (
-                                <Card className="border-2 border-primary">
-                                  <CardHeader>
-                                    <CardTitle className="text-base">Create Custom Template</CardTitle>
-                                    <CardDescription>
-                                      This template will be available for all confirmations in this engagement.
-                                    </CardDescription>
-                                  </CardHeader>
-                                  <CardContent className="space-y-4">
+                              {/* Custom Template Creation Dialog */}
+                              <Dialog open={showCustomTemplateForm} onOpenChange={setShowCustomTemplateForm}>
+                                <DialogContent className="max-w-2xl">
+                                  <DialogHeader>
+                                    <DialogTitle>Create Custom Template</DialogTitle>
+                                    <DialogDescription>
+                                      Create a custom confirmation form template. This will be available for all samples in this engagement.
+                                    </DialogDescription>
+                                  </DialogHeader>
+                                  <div className="space-y-4 py-4">
                                     <div>
                                       <Label>Template Name</Label>
                                       <Input
                                         value={newTemplateName}
                                         onChange={(e) => setNewTemplateName(e.target.value)}
-                                        placeholder="e.g., Formal Bank Confirmation Template"
+                                        placeholder="e.g., Custom Bank Confirmation Template"
+                                        className="mt-2"
                                       />
                                     </div>
                                     <div>
@@ -461,76 +497,99 @@ export const SampleGeneration = () => {
                                         value={newTemplateContent}
                                         onChange={(e) => setNewTemplateContent(e.target.value)}
                                         placeholder="Enter the template content here..."
-                                        rows={8}
+                                        rows={10}
+                                        className="mt-2"
                                       />
                                     </div>
-                                    <div className="flex gap-2">
-                                      <Button onClick={handleCreateCustomTemplate}>
-                                        Create Template
-                                      </Button>
-                                      <Button 
-                                        variant="outline"
-                                        onClick={() => {
-                                          setShowCustomTemplateForm(false);
+                                  </div>
+                                  <div className="flex justify-end gap-2 pt-4 border-t">
+                                    <Button
+                                      variant="outline"
+                                      onClick={() => {
+                                        setShowCustomTemplateForm(false);
+                                        setNewTemplateName("");
+                                        setNewTemplateContent("");
+                                      }}
+                                    >
+                                      Cancel
+                                    </Button>
+                                    <Button
+                                      onClick={() => {
+                                        if (newTemplateName && newTemplateContent) {
+                                          // Add to custom form names list
+                                          setCustomFormNames(prev => [...prev, newTemplateName]);
+                                          // Also create the template object
+                                          handleCreateCustomTemplate();
+                                          // Reset form
                                           setNewTemplateName("");
                                           setNewTemplateContent("");
-                                        }}
-                                      >
-                                        Cancel
-                                      </Button>
-                                    </div>
-                                  </CardContent>
-                                </Card>
-                              )}
-
-                              {/* Templates List */}
-                              <div className="grid grid-cols-1 gap-2 max-h-60 overflow-y-auto border rounded-md p-4">
-                                {getAllTemplates().map((template) => (
-                                  <div 
-                                    key={template.id}
-                                    className="flex items-start gap-3 p-3 border rounded-md hover:bg-muted"
-                                  >
-                                    <RadioGroup
-                                      value={selectedSampleId && sampleTemplateSelections[selectedSampleId] === template.id ? template.id : undefined}
-                                      onValueChange={(value) => {
-                                        if (selectedSampleId) {
-                                          handleTemplateSelection(selectedSampleId, value);
+                                          setShowCustomTemplateForm(false);
                                         }
                                       }}
                                     >
-                                      <div className="flex items-center space-x-2">
-                                        <RadioGroupItem value={template.id} id={template.id} />
-                                        <Label htmlFor={template.id} className="cursor-pointer flex-1">
-                                          <div>
-                                            <div className="flex items-center gap-2">
-                                              <span className="font-medium">{template.name}</span>
-                                              <Badge variant={template.type === "inbuilt" ? "default" : "secondary"}>
-                                                {template.type === "inbuilt" ? "Inbuilt" : "Custom"}
-                                              </Badge>
-                                            </div>
-                                            <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                                              {template.content}
-                                            </p>
-                                          </div>
-                                        </Label>
-                                      </div>
-                                    </RadioGroup>
-                                    {!selectedSampleId && (
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => handleAutofillTemplate(template.id)}
-                                      >
-                                        <Copy className="h-4 w-4 mr-1" />
-                                        Autofill to All
-                                      </Button>
-                                    )}
+                                      Create Template
+                                    </Button>
                                   </div>
-                                ))}
+                                </DialogContent>
+                              </Dialog>
+
+                              {/* Form Name Dropdown */}
+                              <div className="space-y-2">
+                                <Label>Choose a confirmation form:</Label>
+                                <div className="flex gap-2">
+                                  <Select 
+                                    value={selectedFormName}
+                                    onValueChange={(value) => {
+                                      setSelectedFormName(value);
+                                      if (!selectedSampleId) {
+                                        // If no sample is selected, enable autofill
+                                        handleAutofillFormName(value);
+                                      } else {
+                                        // If a sample is selected, assign to that sample
+                                        handleFormNameSelection(selectedSampleId, value);
+                                      }
+                                    }}
+                                  >
+                                    <SelectTrigger className="flex-1">
+                                      <SelectValue placeholder="Select a confirmation form..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {CONFIRMATION_FORM_NAMES.map((formName) => (
+                                        <SelectItem key={formName} value={formName}>
+                                          {formName}
+                                        </SelectItem>
+                                      ))}
+                                      {customFormNames.map((formName) => (
+                                        <SelectItem key={formName} value={formName}>
+                                          {formName}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => {
+                                      if (selectedFormName) {
+                                        handleAutofillFormName(selectedFormName);
+                                      }
+                                    }}
+                                    disabled={!selectedFormName}
+                                    className="whitespace-nowrap"
+                                  >
+                                    <Copy className="h-4 w-4 mr-2" />
+                                    Autofill
+                                  </Button>
+                                </div>
+                                {!selectedSampleId && selectedFormName && (
+                                  <p className="text-sm text-muted-foreground">
+                                    This form will be applied to all samples in this set.
+                                  </p>
+                                )}
                               </div>
                             </div>
 
-                            {/* Samples List */}
+                            {/* Samples List - KEEP AS IS */}
                             <div className="space-y-4">
                               <h3 className="text-lg font-semibold">Samples in This Set</h3>
                               <div className="rounded-md border">
@@ -546,16 +605,16 @@ export const SampleGeneration = () => {
                                   </TableHeader>
                                   <TableBody>
                                     {getSamplesForSet(set.id).map((sample) => {
-                                      const selectedTemplateId = sampleTemplateSelections[sample.id];
-                                      const selectedTemplate = selectedTemplateId 
-                                        ? getAllTemplates().find(t => t.id === selectedTemplateId)
-                                        : null;
+                                      const selectedFormNameForSample = sampleTemplateSelections[sample.id];
                                       
                                       return (
                                         <TableRow 
                                           key={sample.id}
                                           className={selectedSampleId === sample.id ? "bg-muted" : ""}
-                                          onClick={() => setSelectedSampleId(sample.id)}
+                                          onClick={() => {
+                                            setSelectedSampleId(sample.id);
+                                            setSelectedFormName(selectedFormNameForSample || "");
+                                          }}
                                         >
                                           <TableCell className="font-medium">{sample.id}</TableCell>
                                           <TableCell>{sample.confirmingParty}</TableCell>
@@ -567,11 +626,31 @@ export const SampleGeneration = () => {
                                           </TableCell>
                                           <TableCell>{sample.amount}</TableCell>
                                           <TableCell>
-                                            {selectedTemplate ? (
-                                              <Badge variant="outline">{selectedTemplate.name}</Badge>
-                                            ) : (
-                                              <span className="text-sm text-muted-foreground">Not selected</span>
-                                            )}
+                                            <Select
+                                              value={selectedFormNameForSample || ""}
+                                              onValueChange={(value) => {
+                                                handleFormNameSelection(sample.id, value);
+                                              }}
+                                            >
+                                              <SelectTrigger className="w-[280px]" onClick={(e) => {
+                                                // Prevent row click when clicking on dropdown
+                                                e.stopPropagation();
+                                              }}>
+                                                <SelectValue placeholder="Select a form..." />
+                                              </SelectTrigger>
+                                              <SelectContent>
+                                                {CONFIRMATION_FORM_NAMES.map((formName) => (
+                                                  <SelectItem key={formName} value={formName}>
+                                                    {formName}
+                                                  </SelectItem>
+                                                ))}
+                                                {customFormNames.map((formName) => (
+                                                  <SelectItem key={formName} value={formName}>
+                                                    {formName}
+                                                  </SelectItem>
+                                                ))}
+                                              </SelectContent>
+                                            </Select>
                                           </TableCell>
                                         </TableRow>
                                       );

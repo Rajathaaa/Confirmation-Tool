@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Shield, Plus, Search, FileText, Calendar, Building2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
+import { formatIndianDate } from "@/lib/utils"; // Add this import
 
 const Engagements = () => {
   const navigate = useNavigate();
@@ -69,9 +70,12 @@ const Engagements = () => {
                 <p className="text-sm text-muted-foreground">Manage your audit engagements</p>
               </div>
             </div>
-            <Button onClick={() => navigate("/auditor/create-engagement")} size="lg">
-              <Plus className="h-4 w-4 mr-2" />
-              New Engagement
+            <Button 
+              variant="outline"
+              onClick={() => navigate("/")} 
+              size="lg"
+            >
+              Return to Home
             </Button>
           </div>
         </div>
@@ -93,10 +97,14 @@ const Engagements = () => {
 
         {/* Engagements List */}
         <div className="space-y-4">
-          <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-semibold text-foreground">
               Open Engagements ({filteredEngagements.length})
             </h2>
+            <Button onClick={() => navigate("/auditor/create-engagement")}>
+              <Plus className="h-4 w-4 mr-2" />
+              New Engagement
+            </Button>
           </div>
 
           <div className="grid gap-4">
@@ -124,7 +132,7 @@ const Engagements = () => {
                     <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
                       <div className="flex items-center gap-2">
                         <Calendar className="h-4 w-4" />
-                        <span>Period End: {engagement.periodEnd}</span>
+                        <span>Period End: {formatIndianDate(engagement.periodEnd)}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <Building2 className="h-4 w-4" />

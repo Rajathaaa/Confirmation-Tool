@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
+import { formatIndianDate, formatNumberInput, parseIndianNumber } from "@/lib/utils";
 
 const OtherReceivablesAdvanceToSupplierForm = ({ confirmation }: { confirmation: any }) => {
   const [rows, setRows] = useState([{ amount: "", currency: "" }]);
@@ -28,7 +29,7 @@ const OtherReceivablesAdvanceToSupplierForm = ({ confirmation }: { confirmation:
       onSubmit={handleSubmit}
     >
       <p className="text-sm text-muted-foreground mb-4">
-        Kindly confirm to us the following information in respect of amounts receivable from you in respect of Advances as on {confirmation.periodEndDate}.
+        Kindly confirm to us the following information in respect of amounts receivable from you in respect of Advances as on {confirmation.periodEndDate ? formatIndianDate(confirmation.periodEndDate) : "[Period-end Date]"}.
       </p>
 
       <div className="rounded-md border">
@@ -45,9 +46,12 @@ const OtherReceivablesAdvanceToSupplierForm = ({ confirmation }: { confirmation:
               <TableRow key={index}>
                 <TableCell>
                   <Input
-                    type="number"
-                    value={row.amount}
-                    onChange={(e) => updateRow(index, "amount", e.target.value)}
+                    type="text"
+                    value={formatNumberInput(row.amount)}
+                    onChange={(e) => {
+                      const numericValue = parseIndianNumber(e.target.value);
+                      updateRow(index, "amount", numericValue.toString());
+                    }}
                   />
                 </TableCell>
                 <TableCell>

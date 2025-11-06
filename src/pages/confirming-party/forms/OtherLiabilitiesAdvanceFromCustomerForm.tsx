@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
-import { formatNumberInput, parseIndianNumber } from "@/lib/utils";
+import { formatNumberInput, parseIndianNumber, formatIndianDate } from "@/lib/utils";
 
 const OtherLiabilitiesAdvanceFromCustomerForm = ({ confirmation }: { confirmation: any }) => {
   const [rows, setRows] = useState([{ amount: "", currency: "" }]);
@@ -34,7 +34,7 @@ const OtherLiabilitiesAdvanceFromCustomerForm = ({ confirmation }: { confirmatio
       onSubmit={handleSubmit}
     >
       <p className="text-sm text-muted-foreground mb-4">
-        Kindly confirm to us the following information in respect of amounts payable to you in respect of Advances as on {confirmation.periodEndDate || "[Period-end Date]"}.
+        Kindly confirm to us the following information in respect of amounts payable to you in respect of Advances as on {confirmation.periodEndDate ? formatIndianDate(confirmation.periodEndDate || "") : "[Period-end Date]"}.
       </p>
 
       <div className="space-y-4">

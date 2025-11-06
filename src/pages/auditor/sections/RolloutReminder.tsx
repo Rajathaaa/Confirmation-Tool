@@ -35,6 +35,7 @@ interface Confirmation {
   attachments?: string[];
   activityLog: ActivityLogEntry[];
   formData?: any; // Stores the filled form data from confirming party
+  periodEndDate?: string; // Add this
 }
 
 const mockConfirmations: Confirmation[] = [
@@ -50,6 +51,7 @@ const mockConfirmations: Confirmation[] = [
     confirmedDate: "2025-01-18 14:22:15",
     confirmedBy: "John Smith",
     confirmedIP: "203.45.67.89",
+    periodEndDate: "2024-12-31", // Add this
     remarks: "We confirm the outstanding balance as of December 31, 2024. All invoices have been reviewed and verified.",
     attachments: ["invoice_summary.pdf", "payment_schedule.xlsx"],
     formData: {
@@ -114,6 +116,7 @@ const mockConfirmations: Confirmation[] = [
     recipientOrg: "XYZ Industries",
     status: "sent",
     sentDate: "2025-01-20 09:15:00",
+    periodEndDate: "2024-12-31", // Add this
     activityLog: [
       {
         timestamp: "2025-01-18 10:00:00",
@@ -165,6 +168,7 @@ const mockConfirmations: Confirmation[] = [
     recipientName: "Michael Brown",
     recipientOrg: "Global Supplies Inc.",
     status: "not-sent",
+    periodEndDate: "2024-12-31", // Add this
     activityLog: [
       {
         timestamp: "2025-01-22 11:00:00",
@@ -227,7 +231,7 @@ const ConfirmationFormView = ({ confirmation }: { confirmation: Confirmation }) 
         return (
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground mb-4">
-              Kindly confirm to us the following information in respect of amounts {confirmation.area === "Trade Receivables" ? "receivable from" : "payable to"} you as on [Period-end Date]:
+              Kindly confirm to us the following information in respect of amounts {confirmation.area === "Trade Receivables" ? "receivable from" : "payable to"} you as on {confirmation.periodEndDate ? formatIndianDate(confirmation.periodEndDate) : "[Period-end Date]"}:
             </p>
             {confirmation.formData.amounts && confirmation.formData.amounts.length > 0 && (
               <div className="rounded-md border">
@@ -257,7 +261,7 @@ const ConfirmationFormView = ({ confirmation }: { confirmation: Confirmation }) 
         return (
           <div className="space-y-6">
             <p className="text-sm text-muted-foreground mb-6">
-              Kindly confirm the below balances to us pertaining to the account balances of [Client Organization] as are held with you as on [Period-end Date]:
+              Kindly confirm the below balances to us pertaining to the account balances of [Client Organization] as are held with you as on {confirmation.periodEndDate ? formatIndianDate(confirmation.periodEndDate) : "[Period-end Date]"}:
             </p>
             
             {confirmation.formData.currentAccounts && confirmation.formData.currentAccounts.length > 0 && (
@@ -340,6 +344,7 @@ const ConfirmationFormView = ({ confirmation }: { confirmation: Confirmation }) 
             <p className="text-sm text-muted-foreground mb-4">
               Kindly furnish a list that describes and evaluates pending or threatened litigations, claims, and assessments with respect to which you have been engaged and to which you have devoted substantive attention on behalf of [Client Organization] in the form of legal consultation or representation.
             </p>
+            {/* Note: We might not have client organization in confirmation object, so keeping placeholder */}
             {confirmation.formData.details && (
               <div className="bg-muted p-4 rounded-md">
                 <p className="text-sm whitespace-pre-wrap">{confirmation.formData.details}</p>
@@ -642,6 +647,12 @@ export const RolloutReminder = () => {
                                   <div>
                                     <p className="text-muted-foreground">IP Address</p>
                                     <p className="font-medium">{confirmation.confirmedIP}</p>
+                                  </div>
+                                )}
+                                {confirmation.periodEndDate && (
+                                  <div>
+                                    <p className="text-muted-foreground">Period End Date</p>
+                                    <p className="font-medium">{formatIndianDate(confirmation.periodEndDate)}</p>
                                   </div>
                                 )}
                               </div>

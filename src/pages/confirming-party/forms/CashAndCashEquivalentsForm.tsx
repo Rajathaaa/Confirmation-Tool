@@ -77,7 +77,7 @@ const CashAndCashEquivalentsForm = ({ confirmation }: { confirmation: any }) => 
       hideRemarks={true}
     >
       <p className="text-sm text-muted-foreground mb-6">
-        Kindly confirm the below balances to us pertaining to the account balances of {confirmation.confirmationFor} as are held with you as on {confirmation.periodEndDate}:
+        Kindly confirm the below balances to us pertaining to the account balances of {confirmation.confirmationFor} as are held with you as on {confirmation.periodEndDate ? formatIndianDate(confirmation.periodEndDate) : "[Period-end Date]"}:
       </p>
 
       <div className="space-y-8">
@@ -251,7 +251,6 @@ const CashAndCashEquivalentsForm = ({ confirmation }: { confirmation: any }) => 
         {/* 5. Investments */}
         <div className="space-y-2">
           <h4 className="font-semibold">5. Investments and other Documents of title held in Safe Custody</h4>
-          <p className="text-xs text-muted-foreground italic">*In case of investments held in D-Mat form, please enclose a statement of holding along with this annexure.</p>
           <div className="rounded-md border">
             <Table>
               <TableHeader>
@@ -274,6 +273,7 @@ const CashAndCashEquivalentsForm = ({ confirmation }: { confirmation: any }) => 
               </TableBody>
             </Table>
           </div>
+          <p className="text-xs text-muted-foreground italic">*In case of investments held in D-Mat form, please enclose a statement of holding along with this annexure.</p>
           <Button type="button" variant="outline" size="sm" onClick={() => addRow(setInvestments, { designation: "", investmentIn: "", value: "" })}><Plus className="h-4 w-4 mr-2" />Add Row</Button>
         </div>
 
@@ -394,7 +394,6 @@ const CashAndCashEquivalentsForm = ({ confirmation }: { confirmation: any }) => 
         {/* 8. Bills for Collection (Second Type) */}
         <div className="space-y-2">
           <h4 className="font-semibold">8. Bills for Collection</h4>
-          <p className="text-xs text-muted-foreground italic">(Including Trust Receipt facilities, import loans or export bills negotiated etc. with the list of documents obtained for the same)</p>
           <div className="rounded-md border">
             <Table>
               <TableHeader>
@@ -461,6 +460,7 @@ const CashAndCashEquivalentsForm = ({ confirmation }: { confirmation: any }) => 
               </TableBody>
             </Table>
           </div>
+          <p className="text-xs text-muted-foreground italic">(Including Trust Receipt facilities, import loans or export bills negotiated etc. with the list of documents obtained for the same)</p>
           <Button type="button" variant="outline" size="sm" onClick={() => addRow(setBillsCollection2, { drawee: "", currency: "", amount: "", dueDate: "" })}><Plus className="h-4 w-4 mr-2" />Add Row</Button>
         </div>
 
@@ -623,15 +623,37 @@ const CashAndCashEquivalentsForm = ({ confirmation }: { confirmation: any }) => 
                     <TableCell><Input value={row.nature} onChange={(e) => updateRow(setDerivatives, index, "nature", e.target.value)} /></TableCell>
                     <TableCell><Input value={row.contractNumber} onChange={(e) => updateRow(setDerivatives, index, "contractNumber", e.target.value)} /></TableCell>
                     <TableCell>
-                      <Input 
-                        type="text"
-                        value={formatDateInput(row.dealDate)}
-                        onChange={(e) => {
-                          updateRow(setDerivatives, index, "dealDate", e.target.value);
-                        }}
-                        placeholder="dd-mm-yyyy"
-                        maxLength={10}
-                      />
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              "w-full justify-start text-left font-normal",
+                              !row.dealDate && "text-muted-foreground"
+                            )}
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {row.dealDate ? (
+                              formatIndianDate(parseIndianDate(row.dealDate) || new Date())
+                            ) : (
+                              <span>dd-mm-yyyy</span>
+                            )}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={row.dealDate ? parseIndianDate(row.dealDate) || undefined : undefined}
+                            onSelect={(date) => {
+                              if (date) {
+                                const formatted = formatIndianDate(date);
+                                updateRow(setDerivatives, index, "dealDate", formatted);
+                              }
+                            }}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
                     </TableCell>
                     <TableCell><Input value={row.currency} onChange={(e) => updateRow(setDerivatives, index, "currency", e.target.value)} /></TableCell>
                     <TableCell><Input value={row.notional} onChange={(e) => updateRow(setDerivatives, index, "notional", e.target.value)} /></TableCell>

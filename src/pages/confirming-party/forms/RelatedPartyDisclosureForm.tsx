@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
-import { formatNumberInput, parseIndianNumber } from "@/lib/utils";
+import { formatNumberInput, parseIndianNumber, formatIndianDate } from "@/lib/utils";
 
 const RelatedPartyDisclosureForm = ({ confirmation }: { confirmation: any }) => {
   // Nature of relationship state
@@ -167,7 +167,7 @@ const RelatedPartyDisclosureForm = ({ confirmation }: { confirmation: any }) => 
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-16">Sl. No.</TableHead>
-                  <TableHead>Nature of Relationship as at {confirmation.periodEndDate || "[Period end date]"}</TableHead>
+                  <TableHead>Nature of Relationship as at {confirmation.periodEndDate ? formatIndianDate(confirmation.periodEndDate) : "[Period end date]"}</TableHead>
                   <TableHead>Response</TableHead>
                 </TableRow>
               </TableHeader>
@@ -281,7 +281,7 @@ const RelatedPartyDisclosureForm = ({ confirmation }: { confirmation: any }) => 
 
         {/* Details of transactions */}
         <div className="space-y-2">
-          <h4 className="font-semibold">Details of transactions with {confirmation.confirmationFor || "[Client Organization Name]"} during the year ended {confirmation.periodEndDate || "[Period End Date]"}</h4>
+          <h4 className="font-semibold">Details of transactions with {confirmation.confirmationFor || "[Client Organization Name]"} during the year ended {confirmation.periodEndDate ? formatIndianDate(confirmation.periodEndDate) : "[Period End Date]"}</h4>
           <div className="rounded-md border">
             <Table>
               <TableHeader>
@@ -379,7 +379,7 @@ const RelatedPartyDisclosureForm = ({ confirmation }: { confirmation: any }) => 
                       </TableCell>
                     </TableRow>
                     <TableRow>
-                      <TableCell className="font-medium">Loan amount payable as on {confirmation.periodEndDate || "[Period end date]"} (also include balances outstanding in respect of transactions during prior years)</TableCell>
+                      <TableCell className="font-medium">Loan amount payable as on {confirmation.periodEndDate ? formatIndianDate(confirmation.periodEndDate) : "[Period end date]"} (also include balances outstanding in respect of transactions during prior years)</TableCell>
                       <TableCell>
                         <Input
                           type="text"
@@ -399,7 +399,7 @@ const RelatedPartyDisclosureForm = ({ confirmation }: { confirmation: any }) => 
                       </TableCell>
                     </TableRow>
                     <TableRow>
-                      <TableCell className="font-medium">Interest amount payable as on {confirmation.periodEndDate || "[Period end date]"} (also include balances outstanding in respect of interest related to prior years)</TableCell>
+                      <TableCell className="font-medium">Interest amount payable as on {confirmation.periodEndDate ? formatIndianDate(confirmation.periodEndDate) : "[Period end date]"} (also include balances outstanding in respect of interest related to prior years)</TableCell>
                       <TableCell>
                         <Input
                           type="text"
@@ -413,7 +413,7 @@ const RelatedPartyDisclosureForm = ({ confirmation }: { confirmation: any }) => 
                       </TableCell>
                     </TableRow>
                     <TableRow>
-                      <TableCell className="font-medium">Overdue amount as on {confirmation.periodEndDate || "[Period-end date]"} (also include balances outstanding in respect of transactions related to prior years)</TableCell>
+                      <TableCell className="font-medium">Overdue amount as on {confirmation.periodEndDate ? formatIndianDate(confirmation.periodEndDate) : "[Period-end date]"} (also include balances outstanding in respect of transactions related to prior years)</TableCell>
                       <TableCell>
                         <Input
                           type="text"
@@ -522,7 +522,7 @@ const RelatedPartyDisclosureForm = ({ confirmation }: { confirmation: any }) => 
                       <TableCell><Input value={loansGiven.currency} onChange={(e) => setLoansGiven(prev => ({ ...prev, currency: e.target.value }))} /></TableCell>
                     </TableRow>
                     <TableRow>
-                      <TableCell className="font-medium">Loan amount receivable as on {confirmation.periodEndDate || "[Period end date]"} (also include balances outstanding in respect of transactions during prior years)</TableCell>
+                      <TableCell className="font-medium">Loan amount receivable as on {confirmation.periodEndDate ? formatIndianDate(confirmation.periodEndDate) : "[Period end date]"} (also include balances outstanding in respect of transactions during prior years)</TableCell>
                       <TableCell>
                         <Input
                           type="text"
@@ -542,7 +542,7 @@ const RelatedPartyDisclosureForm = ({ confirmation }: { confirmation: any }) => 
                       </TableCell>
                     </TableRow>
                     <TableRow>
-                      <TableCell className="font-medium">Interest amount receivable as on {confirmation.periodEndDate || "[Period end date]"} (also include balances outstanding in respect of interest related to prior years)</TableCell>
+                      <TableCell className="font-medium">Interest amount receivable as on {confirmation.periodEndDate ? formatIndianDate(confirmation.periodEndDate) : "[Period end date]"} (also include balances outstanding in respect of interest related to prior years)</TableCell>
                       <TableCell>
                         <Input
                           type="text"
@@ -556,7 +556,7 @@ const RelatedPartyDisclosureForm = ({ confirmation }: { confirmation: any }) => 
                       </TableCell>
                     </TableRow>
                     <TableRow>
-                      <TableCell className="font-medium">Overdue amount as on {confirmation.periodEndDate || "[Period-end date]"} (also include balances outstanding in respect of transactions related to prior years)</TableCell>
+                      <TableCell className="font-medium">Overdue amount as on {confirmation.periodEndDate ? formatIndianDate(confirmation.periodEndDate) : "[Period-end date]"} (also include balances outstanding in respect of transactions related to prior years)</TableCell>
                       <TableCell>
                         <Input
                           type="text"
@@ -627,7 +627,7 @@ const RelatedPartyDisclosureForm = ({ confirmation }: { confirmation: any }) => 
 
         {/* Outstanding balances */}
         <div className="space-y-2">
-          <h4 className="font-semibold">Details of outstanding balances with [Confirming Party] as at {confirmation.periodEndDate || "[Period-end date]"}</h4>
+          <h4 className="font-semibold">Details of outstanding balances with [Confirming Party] as at {confirmation.periodEndDate ? formatIndianDate(confirmation.periodEndDate) : "[Period-end date]"}</h4>
           <div className="rounded-md border">
             <Table>
               <TableHeader>

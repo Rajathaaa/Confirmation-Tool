@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
-import { formatNumberInput, parseIndianNumber } from "@/lib/utils";
+import { formatNumberInput, parseIndianNumber, formatIndianDate } from "@/lib/utils";
 
 const TradePayablesForm = ({ confirmation }: { confirmation: any }) => {
   const [rows, setRows] = useState([{ amount: "", currency: "" }]);
@@ -41,7 +41,7 @@ const TradePayablesForm = ({ confirmation }: { confirmation: any }) => {
       onSubmit={handleSubmit}
     >
       <p className="text-sm text-muted-foreground mb-4">
-        Kindly confirm to us the following information in respect of amounts payable to you as on {confirmation.periodEndDate || "[Period-end Date]"}.
+        Kindly confirm to us the following information in respect of amounts payable to you as on {confirmation.periodEndDate ? formatIndianDate(confirmation.periodEndDate) : "[Period-end Date]"}.
       </p>
 
       <div className="space-y-4">

@@ -97,7 +97,19 @@ const mockAuthorizationRequests: AuthorizationRequest[] = [
     status: "authorized",
     authorizedBy: "Sarah Johnson",
     authorizedDate: "2025-01-19 15:00:00",
-    confirmationStatus: "pending",
+    confirmationStatus: "confirmed",
+    confirmedDate: "2025-01-25 11:20:00",
+    formData: {
+      amounts: [
+        { amount: "85000.00", currency: "USD" }
+      ],
+      organizationName: "Global Supplies Inc.",
+      name: "Michael Brown",
+      designation: "Accounts Manager",
+      isCertified: true
+    },
+    remarks: "Payables confirmed as per records.",
+    attachments: ["confirmation_response_002.pdf"]
   },
   {
     id: "AUTH-003",
@@ -106,36 +118,463 @@ const mockAuthorizationRequests: AuthorizationRequest[] = [
     recipientEmail: "contact@xyzbank.com",
     recipientName: "Jane Doe",
     remarksByAuditor: "Confirmation request for bank balances.",
-    attachmentByAuditor: [],
+    attachmentByAuditor: ["authorization_letter_003.pdf"],
     status: "authorized",
     authorizedBy: "Sarah Johnson",
     authorizedDate: "2025-01-20 14:35:22",
-    confirmationStatus: "not-confirmed",
+    confirmationStatus: "confirmed",
+    confirmedDate: "2025-01-23 09:15:00",
+    formData: {
+      currentAccounts: [
+        { designation: "Current Account - 1234", currency: "USD", balance: "500000.00" }
+      ],
+      organizationName: "XYZ Bank",
+      name: "Jane Doe",
+      designation: "Branch Manager",
+      isCertified: true
+    },
+    remarks: "Bank balances confirmed.",
+    attachments: ["confirmation_response_003.pdf"]
   },
   {
     id: "AUTH-004",
-    area: "Trade Receivables",
-    confirmingParty: "DEF Solutions Ltd.",
-    recipientEmail: "lisa.wong@defsolutions.com",
-    recipientName: "Lisa Wong",
-    remarksByAuditor: "Additional confirmation required.",
+    area: "Borrowings",
+    confirmingParty: "Finance Corp. Bank",
+    recipientEmail: "loans@financecorp.com",
+    recipientName: "Vikram Reddy",
+    remarksByAuditor: "Confirm outstanding loan balances and terms as of December 31, 2024.",
     attachmentByAuditor: ["authorization_letter_004.pdf"],
-    status: "rejected",
+    status: "authorized",
     authorizedBy: "Sarah Johnson",
     authorizedDate: "2025-01-21 10:15:00",
-    confirmationStatus: "not-confirmed",
+    confirmationStatus: "confirmed",
+    confirmedDate: "2025-01-24 16:00:00",
+    formData: {
+      currentAccounts: [
+        { designation: "Term Loan A", currency: "USD", balance: "5000000.00" }
+      ],
+      organizationName: "Finance Corp. Bank",
+      name: "Vikram Reddy",
+      designation: "Credit Manager",
+      isCertified: true
+    },
+    remarks: "Loan details confirmed.",
+    attachments: ["confirmation_response_004.pdf"]
   },
   {
     id: "AUTH-005",
+    area: "Related Party Disclosure",
+    confirmingParty: "Subsidiary Co. Ltd.",
+    recipientEmail: "contact@subsidiaryco.com",
+    recipientName: "Rahul Sharma",
+    remarksByAuditor: "Confirm related party transactions and balances for the year.",
+    attachmentByAuditor: ["authorization_letter_005.pdf"],
+    status: "authorized",
+    authorizedBy: "Sarah Johnson",
+    authorizedDate: "2025-01-18 09:45:00",
+    confirmationStatus: "confirmed",
+    confirmedDate: "2025-01-26 09:45:00",
+    formData: {
+      organizationName: "Subsidiary Co. Ltd.",
+      name: "Rahul Sharma",
+      designation: "Finance Head",
+      isCertified: true
+    },
+    remarks: "All related party details confirmed.",
+    attachments: ["confirmation_response_005.pdf"]
+  },
+  {
+    id: "AUTH-006",
+    area: "Plan Assets",
+    confirmingParty: "Pension Fund Managers",
+    recipientEmail: "funds@pension.com",
+    recipientName: "Alok Kumar",
+    remarksByAuditor: "Confirm details of plan assets held as of December 31, 2024.",
+    attachmentByAuditor: ["authorization_letter_006.pdf"],
+    status: "authorized",
+    authorizedBy: "Sarah Johnson",
+    authorizedDate: "2025-01-22 11:00:00",
+    confirmationStatus: "confirmed",
+    confirmedDate: "2025-01-27 10:15:00",
+    formData: {
+      amount: "2000000.00",
+      organizationName: "Pension Fund Managers",
+      name: "Alok Kumar",
+      designation: "Fund Manager",
+      isCertified: true
+    },
+    remarks: "Plan assets confirmed.",
+    attachments: ["confirmation_response_006.pdf"]
+  },
+  {
+    id: "AUTH-007",
+    area: "Other Liabilities - Capex Vendors",
+    confirmingParty: "Equipment Suppliers Co.",
+    recipientEmail: "capex@equipments.com",
+    recipientName: "Sonia Das",
+    remarksByAuditor: "Confirm outstanding payables to capex vendors as of December 31, 2024.",
+    attachmentByAuditor: ["authorization_letter_007.pdf"],
+    status: "authorized",
+    authorizedBy: "Sarah Johnson",
+    authorizedDate: "2025-01-19 14:20:00",
+    confirmationStatus: "confirmed",
+    confirmedDate: "2025-01-25 10:15:00",
+    formData: {
+      amounts: [
+        { amount: "750000.00", currency: "USD" }
+      ],
+      organizationName: "Equipment Suppliers Co.",
+      name: "Sonia Das",
+      designation: "Accounts Head",
+      isCertified: true
+    },
+    remarks: "Capex payables confirmed.",
+    attachments: ["confirmation_response_007.pdf"]
+  },
+  {
+    id: "AUTH-008",
+    area: "Inventory",
+    confirmingParty: "Warehouse Management Ltd.",
+    recipientEmail: "inventory@warehouse.com",
+    recipientName: "Rajesh Patel",
+    remarksByAuditor: "Please review and authorize this confirmation request for inventory held.",
+    attachmentByAuditor: ["authorization_letter_008.pdf"],
+    status: "pending",
+  },
+  {
+    id: "AUTH-009",
+    area: "Fixed Assets",
+    confirmingParty: "Asset Verification Services",
+    recipientEmail: "assets@verification.com",
+    recipientName: "Meera Singh",
+    remarksByAuditor: "Confirm fixed assets valuation and existence as of December 31, 2024.",
+    attachmentByAuditor: ["authorization_letter_009.pdf"],
+    status: "rejected",
+    authorizedBy: "Sarah Johnson",
+    authorizedDate: "2025-01-26 10:45:00",
+    confirmationStatus: "not-confirmed",
+  },
+  {
+    id: "AUTH-010",
+    area: "Investments",
+    confirmingParty: "Investment Advisors Inc.",
+    recipientEmail: "investments@advisors.com",
+    recipientName: "Amit Verma",
+    remarksByAuditor: "Please confirm investment holdings and valuations.",
+    attachmentByAuditor: ["authorization_letter_010.pdf"],
+    status: "rejected",
+    authorizedBy: "Sarah Johnson",
+    authorizedDate: "2025-01-26 10:45:00",
+    confirmationStatus: "not-confirmed",
+  },
+  {
+    id: "AUTH-011",
+    area: "Litigations & Claims",
+    confirmingParty: "Legal Counsel LLP",
+    recipientEmail: "legal@counsel.com",
+    recipientName: "Anjali Singh",
+    remarksByAuditor: "Provide details of all pending and threatened litigations as of December 31, 2024.",
+    attachmentByAuditor: ["authorization_letter_011.pdf"],
+    status: "rejected",
+    authorizedBy: "Sarah Johnson",
+    authorizedDate: "2025-01-26 10:45:00",
+    confirmationStatus: "not-confirmed",
+  },
+  {
+    id: "AUTH-012",
+    area: "Other Assets - Security Deposits",
+    confirmingParty: "Property Management Co.",
+    recipientEmail: "security@property.com",
+    recipientName: "Kiran Mehta",
+    remarksByAuditor: "Confirm security deposits held as of December 31, 2024.",
+    attachmentByAuditor: ["authorization_letter_012.pdf"],
+    status: "rejected",
+    authorizedBy: "Sarah Johnson",
+    authorizedDate: "2025-01-26 10:45:00",
+    confirmationStatus: "not-confirmed",
+  },
+  {
+    id: "AUTH-013",
+    area: "Other Liabilities - Security Deposits",
+    confirmingParty: "Tenant Services Ltd.",
+    recipientEmail: "deposits@tenant.com",
+    recipientName: "Neha Kapoor",
+    remarksByAuditor: "Confirm security deposits payable as of December 31, 2024.",
+    attachmentByAuditor: ["authorization_letter_013.pdf"],
+    status: "authorized",
+    authorizedBy: "Sarah Johnson",
+    authorizedDate: "2025-01-26 10:45:00",
+    confirmationStatus: "not-confirmed",
+  },
+  {
+    id: "AUTH-014",
+    area: "Other Receivables - Advance to Supplier",
+    confirmingParty: "Supplier Network Inc.",
+    recipientEmail: "advances@supplier.com",
+    recipientName: "Pradeep Kumar",
+    remarksByAuditor: "Confirm advances given to suppliers as of December 31, 2024.",
+    attachmentByAuditor: ["authorization_letter_014.pdf"],
+    status: "authorized",
+    authorizedBy: "Sarah Johnson",
+    authorizedDate: "2025-01-26 10:45:00",
+    confirmationStatus: "not-confirmed",
+  },
+  {
+    id: "AUTH-015",
+    area: "Other Receivables - Capital Advances",
+    confirmingParty: "Capital Projects Ltd.",
+    recipientEmail: "capital@projects.com",
+    recipientName: "Sanjay Rao",
+    remarksByAuditor: "Confirm capital advances made as of December 31, 2024.",
+    attachmentByAuditor: ["authorization_letter_015.pdf"],
+    status: "pending",
+  },
+  {
+    id: "AUTH-016",
+    area: "Other Liabilities - Advance from Customer",
+    confirmingParty: "Customer A Pvt. Ltd.",
+    recipientEmail: "advances@customerA.com",
+    recipientName: "Rohan Gupta",
+    remarksByAuditor: "Confirm advance payments received as of December 31, 2024.",
+    attachmentByAuditor: ["authorization_letter_016.pdf"],
+    status: "pending",
+  },
+  {
+    id: "AUTH-017",
+    area: "Trustee",
+    confirmingParty: "Trust Management Services",
+    recipientEmail: "trust@management.com",
+    recipientName: "Deepak Joshi",
+    remarksByAuditor: "Confirm trust assets and liabilities as of December 31, 2024.",
+    attachmentByAuditor: ["authorization_letter_017.pdf"],
+    status: "pending",
+  },
+  {
+    id: "AUTH-018",
     area: "Trade Receivables",
     confirmingParty: "New Company Ltd.",
     recipientEmail: "contact@newcompany.com",
     recipientName: "John Doe",
     remarksByAuditor: "Please review and authorize this confirmation request.",
-    attachmentByAuditor: ["authorization_letter_005.pdf"],
-    status: "pending", // This will show the Accept/Reject buttons
+    attachmentByAuditor: ["authorization_letter_018.pdf"],
+    status: "pending",
+  },
+  {
+    id: "AUTH-019",
+    area: "Related Party Disclosure",
+    confirmingParty: "Acme Holdings Pvt. Ltd.",
+    recipientEmail: "rpd.contact@acmeholdings.com",
+    recipientName: "Priya Nair",
+    remarksByAuditor: "Please confirm related party relationships, transactions and balances as per the attached format.",
+    attachmentByAuditor: ["authorization_letter_019.pdf"],
+    status: "pending",
+  },
+  {
+    id: "AUTH-020",
+    area: "Cash & Cash Equivalents",
+    confirmingParty: "Global Bank Corp.",
+    recipientEmail: "corporate@globalbank.com",
+    recipientName: "Sarah Chen",
+    remarksByAuditor: "Confirm all bank accounts and fixed deposits as of December 31, 2024.",
+    attachmentByAuditor: ["authorization_letter_020.pdf"],
+    status: "pending",
   }
 ];
+
+// Add a new component to render blank confirmation template (for viewing before authorization)
+const BlankConfirmationTemplateView = ({ request }: { request: AuthorizationRequest }) => {
+  const renderFormByArea = () => {
+    switch (request.area) {
+      case "Trade Receivables":
+      case "Trade Payables":
+        return (
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground mb-4">
+              Kindly confirm to us the following information in respect of amounts {request.area === "Trade Receivables" ? "receivable from" : "payable to"} you as on [Period-end Date]:
+            </p>
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Amount</TableHead>
+                    <TableHead>Currency</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  <TableRow>
+                    <TableCell colSpan={2} className="text-center text-muted-foreground py-8">
+                      (Form fields will be filled by confirming party)
+                    </TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        );
+
+      case "Cash & Cash Equivalents":
+      case "Borrowings":
+        return (
+          <div className="space-y-6">
+            <p className="text-sm text-muted-foreground mb-6">
+              Kindly confirm the below balances to us pertaining to the account balances of [Client Organization] as are held with you as on [Period-end Date]:
+            </p>
+            
+            <div className="space-y-2">
+              <h4 className="font-semibold">1. Current Accounts</h4>
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Designation of Account</TableHead>
+                      <TableHead>Currency</TableHead>
+                      <TableHead>Balance [Credit/(Debit)]</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    <TableRow>
+                      <TableCell colSpan={3} className="text-center text-muted-foreground py-8">
+                        (Form fields will be filled by confirming party)
+                      </TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+
+            <div className="space-y-2 pt-4 border-t">
+              <h4 className="font-semibold">2. Overdrawn Current Accounts</h4>
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Designation of Account</TableHead>
+                      <TableHead>Currency</TableHead>
+                      <TableHead>Balance (Debit)</TableHead>
+                      <TableHead>Security Held</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                        (Form fields will be filled by confirming party)
+                      </TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+
+            {/* Add other sections as placeholders */}
+            <div className="space-y-2 pt-4 border-t">
+              <Label className="text-sm font-semibold">Additional sections (if applicable):</Label>
+              <ul className="text-sm text-muted-foreground list-disc list-inside space-y-1 ml-4">
+                <li>Fixed Deposits</li>
+                <li>Recurring Deposits</li>
+                <li>Loan Accounts</li>
+                <li>Derivative Contracts</li>
+                <li>Investments</li>
+                <li>Interest Accrued</li>
+                <li>Wilful Defaulter Status</li>
+              </ul>
+            </div>
+          </div>
+        );
+
+      case "Litigations & Claims":
+        return (
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground mb-4">
+              Kindly furnish a list that describes and evaluates pending or threatened litigations, claims, and assessments with respect to which you have been engaged and to which you have devoted substantive attention on behalf of [Client Organization] in the form of legal consultation or representation.
+            </p>
+            <p className="text-sm text-muted-foreground mb-4">
+              Kindly also furnish a list of unasserted claims or assessments (considered by management to be probable of assertion and which, if asserted, would have at least a reasonable possibility of an unfavourable outcome).
+            </p>
+            <div className="bg-muted p-4 rounded-md">
+              <p className="text-sm text-muted-foreground italic">
+                (Details will be filled by confirming party)
+              </p>
+            </div>
+          </div>
+        );
+
+        case "Related Party Disclosure":
+          return (
+            <div className="space-y-6">
+              <p className="text-sm text-muted-foreground">
+                Kindly confirm to us the following information in respect of related party transactions as on [Period-end Date]:
+              </p>
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[80px]">Sl. No.</TableHead>
+                      <TableHead>Nature of Relationship as at [Period end date]</TableHead>
+                      <TableHead className="w-[340px]">Response</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {[
+                      "Wholly Owned Subsidiary",
+                      "Subsidiary",
+                      "Fellow Subsidiary",
+                      "Joint Venture",
+                      "Associate",
+                      "Key Managerial Personnel [KMP]",
+                      "Relative of KMP",
+                      "Company in which KMP or his/her relative has significant influence",
+                      "Any other relationship (not mentioned above)",
+                      "Any change in relationship during the year or subsequent to year-end",
+                    ].map((label, idx) => (
+                      <TableRow key={idx}>
+                        <TableCell className="font-medium">{idx + 1}.</TableCell>
+                        <TableCell>{label}</TableCell>
+                        <TableCell className="text-muted-foreground italic">
+                          (Form fields will be filled by confirming party)
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          );
+
+      default:
+        return (
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Confirmation form template for {request.area}
+            </p>
+            <div className="bg-muted p-4 rounded-md">
+              <p className="text-sm text-muted-foreground italic">
+                (Form details will be filled by confirming party)
+              </p>
+            </div>
+          </div>
+        );
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Letter Header */}
+      <div className="space-y-2 border-b pb-4">
+        <p className="text-sm text-muted-foreground">
+          Dear {request.recipientName},
+        </p>
+        {renderFormByArea()}
+      </div>
+
+      {/* Certification Section (Placeholder) */}
+      <div className="space-y-2 pt-4 border-t">
+        <p className="text-sm text-muted-foreground italic">
+          (Certification statement and signatory details will be provided by confirming party)
+        </p>
+      </div>
+    </div>
+  );
+};
 
 // Component to render confirmation form template in read-only mode (for client view)
 const ConfirmationFormView = ({ request }: { request: AuthorizationRequest }) => {
@@ -242,6 +681,147 @@ const ConfirmationFormView = ({ request }: { request: AuthorizationRequest }) =>
             )}
           </div>
         );
+      
+        case "Related Party Disclosure":
+          return (
+            <div className="space-y-6">
+              <p className="text-sm text-muted-foreground mb-4">
+                Kindly confirm to us the following information in respect of related party transactions as on [Period-end Date]:
+              </p>
+              
+              {/* Relationship Responses */}
+              {request.formData.relationshipResponses && (
+                <div className="space-y-2">
+                  <Label className="font-semibold">Nature of Relationship</Label>
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-[80px]">Sl. No.</TableHead>
+                          <TableHead>Nature of Relationship</TableHead>
+                          <TableHead>Response</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {[
+                          { key: "whollyOwnedSubsidiary", label: "Wholly Owned Subsidiary" },
+                          { key: "subsidiary", label: "Subsidiary" },
+                          { key: "fellowSubsidiary", label: "Fellow Subsidiary" },
+                          { key: "jointVenture", label: "Joint Venture" },
+                          { key: "associate", label: "Associate" },
+                          { key: "kmp", label: "Key Managerial Personnel [KMP]" },
+                          { key: "relativeOfKmp", label: "Relative of KMP" },
+                          { key: "companyWithKmp", label: "Company in which KMP or his/her relative has significant influence" },
+                        ].map((item, idx) => (
+                          <TableRow key={idx}>
+                            <TableCell className="font-medium">{idx + 1}.</TableCell>
+                            <TableCell>{item.label}</TableCell>
+                            <TableCell>{request.formData.relationshipResponses[item.key] || "-"}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              )}
+  
+              {/* Transactions */}
+              {request.formData.transactions && request.formData.transactions.length > 0 && (
+                <div className="space-y-2 pt-4 border-t">
+                  <Label className="font-semibold">Details of Transactions</Label>
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Nature of Transaction</TableHead>
+                          <TableHead>Currency</TableHead>
+                          <TableHead>Amount Involved</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {request.formData.transactions.map((row: any, index: number) => (
+                          <TableRow key={index}>
+                            <TableCell>{row.nature || "-"}</TableCell>
+                            <TableCell>{row.currency || "-"}</TableCell>
+                            <TableCell>{row.amount ? formatIndianNumber(row.amount) : "-"}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+  
+        case "Plan Assets":
+          return (
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground mb-4">
+                Kindly confirm to us the following information in respect of Plan Assets as on [Period-end Date]:
+              </p>
+              {request.formData.accounts && request.formData.accounts.length > 0 ? (
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Account</TableHead>
+                        <TableHead>Amount</TableHead>
+                        <TableHead>Currency</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {request.formData.accounts.map((row: any, index: number) => (
+                        <TableRow key={index}>
+                          <TableCell>{row.account || "-"}</TableCell>
+                          <TableCell className="font-medium">
+                            {row.amount ? formatIndianNumber(row.amount) : "-"}
+                          </TableCell>
+                          <TableCell>{row.currency || "-"}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              ) : request.formData.amount ? (
+                <div className="space-y-2">
+                  <Label>Amount</Label>
+                  <p className="font-medium">{formatIndianNumber(request.formData.amount)}</p>
+                </div>
+              ) : null}
+            </div>
+          );
+  
+        case "Other Liabilities - Capex Vendors":
+          return (
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground mb-4">
+                Kindly confirm to us the following information in respect of amounts payable to you as on [Period-end Date]:
+              </p>
+              {request.formData.amounts && request.formData.amounts.length > 0 && (
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Amount</TableHead>
+                        <TableHead>Currency</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {request.formData.amounts.map((row: any, index: number) => (
+                        <TableRow key={index}>
+                          <TableCell className="font-medium">
+                            {row.amount ? formatIndianNumber(row.amount) : "-"}
+                          </TableCell>
+                          <TableCell>{row.currency || "-"}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </div>
+          );
 
       default:
         return (
@@ -370,7 +950,18 @@ const ClientDashboard = () => {
     }
   };
 
-  const getConfirmationStatusBadge = (status?: string) => {
+  const getConfirmationStatusBadge = (status?: string, authorizationStatus?: string) => {
+    // If authorization is still pending, show Pending
+    if (authorizationStatus === "pending") {
+      return (
+        <Badge variant="outline">
+          <Clock className="h-3 w-3 mr-1" />
+          Pending
+        </Badge>
+      );
+    }
+    
+    // If authorization is done (authorized/rejected), only show Confirmed or Not Confirmed
     switch (status) {
       case "confirmed":
         return (
@@ -387,10 +978,11 @@ const ClientDashboard = () => {
           </Badge>
         );
       default:
+        // When authorization is done but confirmation status is not set, show Not Confirmed
         return (
-          <Badge variant="outline">
-            <Clock className="h-3 w-3 mr-1" />
-            Pending
+          <Badge variant="destructive">
+            <XCircle className="h-3 w-3 mr-1" />
+            Not Confirmed
           </Badge>
         );
     }
@@ -398,32 +990,32 @@ const ClientDashboard = () => {
 
   // Show access denied if user email is not in client users list
   if (!hasAccess) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background">
-        <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-50">
-          <div className="container mx-auto px-4 py-4">
-            <div className="flex items-center gap-2">
-              <Shield className="h-8 w-8 text-primary" />
-              <h1 className="text-2xl font-bold text-foreground">Client Dashboard</h1>
-            </div>
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background">
+      <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-50">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center gap-2">
+            <Shield className="h-8 w-8 text-primary" />
+            <h1 className="text-2xl font-bold text-foreground">Client Dashboard</h1>
           </div>
-        </header>
+        </div>
+      </header>
 
-        <div className="container mx-auto px-4 py-16">
-          <Card className="p-12 text-center max-w-2xl mx-auto animate-fade-in">
+      <div className="container mx-auto px-4 py-16">
+        <Card className="p-12 text-center max-w-2xl mx-auto animate-fade-in">
             <div className="bg-warning/10 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
               <AlertCircle className="h-10 w-10 text-warning" />
-            </div>
+          </div>
             <h2 className="text-3xl font-bold text-foreground mb-4">Access Denied</h2>
-            <p className="text-lg text-muted-foreground mb-8">
+          <p className="text-lg text-muted-foreground mb-8">
               This page is only accessible to users whose email ID has been added by an Auditor in the Client Role. 
               Please contact your auditor to request access.
-            </p>
-            <div className="flex gap-4 justify-center">
-              <Button onClick={() => navigate("/")}>
-                Return to Home
-              </Button>
-            </div>
+          </p>
+          <div className="flex gap-4 justify-center">
+            <Button onClick={() => navigate("/")}>
+              Return to Home
+            </Button>
+          </div>
           </Card>
         </div>
       </div>
@@ -542,7 +1134,7 @@ const ClientDashboard = () => {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          {getConfirmationStatusBadge(request.confirmationStatus)}
+                          {getConfirmationStatusBadge(request.confirmationStatus, request.status)}
                           {request.formData && (
                             <Dialog>
                               <DialogTrigger asChild>
@@ -584,7 +1176,7 @@ const ClientDashboard = () => {
                                     )}
                                     <div>
                                       <p className="text-muted-foreground">Status</p>
-                                      {getConfirmationStatusBadge(request.confirmationStatus)}
+                                      {getConfirmationStatusBadge(request.confirmationStatus, request.status)}
                                     </div>
                                   </div>
 
@@ -641,7 +1233,59 @@ const ClientDashboard = () => {
                         {/* For Authorizer: Show buttons only for pending, status badge for completed */}
                         {userRole === "Authorizer" ? (
                           request.status === "pending" ? (
-                            <div className="flex gap-3 justify-end">
+                            <div className="flex gap-3 justify-end items-center">
+                              {/* Eye icon button to view template */}
+                              <Dialog>
+                                <DialogTrigger asChild>
+                                  <Button
+                                    size="default"
+                                    variant="outline"
+                                    className="px-3 py-2.5"
+                                    title="View Confirmation Template"
+                                  >
+                                    <Eye className="h-4 w-4" />
+                                  </Button>
+                                </DialogTrigger>
+                                <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+                                  <DialogHeader>
+                                    <DialogTitle>Confirmation Template - {request.id}</DialogTitle>
+                                    <DialogDescription>
+                                      Preview the confirmation template that will be sent to {request.recipientName} at {request.recipientEmail}
+                                    </DialogDescription>
+                                  </DialogHeader>
+                                  <div className="space-y-6 py-4">
+                                    {/* Confirmation Metadata */}
+                                    <div className="grid grid-cols-2 gap-4 text-sm">
+                                      <div>
+                                        <p className="text-muted-foreground">Area</p>
+                                        <p className="font-medium">{request.area}</p>
+                                      </div>
+                                      <div>
+                                        <p className="text-muted-foreground">Confirming Party</p>
+                                        <p className="font-medium">{request.confirmingParty}</p>
+                                      </div>
+                                      <div>
+                                        <p className="text-muted-foreground">Recipient Name</p>
+                                        <p className="font-medium">{request.recipientName}</p>
+                                      </div>
+                                      <div>
+                                        <p className="text-muted-foreground">Recipient Email</p>
+                                        <p className="font-medium">{request.recipientEmail}</p>
+                                      </div>
+                                    </div>
+
+                                    {/* Confirmation Form Template Section */}
+                                    <div className="pt-4 border-t">
+                                      <h3 className="text-lg font-semibold mb-4">Confirmation Form Template</h3>
+                                      <Card>
+                                        <CardContent className="pt-6">
+                                          <BlankConfirmationTemplateView request={request} />
+                                        </CardContent>
+                                      </Card>
+                                    </div>
+                                  </div>
+                                </DialogContent>
+                              </Dialog>
                               <Button
                                 size="default"
                                 className="bg-gradient-to-br from-emerald-500 via-green-600 to-emerald-700 hover:from-emerald-600 hover:via-green-700 hover:to-emerald-800 text-white font-semibold shadow-md hover:shadow-lg transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] px-7 py-2.5 rounded-xl border-0 hover:border-green-400/30 border-2"

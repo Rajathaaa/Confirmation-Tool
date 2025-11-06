@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
-import { formatNumberInput, parseIndianNumber } from "@/lib/utils";
+import { formatNumberInput, parseIndianNumber, formatIndianDate } from "@/lib/utils";
 
 const PlanAssetsForm = ({ confirmation }: { confirmation: any }) => {
   const [rows, setRows] = useState([{ account: "", amount: "", currency: "" }]);
@@ -40,8 +40,8 @@ const PlanAssetsForm = ({ confirmation }: { confirmation: any }) => {
       onSubmit={handleSubmit}
     >
       <div className="space-y-4">
-        <p className="text-sm text-muted-foreground">
-          Kindly confirm to us the following information in respect of Plan Assets as on {confirmation.periodEndDate || "[Period-end Date]"}.
+        <p className="text-sm text-muted-foreground mb-6">
+          Kindly confirm the below balances to us pertaining to the account balances of {confirmation.confirmationFor} as are held with you as on {confirmation.periodEndDate ? formatIndianDate(confirmation.periodEndDate) : "[Period-end Date]"}:
         </p>
 
         <p className="text-sm text-muted-foreground">

@@ -2,6 +2,7 @@ import { BaseConfirmationForm } from "./BaseConfirmationForm";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useState } from "react";
+import { formatIndianDate } from "@/lib/utils";
 
 const LitigationsAndClaimsForm = ({ confirmation }: { confirmation: any }) => {
   const [mattersDetails, setMattersDetails] = useState("");
@@ -25,8 +26,8 @@ const LitigationsAndClaimsForm = ({ confirmation }: { confirmation: any }) => {
       onSubmit={handleSubmit}
     >
       <div className="space-y-6">
-        <p className="text-sm text-muted-foreground">
-          Kindly furnish a list that describes and evaluates pending or threatened litigations, claims, and assessments with respect to which you have been engaged and to which you have devoted substantive attention on behalf of {confirmation.confirmationFor || "[Name of Client Company]"} in the form of legal consultation or representation. Your response should include matters that existed as at {confirmation.periodEndDate || "[Period closing date]"} as well as new matters during the period from that date to the specified effective date of your response.
+        <p className="text-sm text-muted-foreground mb-6">
+          Kindly confirm the below balances to us pertaining to the account balances of {confirmation.confirmationFor} as are held with you as on {confirmation.periodEndDate ? formatIndianDate(confirmation.periodEndDate) : "[Period-end Date]"}:
         </p>
 
         <p className="text-sm text-muted-foreground">

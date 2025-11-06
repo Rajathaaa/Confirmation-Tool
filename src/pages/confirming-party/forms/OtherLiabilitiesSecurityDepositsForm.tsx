@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
+import { formatIndianDate, formatNumberInput, parseIndianNumber } from "@/lib/utils";
 
 const OtherLiabilitiesSecurityDepositsForm = ({ confirmation }: { confirmation: any }) => {
   const [rows, setRows] = useState([{ amountDue: "", amountOverdue: "", currency: "", rateOfInterest: "", interestAccrued: "", collateral: "", terms: "" }]);
@@ -28,7 +29,7 @@ const OtherLiabilitiesSecurityDepositsForm = ({ confirmation }: { confirmation: 
       onSubmit={handleSubmit}
     >
       <p className="text-sm text-muted-foreground mb-4">
-        Kindly confirm to us the following information in respect of amounts payable to you in respect of Inter Corporate Deposits / Loans / Advances as on {confirmation.periodEndDate}.
+        Kindly confirm to us the following information in respect of amounts payable to you in respect of Inter Corporate Deposits / Loans / Advances as on {confirmation.periodEndDate ? formatIndianDate(confirmation.periodEndDate) : "[Period-end Date]"}.
       </p>
       <div className="rounded-md border">
         <Table>
@@ -47,11 +48,38 @@ const OtherLiabilitiesSecurityDepositsForm = ({ confirmation }: { confirmation: 
           <TableBody>
             {rows.map((row, index) => (
               <TableRow key={index}>
-                <TableCell><Input type="number" value={row.amountDue} onChange={(e) => updateRow(index, "amountDue", e.target.value)} /></TableCell>
-                <TableCell><Input type="number" value={row.amountOverdue} onChange={(e) => updateRow(index, "amountOverdue", e.target.value)} /></TableCell>
+                <TableCell>
+                  <Input 
+                    type="text"
+                    value={formatNumberInput(row.amountDue)}
+                    onChange={(e) => {
+                      const numericValue = parseIndianNumber(e.target.value);
+                      updateRow(index, "amountDue", numericValue.toString());
+                    }}
+                  />
+                </TableCell>
+                <TableCell>
+                  <Input 
+                    type="text"
+                    value={formatNumberInput(row.amountOverdue)}
+                    onChange={(e) => {
+                      const numericValue = parseIndianNumber(e.target.value);
+                      updateRow(index, "amountOverdue", numericValue.toString());
+                    }}
+                  />
+                </TableCell>
                 <TableCell><Input value={row.currency} onChange={(e) => updateRow(index, "currency", e.target.value)} /></TableCell>
                 <TableCell><Input value={row.rateOfInterest} onChange={(e) => updateRow(index, "rateOfInterest", e.target.value)} /></TableCell>
-                <TableCell><Input type="number" value={row.interestAccrued} onChange={(e) => updateRow(index, "interestAccrued", e.target.value)} /></TableCell>
+                <TableCell>
+                  <Input 
+                    type="text"
+                    value={formatNumberInput(row.interestAccrued)}
+                    onChange={(e) => {
+                      const numericValue = parseIndianNumber(e.target.value);
+                      updateRow(index, "interestAccrued", numericValue.toString());
+                    }}
+                  />
+                </TableCell>
                 <TableCell><Input value={row.collateral} onChange={(e) => updateRow(index, "collateral", e.target.value)} /></TableCell>
                 <TableCell><Input value={row.terms} onChange={(e) => updateRow(index, "terms", e.target.value)} /></TableCell>
                 <TableCell>{rows.length > 1 && <Button size="sm" variant="ghost" onClick={() => removeRow(index)}><Trash2 className="h-4 w-4" /></Button>}</TableCell>

@@ -55,35 +55,31 @@ export function parseIndianDate(dateString: string): Date | null {
  * Examples: 100000 -> "1,00,000", 10000000 -> "1,00,00,000"
  */
 export function formatIndianNumber(num: number | string): string {
-  const n = typeof num === 'string' ? parseFloat(num.replace(/,/g, '')) : num;
+  if (num === null || num === undefined || num === "") return "";
+
+  const n = typeof num === "string" ? Number(num.replace(/,/g, "")) : num;
   if (isNaN(n)) return num.toString();
-  
-  // Handle negative numbers
+
   const isNegative = n < 0;
   const absNum = Math.abs(n);
-  
-  // Convert to string and split by decimal point
-  const parts = absNum.toString().split('.');
-  const integerPart = parts[0];
-  const decimalPart = parts[1] || '';
-  
-  // Apply Indian numbering system to integer part
-  let formatted = '';
-  let count = 0;
-  
-  // Process from right to left
-  for (let i = integerPart.length - 1; i >= 0; i--) {
-    if (count === 3 || (count > 3 && (count - 3) % 2 === 0)) {
-      formatted = ',' + formatted;
-      count = 0;
-    }
-    formatted = integerPart[i] + formatted;
-    count++;
-  }
-  
+
+  // Split integer and decimal parts
+  const [integerPart, decimalPart] = absNum.toString().split(".");
+
+  // First three digits (rightmost group)
+  const lastThree = integerPart.slice(-3);
+  const otherNumbers = integerPart.slice(0, -3);
+
+  // Add commas for the rest (Indian grouping)
+  const formatted =
+    otherNumbers.replace(/\B(?=(\d{2})+(?!\d))/g, ",") +
+    (otherNumbers ? "," : "") +
+    lastThree;
+
   // Add decimal part if exists
-  const result = decimalPart ? formatted + '.' + decimalPart : formatted;
-  return isNegative ? '-' + result : result;
+  const result = decimalPart ? formatted + "." + decimalPart : formatted;
+
+  return isNegative ? "-" + result : result;
 }
 
 /**

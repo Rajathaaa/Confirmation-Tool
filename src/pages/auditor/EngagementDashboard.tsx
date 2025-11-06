@@ -12,6 +12,7 @@ import { RolloutReminder } from "./sections/RolloutReminder";
 import { WorkingPaper } from "./sections/WorkingPaper";
 import { AccessRoles } from "./sections/AccessRoles";
 import { Archival } from "./sections/Archival";
+import { formatIndianDate } from "@/lib/utils";
 
 const EngagementDashboard = () => {
   const navigate = useNavigate();
@@ -113,12 +114,21 @@ const EngagementDashboard = () => {
             <div className="flex items-center gap-4">
               <div>
                 <h1 className="text-xl font-bold text-foreground">{currentEngagement.clientName}</h1>
-                <p className="text-sm text-muted-foreground">{currentEngagement.id} • Period End: {currentEngagement.periodEnd}</p>
+                <p className="text-sm text-muted-foreground">{currentEngagement.id} • Period End: {formatIndianDate(currentEngagement.periodEnd)}</p>
               </div>
             </div>
-            <Badge className={getStatusColor(currentEngagement.status)}>
-              {currentEngagement.status}
-            </Badge>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                className="px-3 py-1.5 rounded-md shadow-sm hover:shadow transition-all"
+                onClick={() => navigate("/")}
+              >
+                Return to Home
+              </Button>
+              <Badge className={getStatusColor(currentEngagement.status)}>
+                {currentEngagement.status}
+              </Badge>
+            </div>
           </div>
         </header>
 
