@@ -849,20 +849,20 @@ export const RolloutReminder = () => {
                                     >
                                       <RotateCcw className="h-4 w-4 mr-2" />
                                       Resend Confirmation
-                                    </Button>
+                          </Button>
                                   </div>
                                 </div>
                               </DialogContent>
                             </Dialog>
                             
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => lockConfirmation(confirmation.id)}
-                            >
-                              <Lock className="h-4 w-4 mr-1" />
-                              Lock
-                            </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => lockConfirmation(confirmation.id)}
+                          >
+                            <Lock className="h-4 w-4 mr-1" />
+                            Lock
+                          </Button>
                           </>
                         )}
                       </div>
