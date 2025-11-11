@@ -111,6 +111,7 @@ interface TemplateElement {
   statement?: string;
   // Footnotes for this element
   footnotes?: Footnote[];
+  tableName?: string; // Add this field
 }
 
 interface CustomTemplateStructure {
@@ -1195,6 +1196,32 @@ export const SampleGeneration = () => {
                                 )}
                               </td>
                             ))}
+                            <td className="border border-gray-400 p-1 w-10 align-middle">
+                              <div className="flex flex-col gap-1">
+                                {/* Only show Add Row button if NOT all headers have "Entered by Confirming Party" checked */}
+                                {!element.tableData.canConfirmingPartyAddRows && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-6 w-6 p-0"
+                                    onClick={() => addTableRow(element.id, row.id)}
+                                    title="Add row below"
+                                  >
+                                    <Plus className="h-3 w-3" />
+                                  </Button>
+                                )}
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 w-6 p-0"
+                                  onClick={() => removeTableRow(element.id, row.id)}
+                                  disabled={element.tableData.dataRows.length <= 1}
+                                  title="Delete row"
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            </td>
                           </tr>
                         ))}
                       </tbody>
@@ -1229,32 +1256,52 @@ export const SampleGeneration = () => {
 
         {/* Mandatory Elements Preview */}
         <div className="space-y-4 border-t pt-6 mt-6">
-          <h3 className="font-semibold text-lg">Remarks Section</h3>
-          <div className="border rounded-md p-4 bg-muted/30">
-            <p className="text-sm text-muted-foreground italic">
-              (Remarks will be entered by confirming party)
-            </p>
+          {/* Remarks Section */}
+          <div className="space-y-2">
+            <Label className="font-semibold">Remarks</Label>
+            <Textarea
+              placeholder="Enter any remarks or additional information..."
+              rows={4}
+              disabled
+              className="bg-muted/30"
+            />
           </div>
 
-          <h3 className="font-semibold text-lg">Attachments Section</h3>
-          <div className="border rounded-md p-4 bg-muted/30">
-            <p className="text-sm text-muted-foreground italic">
-              (Attachments will be uploaded by confirming party)
-            </p>
+          {/* Attachments Section */}
+          <div className="space-y-2">
+            <Label className="font-semibold">Attachments</Label>
+            <Input
+              type="file"
+              multiple
+              disabled
+              className="cursor-pointer bg-muted/30"
+            />
           </div>
 
-          <h3 className="font-semibold text-lg">Confirming Party Confirmation Statement</h3>
-          <div className="border rounded-md p-4 bg-muted/30">
-            <p className="text-sm">
-              "We certify that the above particulars (read alongwith the attachments if any) are full and correct."
-            </p>
+          {/* Certification Statement */}
+          <div className="space-y-2 border-t pt-4">
+            <div className="flex items-start gap-2">
+              <Checkbox disabled className="mt-1" />
+              <p className="text-sm">
+                We certify that the above particulars (read alongwith the attachments if any) are full and correct and do not exclude any other financial relationship of the entity with us.
+              </p>
+            </div>
           </div>
 
-          <h3 className="font-semibold text-lg">Confirming Party Details</h3>
-          <div className="border rounded-md p-4 bg-muted/30">
-            <p className="text-sm text-muted-foreground italic">
-              (Confirming party details will be filled automatically)
-            </p>
+          {/* Confirming Party Details */}
+          <div className="space-y-3 border-t pt-4">
+            <div className="space-y-1">
+              <Label>Organization Name (if any)</Label>
+              <Input placeholder="Organization name" disabled className="max-w-md bg-muted/30" />
+            </div>
+            <div className="space-y-1">
+              <Label>Name <span className="text-red-500">*</span></Label>
+              <Input placeholder="Your name" disabled className="max-w-md bg-muted/30" />
+            </div>
+            <div className="space-y-1">
+              <Label>Designation <span className="text-red-500">*</span></Label>
+              <Input placeholder="Your designation" disabled className="max-w-md bg-muted/30" />
+            </div>
           </div>
         </div>
       </div>
@@ -1745,17 +1792,31 @@ export const SampleGeneration = () => {
                                                     ) : element.tableData ? (
                                                       // Table editor
                                                       <div className="space-y-3">
+                                                        {/* Table Name Input */}
+                                                        <div className="space-y-1">
+                                                          <Label className="text-sm font-medium">Table Name</Label>
+                                                          <Input
+                                                            value={element.tableName || ""}
+                                                            onChange={(e) => updateElement(element.id, { tableName: e.target.value })}
+                                                            placeholder="Enter table name (e.g., Balance Details)"
+                                                            className="max-w-md"
+                                                          />
+                                                        </div>
+
                                                         {/* Table Controls */}
                                                         <div className="flex gap-2 flex-wrap items-center justify-between p-2 bg-muted rounded">
                                                           <div className="flex gap-2">
-                                                            <Button
-                                                              variant="outline"
-                                                              size="sm"
-                                                              onClick={() => addTableRow(element.id)}
-                                                            >
-                                                              <Plus className="h-3 w-3 mr-1" />
-                                                              Add Row
-                                                            </Button>
+                                                            {/* Only show Add Row if NOT all headers have "Entered by Confirming Party" checked */}
+                                                            {!element.tableData.canConfirmingPartyAddRows && (
+                                                              <Button
+                                                                variant="outline"
+                                                                size="sm"
+                                                                onClick={() => addTableRow(element.id)}
+                                                              >
+                                                                <Plus className="h-3 w-3 mr-1" />
+                                                                Add Row
+                                                              </Button>
+                                                            )}
                                                             <Button
                                                               variant="outline"
                                                               size="sm"
@@ -1850,34 +1911,43 @@ export const SampleGeneration = () => {
                                                                               checked={cell.enteredByConfirmingParty}
                                                                               onCheckedChange={(checked) => {
                                                                                 const isChecked = checked as boolean;
+                                                                                
+                                                                                // Get current element state
+                                                                                const currentElement = templateElements.find(e => e.id === element.id);
+                                                                                if (!currentElement?.tableData) return;
+                                                                                
+                                                                                // Find the column index
+                                                                                const colIndex = currentElement.tableData.headerRow.cells.findIndex(c => c.id === cell.id);
+                                                                                if (colIndex === -1) return;
+                                                                                
                                                                                 // Update header cell
-                                                                                updateTableCell(
-                                                                                  element.id,
-                                                                                  "header-row",
-                                                                                  cell.id,
-                                                                                  { enteredByConfirmingParty: isChecked }
+                                                                                const updatedHeaderCells = currentElement.tableData.headerRow.cells.map(c =>
+                                                                                  c.id === cell.id ? { ...c, enteredByConfirmingParty: isChecked } : c
                                                                                 );
                                                                                 
-                                                                                // Propagate to all cells in this column
-                                                                                const currentElement = templateElements.find(e => e.id === element.id);
-                                                                                if (currentElement?.tableData) {
-                                                                                  const updatedDataRows = currentElement.tableData.dataRows.map(row => ({
-                                                                                    ...row,
-                                                                                    cells: row.cells.map((dataCell, idx) => {
-                                                                                      if (idx === colIndex) {
-                                                                                        return { ...dataCell, enteredByConfirmingParty: isChecked };
-                                                                                      }
-                                                                                      return dataCell;
-                                                                                    })
-                                                                                  }));
-                                                                                  
-                                                                                  updateElement(element.id, {
-                                                                                    tableData: {
-                                                                                      ...currentElement.tableData,
-                                                                                      dataRows: updatedDataRows
+                                                                                // Propagate to all data cells in this column
+                                                                                const updatedDataRows = currentElement.tableData.dataRows.map(row => ({
+                                                                                  ...row,
+                                                                                  cells: row.cells.map((dataCell, idx) => {
+                                                                                    if (idx === colIndex) {
+                                                                                      return { ...dataCell, enteredByConfirmingParty: isChecked };
                                                                                     }
-                                                                                  });
-                                                                                }
+                                                                                    return dataCell;
+                                                                                  })
+                                                                                }));
+                                                                                
+                                                                                // Recalculate canConfirmingPartyAddRows
+                                                                                const allColumnsConfirmingParty = updatedHeaderCells.every(c => c.enteredByConfirmingParty);
+                                                                                
+                                                                                // Update element with all changes at once
+                                                                                updateElement(element.id, {
+                                                                                  tableData: {
+                                                                                    ...currentElement.tableData,
+                                                                                    headerRow: { ...currentElement.tableData.headerRow, cells: updatedHeaderCells },
+                                                                                    dataRows: updatedDataRows,
+                                                                                    canConfirmingPartyAddRows: allColumnsConfirmingParty
+                                                                                  }
+                                                                                });
                                                                               }}
                                                                             />
                                                                             <Label className="text-xs">Entered by Confirming Party?</Label>
@@ -2155,15 +2225,18 @@ export const SampleGeneration = () => {
                                                                   ))}
                                                                   <td className="border border-gray-400 p-1 w-10 align-middle">
                                                                     <div className="flex flex-col gap-1">
-                                                                      <Button
-                                                                        variant="ghost"
-                                                                        size="sm"
-                                                                        className="h-6 w-6 p-0"
-                                                                        onClick={() => addTableRow(element.id, row.id)}
-                                                                        title="Add row below"
-                                                                      >
-                                                                        <Plus className="h-3 w-3" />
-                                                                      </Button>
+                                                                      {/* Only show Add Row button if NOT all headers have "Entered by Confirming Party" checked */}
+                                                                      {!element.tableData.canConfirmingPartyAddRows && (
+                                                                        <Button
+                                                                          variant="ghost"
+                                                                          size="sm"
+                                                                          className="h-6 w-6 p-0"
+                                                                          onClick={() => addTableRow(element.id, row.id)}
+                                                                          title="Add row below"
+                                                                        >
+                                                                          <Plus className="h-3 w-3" />
+                                                                        </Button>
+                                                                      )}
                                                                       <Button
                                                                         variant="ghost"
                                                                         size="sm"
@@ -2226,14 +2299,6 @@ export const SampleGeneration = () => {
                                                       <Plus className="h-3 w-3 mr-1" />
                                                       Table
                                                     </Button>
-                                                    <Button
-                                                      variant="outline"
-                                                      size="sm"
-                                                      onClick={() => addElement("asteriskStatement", element.id)}
-                                                    >
-                                                      <Plus className="h-3 w-3 mr-1" />
-                                                      Asterisk Statement
-                                                    </Button>
                                                   </div>
                                                 </div>
                                               </Card>
@@ -2265,13 +2330,6 @@ export const SampleGeneration = () => {
                                               >
                                                 <Plus className="h-4 w-4 mr-2" />
                                                 Table
-                                              </Button>
-                                              <Button
-                                                variant="outline"
-                                                onClick={() => addElement("asteriskStatement")}
-                                              >
-                                                <Plus className="h-4 w-4 mr-2" />
-                                                Asterisk Statement
                                               </Button>
                                             </div>
                                           </Card>

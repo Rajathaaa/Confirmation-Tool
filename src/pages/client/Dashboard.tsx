@@ -25,6 +25,8 @@ interface AuthorizationRequest {
   formData?: any; // New field - stores filled confirmation form data
   remarks?: string; // Remarks from confirming party
   attachments?: string[]; // Attachments from confirming party
+  periodEndDate?: string; // Add this line
+  clientOrganization?: string; // Add this line
 }
 
 // Mock client user - in real app, this would come from authentication context
@@ -84,7 +86,9 @@ const mockAuthorizationRequests: AuthorizationRequest[] = [
       isCertified: true
     },
     remarks: "We confirm the outstanding balance as of December 31, 2024.",
-    attachments: ["confirmation_response_001.pdf"]
+    attachments: ["confirmation_response_001.pdf"],
+    periodEndDate: "2024-12-31",
+    clientOrganization: "TechCorp Industries Ltd."
   },
   {
     id: "AUTH-002",
@@ -109,7 +113,9 @@ const mockAuthorizationRequests: AuthorizationRequest[] = [
       isCertified: true
     },
     remarks: "Payables confirmed as per records.",
-    attachments: ["confirmation_response_002.pdf"]
+    attachments: ["confirmation_response_002.pdf"],
+    periodEndDate: "2024-12-31",
+    clientOrganization: "TechCorp Industries Ltd."
   },
   {
     id: "AUTH-003",
@@ -134,7 +140,9 @@ const mockAuthorizationRequests: AuthorizationRequest[] = [
       isCertified: true
     },
     remarks: "Bank balances confirmed.",
-    attachments: ["confirmation_response_003.pdf"]
+    attachments: ["confirmation_response_003.pdf"],
+    periodEndDate: "2024-12-31",
+    clientOrganization: "TechCorp Industries Ltd."
   },
   {
     id: "AUTH-004",
@@ -159,7 +167,9 @@ const mockAuthorizationRequests: AuthorizationRequest[] = [
       isCertified: true
     },
     remarks: "Loan details confirmed.",
-    attachments: ["confirmation_response_004.pdf"]
+    attachments: ["confirmation_response_004.pdf"],
+    periodEndDate: "2024-12-31",
+    clientOrganization: "TechCorp Industries Ltd."
   },
   {
     id: "AUTH-005",
@@ -181,7 +191,9 @@ const mockAuthorizationRequests: AuthorizationRequest[] = [
       isCertified: true
     },
     remarks: "All related party details confirmed.",
-    attachments: ["confirmation_response_005.pdf"]
+    attachments: ["confirmation_response_005.pdf"],
+    periodEndDate: "2024-12-31",
+    clientOrganization: "TechCorp Industries Ltd."
   },
   {
     id: "AUTH-006",
@@ -204,7 +216,9 @@ const mockAuthorizationRequests: AuthorizationRequest[] = [
       isCertified: true
     },
     remarks: "Plan assets confirmed.",
-    attachments: ["confirmation_response_006.pdf"]
+    attachments: ["confirmation_response_006.pdf"],
+    periodEndDate: "2024-12-31",
+    clientOrganization: "TechCorp Industries Ltd."
   },
   {
     id: "AUTH-007",
@@ -229,7 +243,9 @@ const mockAuthorizationRequests: AuthorizationRequest[] = [
       isCertified: true
     },
     remarks: "Capex payables confirmed.",
-    attachments: ["confirmation_response_007.pdf"]
+    attachments: ["confirmation_response_007.pdf"],
+    periodEndDate: "2024-12-31",
+    clientOrganization: "TechCorp Industries Ltd."
   },
   {
     id: "AUTH-008",
@@ -240,6 +256,7 @@ const mockAuthorizationRequests: AuthorizationRequest[] = [
     remarksByAuditor: "Please review and authorize this confirmation request for inventory held.",
     attachmentByAuditor: ["authorization_letter_008.pdf"],
     status: "pending",
+    periodEndDate: "2024-12-31"
   },
   {
     id: "AUTH-009",
@@ -253,6 +270,7 @@ const mockAuthorizationRequests: AuthorizationRequest[] = [
     authorizedBy: "Sarah Johnson",
     authorizedDate: "2025-01-26 10:45:00",
     confirmationStatus: "not-confirmed",
+    periodEndDate: "2024-12-31"
   },
   {
     id: "AUTH-010",
@@ -266,6 +284,7 @@ const mockAuthorizationRequests: AuthorizationRequest[] = [
     authorizedBy: "Sarah Johnson",
     authorizedDate: "2025-01-26 10:45:00",
     confirmationStatus: "not-confirmed",
+    periodEndDate: "2024-12-31"
   },
   {
     id: "AUTH-011",
@@ -279,6 +298,7 @@ const mockAuthorizationRequests: AuthorizationRequest[] = [
     authorizedBy: "Sarah Johnson",
     authorizedDate: "2025-01-26 10:45:00",
     confirmationStatus: "not-confirmed",
+    periodEndDate: "2024-12-31"
   },
   {
     id: "AUTH-012",
@@ -292,6 +312,7 @@ const mockAuthorizationRequests: AuthorizationRequest[] = [
     authorizedBy: "Sarah Johnson",
     authorizedDate: "2025-01-26 10:45:00",
     confirmationStatus: "not-confirmed",
+    periodEndDate: "2024-12-31"
   },
   {
     id: "AUTH-013",
@@ -305,6 +326,7 @@ const mockAuthorizationRequests: AuthorizationRequest[] = [
     authorizedBy: "Sarah Johnson",
     authorizedDate: "2025-01-26 10:45:00",
     confirmationStatus: "not-confirmed",
+    periodEndDate: "2024-12-31"
   },
   {
     id: "AUTH-014",
@@ -318,6 +340,7 @@ const mockAuthorizationRequests: AuthorizationRequest[] = [
     authorizedBy: "Sarah Johnson",
     authorizedDate: "2025-01-26 10:45:00",
     confirmationStatus: "not-confirmed",
+    periodEndDate: "2024-12-31"
   },
   {
     id: "AUTH-015",
@@ -328,6 +351,7 @@ const mockAuthorizationRequests: AuthorizationRequest[] = [
     remarksByAuditor: "Confirm capital advances made as of December 31, 2024.",
     attachmentByAuditor: ["authorization_letter_015.pdf"],
     status: "pending",
+    periodEndDate: "2024-12-31"
   },
   {
     id: "AUTH-016",
@@ -338,6 +362,7 @@ const mockAuthorizationRequests: AuthorizationRequest[] = [
     remarksByAuditor: "Confirm advance payments received as of December 31, 2024.",
     attachmentByAuditor: ["authorization_letter_016.pdf"],
     status: "pending",
+    periodEndDate: "2024-12-31"
   },
   {
     id: "AUTH-017",
@@ -348,6 +373,7 @@ const mockAuthorizationRequests: AuthorizationRequest[] = [
     remarksByAuditor: "Confirm trust assets and liabilities as of December 31, 2024.",
     attachmentByAuditor: ["authorization_letter_017.pdf"],
     status: "pending",
+    periodEndDate: "2024-12-31"
   },
   {
     id: "AUTH-018",
@@ -358,6 +384,7 @@ const mockAuthorizationRequests: AuthorizationRequest[] = [
     remarksByAuditor: "Please review and authorize this confirmation request.",
     attachmentByAuditor: ["authorization_letter_018.pdf"],
     status: "pending",
+    periodEndDate: "2024-12-31"
   },
   {
     id: "AUTH-019",
@@ -368,6 +395,7 @@ const mockAuthorizationRequests: AuthorizationRequest[] = [
     remarksByAuditor: "Please confirm related party relationships, transactions and balances as per the attached format.",
     attachmentByAuditor: ["authorization_letter_019.pdf"],
     status: "pending",
+    periodEndDate: "2024-12-31"
   },
   {
     id: "AUTH-020",
@@ -378,6 +406,8 @@ const mockAuthorizationRequests: AuthorizationRequest[] = [
     remarksByAuditor: "Confirm all bank accounts and fixed deposits as of December 31, 2024.",
     attachmentByAuditor: ["authorization_letter_020.pdf"],
     status: "pending",
+    periodEndDate: "2024-12-31",
+    clientOrganization: "TechCorp Industries Ltd."
   }
 ];
 
@@ -390,7 +420,7 @@ const BlankConfirmationTemplateView = ({ request }: { request: AuthorizationRequ
         return (
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground mb-4">
-              Kindly confirm to us the following information in respect of amounts {request.area === "Trade Receivables" ? "receivable from" : "payable to"} you as on [Period-end Date]:
+              Kindly confirm to us the following information in respect of amounts {request.area === "Trade Receivables" ? "receivable from" : "payable to"} you as on {request.periodEndDate ? formatIndianDate(request.periodEndDate) : "[Period-end Date]"}:
             </p>
             <div className="rounded-md border">
               <Table>
@@ -417,7 +447,7 @@ const BlankConfirmationTemplateView = ({ request }: { request: AuthorizationRequ
         return (
           <div className="space-y-6">
             <p className="text-sm text-muted-foreground mb-6">
-              Kindly confirm the below balances to us pertaining to the account balances of [Client Organization] as are held with you as on [Period-end Date]:
+              Kindly confirm the below balances to us pertaining to the account balances of {request.clientOrganization || "[Client Organization]"} as are held with you as on {request.periodEndDate ? formatIndianDate(request.periodEndDate) : "[Period-end Date]"}:
             </p>
             
             <div className="space-y-2">
@@ -485,7 +515,7 @@ const BlankConfirmationTemplateView = ({ request }: { request: AuthorizationRequ
         return (
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground mb-4">
-              Kindly furnish a list that describes and evaluates pending or threatened litigations, claims, and assessments with respect to which you have been engaged and to which you have devoted substantive attention on behalf of [Client Organization] in the form of legal consultation or representation.
+              Kindly furnish a list that describes and evaluates pending or threatened litigations, claims, and assessments with respect to which you have been engaged and to which you have devoted substantive attention on behalf of {request.clientOrganization || "[Client Organization]"} in the form of legal consultation or representation.
             </p>
             <p className="text-sm text-muted-foreground mb-4">
               Kindly also furnish a list of unasserted claims or assessments (considered by management to be probable of assertion and which, if asserted, would have at least a reasonable possibility of an unfavourable outcome).
@@ -502,14 +532,14 @@ const BlankConfirmationTemplateView = ({ request }: { request: AuthorizationRequ
           return (
             <div className="space-y-6">
               <p className="text-sm text-muted-foreground">
-                Kindly confirm to us the following information in respect of related party transactions as on [Period-end Date]:
+                Kindly confirm to us the following information in respect of related party transactions as on {request.periodEndDate ? formatIndianDate(request.periodEndDate) : "[Period-end Date]"}:
               </p>
               <div className="rounded-md border">
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead className="w-[80px]">Sl. No.</TableHead>
-                      <TableHead>Nature of Relationship as at [Period end date]</TableHead>
+                      <TableHead>Nature of Relationship as at {request.periodEndDate ? formatIndianDate(request.periodEndDate) : "[Period end date]"}</TableHead>
                       <TableHead className="w-[340px]">Response</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -593,7 +623,7 @@ const ConfirmationFormView = ({ request }: { request: AuthorizationRequest }) =>
         return (
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground mb-4">
-              Kindly confirm to us the following information in respect of amounts {request.area === "Trade Receivables" ? "receivable from" : "payable to"} you as on [Period-end Date]:
+              Kindly confirm to us the following information in respect of amounts {request.area === "Trade Receivables" ? "receivable from" : "payable to"} you as on {request.periodEndDate ? formatIndianDate(request.periodEndDate) : "[Period-end Date]"}:
             </p>
             {request.formData.amounts && request.formData.amounts.length > 0 && (
               <div className="rounded-md border">
@@ -625,7 +655,7 @@ const ConfirmationFormView = ({ request }: { request: AuthorizationRequest }) =>
         return (
           <div className="space-y-6">
             <p className="text-sm text-muted-foreground mb-6">
-              Kindly confirm the below balances to us pertaining to the account balances of [Client Organization] as are held with you as on [Period-end Date]:
+              Kindly confirm the below balances to us pertaining to the account balances of {request.clientOrganization || "[Client Organization]"} as are held with you as on {request.periodEndDate ? formatIndianDate(request.periodEndDate) : "[Period-end Date]"}:
             </p>
             
             {request.formData.currentAccounts && request.formData.currentAccounts.length > 0 && (
@@ -686,7 +716,7 @@ const ConfirmationFormView = ({ request }: { request: AuthorizationRequest }) =>
           return (
             <div className="space-y-6">
               <p className="text-sm text-muted-foreground mb-4">
-                Kindly confirm to us the following information in respect of related party transactions as on [Period-end Date]:
+                Kindly confirm to us the following information in respect of related party transactions as on {request.periodEndDate ? formatIndianDate(request.periodEndDate) : "[Period-end Date]"}:
               </p>
               
               {/* Relationship Responses */}
@@ -758,7 +788,7 @@ const ConfirmationFormView = ({ request }: { request: AuthorizationRequest }) =>
           return (
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground mb-4">
-                Kindly confirm to us the following information in respect of Plan Assets as on [Period-end Date]:
+                Kindly confirm to us the following information in respect of Plan Assets as on {request.periodEndDate ? formatIndianDate(request.periodEndDate) : "[Period-end Date]"}:
               </p>
               {request.formData.accounts && request.formData.accounts.length > 0 ? (
                 <div className="rounded-md border">
@@ -796,7 +826,7 @@ const ConfirmationFormView = ({ request }: { request: AuthorizationRequest }) =>
           return (
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground mb-4">
-                Kindly confirm to us the following information in respect of amounts payable to you as on [Period-end Date]:
+                Kindly confirm to us the following information in respect of amounts payable to you as on {request.periodEndDate ? formatIndianDate(request.periodEndDate) : "[Period-end Date]"}:
               </p>
               {request.formData.amounts && request.formData.amounts.length > 0 && (
                 <div className="rounded-md border">
