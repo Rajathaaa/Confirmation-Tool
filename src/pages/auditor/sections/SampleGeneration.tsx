@@ -17,6 +17,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { BookOpen } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { formatIndianDate, parseIndianDate, cn } from "@/lib/utils";
+import React from "react";
 
 // Add template interfaces
 interface AuthorizationTemplate {
@@ -1840,307 +1841,69 @@ export const SampleGeneration = () => {
                                                             {/* Header Row */}
                                                             <thead>
                                                               <tr>
-                                                                {element.tableData.headerRow.cells.map((cell, colIndex) => (
-                                                                  <th
-                                                                    key={cell.id}
-                                                                    className="border border-gray-400 p-2 bg-gray-100 min-w-[120px] align-top relative"
-                                                                    colSpan={cell.colSpan}
-                                                                    rowSpan={cell.rowSpan}
-                                                                    onClick={() => setSelectedCellForConfig({
-                                                                      elementId: element.id,
-                                                                      rowId: "header-row",
-                                                                      cellId: cell.id,
-                                                                      isHeader: true
-                                                                    })}
-                                                                    style={{
-                                                                      backgroundColor: selectedCellForConfig?.cellId === cell.id ? "#dbeafe" : undefined
-                                                                    }}
-                                                                  >
-                                                                    <div className="space-y-2">
-                                                                      <Input
-                                                                        value={cell.content}
-                                                                        onChange={(e) => updateTableCell(
-                                                                          element.id,
-                                                                          "header-row",
-                                                                          cell.id,
-                                                                          { content: e.target.value }
-                                                                        )}
-                                                                        {...handleTextSelection(element.id, "tableCell", cell.id)}
-                                                                        placeholder={`Header ${colIndex + 1}`}
-                                                                        className="text-xs font-semibold border-0 focus-visible:ring-0 bg-transparent p-0 h-auto"
-                                                                        onClick={(e) => e.stopPropagation()}
-                                                                      />
-                                                                      {selectedText?.elementId === element.id && 
-                                                                       selectedText.fieldType === "tableCell" && 
-                                                                       selectedText.cellId === cell.id && (
-                                                                        <Button
-                                                                          size="sm"
-                                                                          variant="outline"
-                                                                          onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            setFootnoteDialogOpen(true);
-                                                                          }}
-                                                                          className="h-5 text-xs"
-                                                                        >
-                                                                          <BookOpen className="h-3 w-3 mr-1" />
-                                                                          Footnote
-                                                                        </Button>
-                                                                      )}
-                                                                      
-                                                                      {/* Configuration Panel - Inside Header */}
-                                                                      {selectedCellForConfig?.elementId === element.id && 
-                                                                       selectedCellForConfig?.cellId === cell.id && 
-                                                                       selectedCellForConfig?.isHeader && (
-                                                                        <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-xs space-y-2">
-                                                                          <div className="flex items-center justify-between mb-2">
-                                                                            <Label className="text-xs font-semibold">Configure Header</Label>
-                                                                            <Button
-                                                                              variant="ghost"
-                                                                              size="sm"
-                                                                              className="h-4 w-4 p-0"
-                                                                              onClick={(e) => {
-                                                                                e.stopPropagation();
-                                                                                setSelectedCellForConfig(null);
-                                                                              }}
-                                                                            >
-                                                                              ✕
-                                                                            </Button>
-                                                                          </div>
-                                                                          <div className="flex items-center gap-2">
-                                                                            <Checkbox
-                                                                              checked={cell.enteredByConfirmingParty}
-                                                                              onCheckedChange={(checked) => {
-                                                                                const isChecked = checked as boolean;
-                                                                                
-                                                                                // Get current element state
-                                                                                const currentElement = templateElements.find(e => e.id === element.id);
-                                                                                if (!currentElement?.tableData) return;
-                                                                                
-                                                                                // Find the column index
-                                                                                const colIndex = currentElement.tableData.headerRow.cells.findIndex(c => c.id === cell.id);
-                                                                                if (colIndex === -1) return;
-                                                                                
-                                                                                // Update header cell
-                                                                                const updatedHeaderCells = currentElement.tableData.headerRow.cells.map(c =>
-                                                                                  c.id === cell.id ? { ...c, enteredByConfirmingParty: isChecked } : c
-                                                                                );
-                                                                                
-                                                                                // Propagate to all data cells in this column
-                                                                                const updatedDataRows = currentElement.tableData.dataRows.map(row => ({
-                                                                                  ...row,
-                                                                                  cells: row.cells.map((dataCell, idx) => {
-                                                                                    if (idx === colIndex) {
-                                                                                      return { ...dataCell, enteredByConfirmingParty: isChecked };
-                                                                                    }
-                                                                                    return dataCell;
-                                                                                  })
-                                                                                }));
-                                                                                
-                                                                                // Recalculate canConfirmingPartyAddRows
-                                                                                const allColumnsConfirmingParty = updatedHeaderCells.every(c => c.enteredByConfirmingParty);
-                                                                                
-                                                                                // Update element with all changes at once
-                                                                                updateElement(element.id, {
-                                                                                  tableData: {
-                                                                                    ...currentElement.tableData,
-                                                                                    headerRow: { ...currentElement.tableData.headerRow, cells: updatedHeaderCells },
-                                                                                    dataRows: updatedDataRows,
-                                                                                    canConfirmingPartyAddRows: allColumnsConfirmingParty
-                                                                                  }
-                                                                                });
-                                                                              }}
-                                                                            />
-                                                                            <Label className="text-xs">Entered by Confirming Party?</Label>
-                                                                          </div>
-                                                                          <div>
-                                                                            <Label className="text-xs mb-1 block">Cell Type</Label>
-                                                                            <Select
-                                                                              value={cell.cellType}
-                                                                              onValueChange={(value: "text" | "calendar" | "customDropdown") => {
-                                                                                // Update header cell
-                                                                                updateTableCell(
-                                                                                  element.id,
-                                                                                  "header-row",
-                                                                                  cell.id,
-                                                                                  { cellType: value }
-                                                                                );
-                                                                                
-                                                                                // Propagate to all cells in this column
-                                                                                const currentElement = templateElements.find(e => e.id === element.id);
-                                                                                if (currentElement?.tableData) {
-                                                                                  const updatedDataRows = currentElement.tableData.dataRows.map(row => ({
-                                                                                    ...row,
-                                                                                    cells: row.cells.map((dataCell, idx) => {
-                                                                                      if (idx === colIndex) {
-                                                                                        return { 
-                                                                                          ...dataCell, 
-                                                                                          cellType: value,
-                                                                                          // Clear custom dropdown options if changing away from customDropdown
-                                                                                          customDropdownOptions: value === "customDropdown" ? dataCell.customDropdownOptions : undefined
-                                                                                        };
-                                                                                      }
-                                                                                      return dataCell;
-                                                                                    })
-                                                                                  }));
-                                                                                  
-                                                                                  updateElement(element.id, {
-                                                                                    tableData: {
-                                                                                      ...currentElement.tableData,
-                                                                                      dataRows: updatedDataRows
-                                                                                    }
-                                                                                  });
-                                                                                }
-                                                                                
-                                                                                if (value === "customDropdown") {
-                                                                                  setEditingCellForDropdown({
-                                                                                    elementId: element.id,
-                                                                                    rowId: "header-row",
-                                                                                    cellId: cell.id,
-                                                                                    isHeader: true
-                                                                                  });
-                                                                                  setCustomDropdownDialogOpen(true);
-                                                                                }
-                                                                              }}
-                                                                            >
-                                                                              <SelectTrigger className="h-7 text-xs">
-                                                                                <SelectValue />
-                                                                              </SelectTrigger>
-                                                                              <SelectContent>
-                                                                                <SelectItem value="text">Text Field</SelectItem>
-                                                                                <SelectItem value="calendar">Calendar Dropdown</SelectItem>
-                                                                                <SelectItem value="customDropdown">Custom Dropdown</SelectItem>
-                                                                              </SelectContent>
-                                                                            </Select>
-                                                                          </div>
-                                                                          {cell.cellType === "customDropdown" && cell.customDropdownOptions && (
-                                                                            <div className="text-xs text-muted-foreground">
-                                                                              Options: {cell.customDropdownOptions.join(", ")}
-                                                                            </div>
-                                                                          )}
-                                                                          <Button
-                                                                            variant="ghost"
-                                                                            size="sm"
-                                                                            className="h-6 text-xs w-full"
-                                                                            onClick={(e) => {
-                                                                              e.stopPropagation();
-                                                                              removeTableColumn(element.id, colIndex);
-                                                                            }}
-                                                                          >
-                                                                            <Trash2 className="h-3 w-3 mr-1" />
-                                                                            Delete Column
-                                                                          </Button>
-                                                                        </div>
-                                                                      )}
-                                                                      
-
-                                                                    </div>
-                                                                  </th>
-                                                                ))}
-                                                              </tr>
-                                                            </thead>
-                                                            {/* Data Rows */}
-                                                            <tbody>
-                                                              {element.tableData.dataRows.map((row, rowIndex) => (
-                                                                <tr key={row.id} className="group">
-                                                                  {row.cells.map((cell, colIndex) => (
-                                                                    <td
+                                                                {element.tableData.headerRow.cells.map((cell, colIndex) => {
+                                                                  const isHeaderSelected = selectedCellForConfig?.elementId === element.id && 
+                                                                                           selectedCellForConfig?.cellId === cell.id && 
+                                                                                           selectedCellForConfig?.isHeader;
+                                                                  return (
+                                                                    <th
                                                                       key={cell.id}
-                                                                      className="border border-gray-400 p-2 min-w-[120px] align-top relative"
+                                                                      className="border border-gray-400 p-2 bg-gray-100 min-w-[120px] align-top relative"
                                                                       colSpan={cell.colSpan}
                                                                       rowSpan={cell.rowSpan}
                                                                       onClick={() => setSelectedCellForConfig({
                                                                         elementId: element.id,
-                                                                        rowId: row.id,
+                                                                        rowId: "header-row",
                                                                         cellId: cell.id,
-                                                                        isHeader: false
+                                                                        isHeader: true
                                                                       })}
                                                                       style={{
-                                                                        backgroundColor: selectedCellForConfig?.cellId === cell.id && selectedCellForConfig?.rowId === row.id ? "#dbeafe" : undefined
+                                                                        backgroundColor: selectedCellForConfig?.cellId === cell.id ? "#dbeafe" : undefined
                                                                       }}
                                                                     >
                                                                       <div className="space-y-2">
-                                                                        {/* Render input based on cellType */}
-                                                                        {cell.cellType === "text" && (
-                                                                          <Input
-                                                                            value={cell.content}
-                                                                            onChange={(e) => updateTableCell(
-                                                                              element.id,
-                                                                              row.id,
-                                                                              cell.id,
-                                                                              { content: e.target.value }
-                                                                            )}
-                                                                            {...handleTextSelection(element.id, "tableCell", cell.id)}
-                                                                            placeholder={`Row ${rowIndex + 1}, Col ${colIndex + 1}`}
-                                                                            className="text-xs border-0 focus-visible:ring-0 bg-transparent p-0 h-auto"
-                                                                            onClick={(e) => e.stopPropagation()}
-                                                                          />
-                                                                        )}
-                                                                        
-                                                                        {cell.cellType === "calendar" && (
-                                                                          <Popover>
-                                                                            <PopoverTrigger asChild>
-                                                                              <Button
-                                                                                variant="outline"
-                                                                                className={cn(
-                                                                                  "w-full justify-start text-left font-normal text-xs h-auto py-1 px-2",
-                                                                                  !cell.content && "text-muted-foreground"
-                                                                                )}
-                                                                                onClick={(e) => e.stopPropagation()}
-                                                                              >
-                                                                                <CalendarIcon className="mr-2 h-3 w-3" />
-                                                                                {cell.content ? (
-                                                                                  formatIndianDate(parseIndianDate(cell.content) || new Date())
-                                                                                ) : (
-                                                                                  <span>dd-mm-yyyy</span>
-                                                                                )}
-                                                                              </Button>
-                                                                            </PopoverTrigger>
-                                                                            <PopoverContent className="w-auto p-0" align="start">
-                                                                              <Calendar
-                                                                                mode="single"
-                                                                                selected={cell.content ? parseIndianDate(cell.content) || undefined : undefined}
-                                                                                onSelect={(date) => {
-                                                                                  if (date) {
-                                                                                    const formatted = formatIndianDate(date);
-                                                                                    updateTableCell(
-                                                                                      element.id,
-                                                                                      row.id,
-                                                                                      cell.id,
-                                                                                      { content: formatted }
-                                                                                    );
-                                                                                  }
-                                                                                }}
-                                                                                initialFocus
-                                                                              />
-                                                                            </PopoverContent>
-                                                                          </Popover>
-                                                                        )}
-                                                                        
-                                                                        {cell.cellType === "customDropdown" && cell.customDropdownOptions && (
-                                                                          <Select
-                                                                            value={cell.content}
-                                                                            onValueChange={(value) => {
-                                                                              updateTableCell(
-                                                                                element.id,
-                                                                                row.id,
-                                                                                cell.id,
-                                                                                { content: value }
-                                                                              );
+                                                                        {/* Plus and Delete buttons in header - top right */}
+                                                                        <div className="flex justify-end gap-1 mb-1">
+                                                                          <Button
+                                                                            variant="ghost"
+                                                                            size="sm"
+                                                                            className="h-5 w-5 p-0"
+                                                                            onClick={(e) => {
+                                                                              e.stopPropagation();
+                                                                              addTableColumn(element.id, colIndex);
                                                                             }}
+                                                                            title="Add column after"
                                                                           >
-                                                                            <SelectTrigger className="h-auto py-1 px-2 text-xs border-0 focus:ring-0 bg-transparent">
-                                                                              <SelectValue placeholder="Select..." />
-                                                                            </SelectTrigger>
-                                                                            <SelectContent>
-                                                                              {cell.customDropdownOptions.map((option) => (
-                                                                                <SelectItem key={option} value={option}>
-                                                                                  {option}
-                                                                                </SelectItem>
-                                                                              ))}
-                                                                            </SelectContent>
-                                                                          </Select>
-                                                                        )}
-
+                                                                            <Plus className="h-3 w-3" />
+                                                                          </Button>
+                                                                          <Button
+                                                                            variant="ghost"
+                                                                            size="sm"
+                                                                            className="h-5 w-5 p-0"
+                                                                            onClick={(e) => {
+                                                                              e.stopPropagation();
+                                                                              removeTableColumn(element.id, colIndex);
+                                                                            }}
+                                                                            disabled={element.tableData.headerRow.cells.length <= 1}
+                                                                            title="Delete column"
+                                                                          >
+                                                                            <Trash2 className="h-3 w-3" />
+                                                                          </Button>
+                                                                        </div>
+                                                                        
+                                                                        <Input
+                                                                          value={cell.content}
+                                                                          onChange={(e) => updateTableCell(
+                                                                            element.id,
+                                                                            "header-row",
+                                                                            cell.id,
+                                                                            { content: e.target.value }
+                                                                          )}
+                                                                          {...handleTextSelection(element.id, "tableCell", cell.id)}
+                                                                          placeholder={`Header ${colIndex + 1}`}
+                                                                          className="text-xs font-semibold border-0 focus-visible:ring-0 bg-transparent p-0 h-auto"
+                                                                          onClick={(e) => e.stopPropagation()}
+                                                                        />
                                                                         {selectedText?.elementId === element.id && 
                                                                          selectedText.fieldType === "tableCell" && 
                                                                          selectedText.cellId === cell.id && (
@@ -2151,21 +1914,43 @@ export const SampleGeneration = () => {
                                                                               e.stopPropagation();
                                                                               setFootnoteDialogOpen(true);
                                                                             }}
-                                                                            className="h-5 text-xs mt-1"
+                                                                            className="h-5 text-xs"
                                                                           >
                                                                             <BookOpen className="h-3 w-3 mr-1" />
                                                                             Footnote
                                                                           </Button>
                                                                         )}
                                                                         
-                                                                        {/* Configuration Panel - Inside Data Cell */}
-                                                                        {selectedCellForConfig?.elementId === element.id && 
-                                                                         selectedCellForConfig?.cellId === cell.id && 
-                                                                         selectedCellForConfig?.rowId === row.id &&
-                                                                         !selectedCellForConfig?.isHeader && (
+                                                                        {/* Dropdown indicator - bottom right, doesn't collide with + and delete */}
+                                                                        <div className="absolute bottom-1 right-1">
+                                                                          <Button
+                                                                            variant="ghost"
+                                                                            size="sm"
+                                                                            className="h-5 w-5 p-0 hover:bg-transparent"
+                                                                            onClick={(e) => {
+                                                                              e.stopPropagation();
+                                                                              if (isHeaderSelected) {
+                                                                                setSelectedCellForConfig(null);
+                                                                              } else {
+                                                                                setSelectedCellForConfig({
+                                                                                  elementId: element.id,
+                                                                                  rowId: "header-row",
+                                                                                  cellId: cell.id,
+                                                                                  isHeader: true
+                                                                                });
+                                                                              }
+                                                                            }}
+                                                                            title={isHeaderSelected ? "Close configuration" : "Open configuration"}
+                                                                          >
+                                                                            <ChevronDown className={`h-4 w-4 ${isHeaderSelected ? 'text-blue-600' : 'text-gray-400'}`} />
+                                                                          </Button>
+                                                                        </div>
+                                                                        
+                                                                        {/* Configuration Panel - Inside Header */}
+                                                                        {isHeaderSelected && (
                                                                           <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-xs space-y-2">
                                                                             <div className="flex items-center justify-between mb-2">
-                                                                              <Label className="text-xs font-semibold">Configure Cell</Label>
+                                                                              <Label className="text-xs font-semibold">Configure Header</Label>
                                                                               <Button
                                                                                 variant="ghost"
                                                                                 size="sm"
@@ -2178,23 +1963,97 @@ export const SampleGeneration = () => {
                                                                                 ✕
                                                                               </Button>
                                                                             </div>
+                                                                            <div className="flex items-center gap-2">
+                                                                              <Checkbox
+                                                                                checked={cell.enteredByConfirmingParty}
+                                                                                onCheckedChange={(checked) => {
+                                                                                  const isChecked = checked as boolean;
+                                                                                  
+                                                                                  // Get current element state
+                                                                                  const currentElement = templateElements.find(e => e.id === element.id);
+                                                                                  if (!currentElement?.tableData) return;
+                                                                                  
+                                                                                  // Find the column index
+                                                                                  const colIndex = currentElement.tableData.headerRow.cells.findIndex(c => c.id === cell.id);
+                                                                                  if (colIndex === -1) return;
+                                                                                  
+                                                                                  // Update header cell
+                                                                                  const updatedHeaderCells = currentElement.tableData.headerRow.cells.map(c =>
+                                                                                    c.id === cell.id ? { ...c, enteredByConfirmingParty: isChecked } : c
+                                                                                  );
+                                                                                  
+                                                                                  // Propagate to all data cells in this column
+                                                                                  const updatedDataRows = currentElement.tableData.dataRows.map(row => ({
+                                                                                    ...row,
+                                                                                    cells: row.cells.map((dataCell, idx) => {
+                                                                                      if (idx === colIndex) {
+                                                                                        return { ...dataCell, enteredByConfirmingParty: isChecked };
+                                                                                      }
+                                                                                      return dataCell;
+                                                                                    })
+                                                                                  }));
+                                                                                  
+                                                                                  // Recalculate canConfirmingPartyAddRows
+                                                                                  const allColumnsConfirmingParty = updatedHeaderCells.every(c => c.enteredByConfirmingParty);
+                                                                                  
+                                                                                  // Update element with all changes at once
+                                                                                  updateElement(element.id, {
+                                                                                    tableData: {
+                                                                                      ...currentElement.tableData,
+                                                                                      headerRow: { ...currentElement.tableData.headerRow, cells: updatedHeaderCells },
+                                                                                      dataRows: updatedDataRows,
+                                                                                      canConfirmingPartyAddRows: allColumnsConfirmingParty
+                                                                                    }
+                                                                                  });
+                                                                                }}
+                                                                              />
+                                                                              <Label className="text-xs">Entered by Confirming Party?</Label>
+                                                                            </div>
                                                                             <div>
                                                                               <Label className="text-xs mb-1 block">Cell Type</Label>
                                                                               <Select
                                                                                 value={cell.cellType}
                                                                                 onValueChange={(value: "text" | "calendar" | "customDropdown") => {
+                                                                                  // Update header cell
                                                                                   updateTableCell(
                                                                                     element.id,
-                                                                                    row.id,
+                                                                                    "header-row",
                                                                                     cell.id,
                                                                                     { cellType: value }
                                                                                   );
+                                                                                  
+                                                                                  // Propagate to all cells in this column
+                                                                                  const currentElement = templateElements.find(e => e.id === element.id);
+                                                                                  if (currentElement?.tableData) {
+                                                                                    const updatedDataRows = currentElement.tableData.dataRows.map(row => ({
+                                                                                      ...row,
+                                                                                      cells: row.cells.map((dataCell, idx) => {
+                                                                                        if (idx === colIndex) {
+                                                                                          return { 
+                                                                                            ...dataCell, 
+                                                                                            cellType: value,
+                                                                                            // Clear custom dropdown options if changing away from customDropdown
+                                                                                            customDropdownOptions: value === "customDropdown" ? dataCell.customDropdownOptions : undefined
+                                                                                          };
+                                                                                        }
+                                                                                        return dataCell;
+                                                                                      })
+                                                                                    }));
+                                                                                    
+                                                                                    updateElement(element.id, {
+                                                                                      tableData: {
+                                                                                        ...currentElement.tableData,
+                                                                                        dataRows: updatedDataRows
+                                                                                      }
+                                                                                    });
+                                                                                  }
+                                                                                  
                                                                                   if (value === "customDropdown") {
                                                                                     setEditingCellForDropdown({
                                                                                       elementId: element.id,
-                                                                                      rowId: row.id,
+                                                                                      rowId: "header-row",
                                                                                       cellId: cell.id,
-                                                                                      isHeader: false
+                                                                                      isHeader: true
                                                                                     });
                                                                                     setCustomDropdownDialogOpen(true);
                                                                                   }
@@ -2215,14 +2074,188 @@ export const SampleGeneration = () => {
                                                                                 Options: {cell.customDropdownOptions.join(", ")}
                                                                               </div>
                                                                             )}
+                                                                            <Button
+                                                                              variant="ghost"
+                                                                              size="sm"
+                                                                              className="h-6 text-xs w-full"
+                                                                              onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                removeTableColumn(element.id, colIndex);
+                                                                              }}
+                                                                            >
+                                                                              <Trash2 className="h-3 w-3 mr-1" />
+                                                                              Delete Column
+                                                                            </Button>
                                                                           </div>
                                                                         )}
                                                                         
-                                                                        {/* Visual Indicators - only show when not selected */}
-
                                                                       </div>
-                                                                    </td>
-                                                                  ))}
+                                                                    </th>
+                                                                  );
+                                                                })}
+                                                              </tr>
+                                                            </thead>
+                                                            {/* Data Rows */}
+                                                            <tbody>
+                                                              {element.tableData.dataRows.map((row, rowIndex) => (
+                                                                <tr key={row.id} className="group">
+                                                                  {row.cells.map((cell, colIndex) => {
+                                                                    const isCellSelected = selectedCellForConfig?.elementId === element.id && 
+                                                                                           selectedCellForConfig?.cellId === cell.id && 
+                                                                                           selectedCellForConfig?.rowId === row.id &&
+                                                                                           !selectedCellForConfig?.isHeader;
+                                                                    return (
+                                                                      <td
+                                                                        key={cell.id}
+                                                                        className="border border-gray-400 p-2 min-w-[120px] align-top relative"
+                                                                        colSpan={cell.colSpan}
+                                                                        rowSpan={cell.rowSpan}
+                                                                        onClick={() => setSelectedCellForConfig({
+                                                                          elementId: element.id,
+                                                                          rowId: row.id,
+                                                                          cellId: cell.id,
+                                                                          isHeader: false
+                                                                        })}
+                                                                        style={{
+                                                                          backgroundColor: selectedCellForConfig?.cellId === cell.id && selectedCellForConfig?.rowId === row.id ? "#dbeafe" : undefined
+                                                                        }}
+                                                                      >
+                                                                        <div className="space-y-2">
+                                                                          {/* Dropdown indicator - top right for data cells */}
+                                                                          <div className="absolute top-1 right-1">
+                                                                            <Button
+                                                                              variant="ghost"
+                                                                              size="sm"
+                                                                              className="h-5 w-5 p-0 hover:bg-transparent"
+                                                                              onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                if (isCellSelected) {
+                                                                                  setSelectedCellForConfig(null);
+                                                                                } else {
+                                                                                  setSelectedCellForConfig({
+                                                                                    elementId: element.id,
+                                                                                    rowId: row.id,
+                                                                                    cellId: cell.id,
+                                                                                    isHeader: false
+                                                                                  });
+                                                                                }
+                                                                              }}
+                                                                              title={isCellSelected ? "Close configuration" : "Open configuration"}
+                                                                            >
+                                                                              <ChevronDown className={`h-4 w-4 ${isCellSelected ? 'text-blue-600' : 'text-gray-400'}`} />
+                                                                            </Button>
+                                                                          </div>
+                                                                          
+                                                                          {/* Render input based on cellType */}
+                                                                          {cell.cellType === "text" && (
+                                                                            <Input
+                                                                              value={cell.content}
+                                                                              onChange={(e) => updateTableCell(
+                                                                                element.id,
+                                                                                row.id,
+                                                                                cell.id,
+                                                                                { content: e.target.value }
+                                                                              )}
+                                                                              {...handleTextSelection(element.id, "tableCell", cell.id)}
+                                                                              placeholder={`Row ${rowIndex + 1}, Col ${colIndex + 1}`}
+                                                                              className="text-xs border-0 focus-visible:ring-0 bg-transparent p-0 h-auto"
+                                                                              onClick={(e) => e.stopPropagation()}
+                                                                            />
+                                                                          )}
+                                                                          
+                                                                          {cell.cellType === "calendar" && (
+                                                                            <Popover>
+                                                                              <PopoverTrigger asChild>
+                                                                                <Button
+                                                                                  variant="outline"
+                                                                                  className={cn(
+                                                                                    "w-full justify-start text-left font-normal text-xs h-auto py-1 px-2",
+                                                                                    !cell.content && "text-muted-foreground"
+                                                                                  )}
+                                                                                  onClick={(e) => e.stopPropagation()}
+                                                                                >
+                                                                                  <CalendarIcon className="mr-2 h-3 w-3" />
+                                                                                  {cell.content ? (
+                                                                                    formatIndianDate(parseIndianDate(cell.content) || new Date())
+                                                                                  ) : (
+                                                                                    <span>dd-mm-yyyy</span>
+                                                                                  )}
+                                                                                </Button>
+                                                                              </PopoverTrigger>
+                                                                              <PopoverContent className="w-auto p-0" align="start">
+                                                                                <Calendar
+                                                                                  mode="single"
+                                                                                  selected={cell.content ? parseIndianDate(cell.content) || undefined : undefined}
+                                                                                  onSelect={(date) => {
+                                                                                    if (date) {
+                                                                                      const formatted = formatIndianDate(date);
+                                                                                      updateTableCell(
+                                                                                        element.id,
+                                                                                        row.id,
+                                                                                        cell.id,
+                                                                                        { content: formatted }
+                                                                                      );
+                                                                                    }
+                                                                                  }}
+                                                                                  initialFocus
+                                                                                />
+                                                                              </PopoverContent>
+                                                                            </Popover>
+                                                                          )}
+                                                                          
+                                                                          {cell.cellType === "customDropdown" && cell.customDropdownOptions && (
+                                                                            <Select
+                                                                              value={cell.content}
+                                                                              onValueChange={(value) => {
+                                                                                updateTableCell(
+                                                                                  element.id,
+                                                                                  row.id,
+                                                                                  cell.id,
+                                                                                  { content: value }
+                                                                                );
+                                                                              }}
+                                                                            >
+                                                                              <SelectTrigger className="h-auto py-1 px-2 text-xs border-0 focus:ring-0 bg-transparent">
+                                                                                <SelectValue placeholder="Select..." />
+                                                                              </SelectTrigger>
+                                                                              <SelectContent>
+                                                                                {cell.customDropdownOptions.map((option) => (
+                                                                                  <SelectItem key={option} value={option}>
+                                                                                    {option}
+                                                                                  </SelectItem>
+                                                                                ))}
+                                                                              </SelectContent>
+                                                                            </Select>
+                                                                          )}
+
+                                                                          {selectedText?.elementId === element.id && 
+                                                                           selectedText.fieldType === "tableCell" && 
+                                                                           selectedText.cellId === cell.id && (
+                                                                            <Button
+                                                                              size="sm"
+                                                                              variant="outline"
+                                                                              onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                setFootnoteDialogOpen(true);
+                                                                              }}
+                                                                              className="h-5 text-xs mt-1"
+                                                                            >
+                                                                              <BookOpen className="h-3 w-3 mr-1" />
+                                                                              Footnote
+                                                                            </Button>
+                                                                          )}
+                                                                          
+                                                                          {/* Configuration Panel - Inside Data Cell */}
+                                                                          {isCellSelected && (
+                                                                            <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-xs space-y-2">
+                                                                              {/* ... existing configuration panel code ... */}
+                                                                            </div>
+                                                                          )}
+                                                                          
+                                                                        </div>
+                                                                      </td>
+                                                                    );
+                                                                  })}
                                                                   <td className="border border-gray-400 p-1 w-10 align-middle">
                                                                     <div className="flex flex-col gap-1">
                                                                       {/* Only show Add Row button if NOT all headers have "Entered by Confirming Party" checked */}
