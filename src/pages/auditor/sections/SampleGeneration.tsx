@@ -18,6 +18,7 @@ import { BookOpen } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { formatIndianDate, parseIndianDate, cn } from "@/lib/utils";
 import React from "react";
+import { useToast } from "@/hooks/use-toast";
 
 // Add template interfaces
 interface AuthorizationTemplate {
@@ -183,6 +184,7 @@ const CONFIRMATION_FORM_NAMES = [
 ];
 
 export const SampleGeneration = () => {
+  const { toast } = useToast();
   const [selectedAreas, setSelectedAreas] = useState<string[]>(["Trade Receivables"]);
   const [activeArea, setActiveArea] = useState("Trade Receivables");
   const [sampleSets, setSampleSets] = useState<Record<string, SampleSet[]>>({
@@ -201,6 +203,14 @@ export const SampleGeneration = () => {
 
   const [newSetName, setNewSetName] = useState("");
   const [showNewSetForm, setShowNewSetForm] = useState(false);
+
+  // Add state for new sample set details
+  const [newSampleSetName, setNewSampleSetName] = useState("");
+  const [newConfirmingPartyName, setNewConfirmingPartyName] = useState("");
+  const [newRecipientName, setNewRecipientName] = useState("");
+  const [newRecipientEmail, setNewRecipientEmail] = useState("");
+  const [newAmount, setNewAmount] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // New state for templates and template selection
   const [customTemplates, setCustomTemplates] = useState<AuthorizationTemplate[]>([]);
@@ -298,6 +308,91 @@ export const SampleGeneration = () => {
       });
       setNewSetName("");
       setShowNewSetForm(false);
+    }
+  };
+
+  // Add handler for creating new sample set with details
+  const handleAddSampleSetWithDetails = async () => {
+    // Validate all required fields
+    if (!newSampleSetName || !activeArea || !newConfirmingPartyName || !newRecipientName || !newRecipientEmail || !newAmount) {
+      toast({
+        title: "Validation Error",
+        description: "Please fill in all fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      // Call backend API
+      const response = await fetch('http://localhost:3001/api/create-sample-set', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          audit_area: activeArea,
+          sample_set_name: newSampleSetName,
+          confirming_party_name: newConfirmingPartyName,
+          recipient_name: newRecipientName,
+          email_id: newRecipientEmail,
+          amount: newAmount,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to create sample set');
+      }
+
+      const result = await response.json();
+
+      // Add the new sample set to the UI
+      const newSet: SampleSet = {
+        id: result.sampleId || `SS-${Date.now()}`,
+        name: newSampleSetName,
+        fileName: "",
+        samplingMethod: "random",
+        sampleSize: 0,
+        populationSize: 0,
+        status: "pending",
+        samples: [{
+          id: `S-${Date.now()}`,
+          sampleSetId: result.sampleId || `SS-${Date.now()}`,
+          confirmingParty: newConfirmingPartyName,
+          amount: newAmount,
+          recipientName: newRecipientName,
+          recipientEmail: newRecipientEmail
+        }]
+      };
+
+      setSampleSets({
+        ...sampleSets,
+        [activeArea]: [...(sampleSets[activeArea] || []), newSet]
+      });
+
+      // Reset form fields
+      setNewSampleSetName("");
+      setNewConfirmingPartyName("");
+      setNewRecipientName("");
+      setNewRecipientEmail("");
+      setNewAmount("");
+
+      toast({
+        title: "Success",
+        description: `Sample set created successfully with ID: ${result.sampleId}`,
+      });
+    } catch (error: any) {
+      console.error('Error creating sample set:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create sample set. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -2761,10 +2856,199 @@ export const SampleGeneration = () => {
                     </>
                   )}
                 </div>
+
+                {/* New Section: Sample Details */}
+                <div className="pt-4 border-t space-y-4">
+                  <h3 className="text-sm font-semibold">Sample Details</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label>Sample Set Name</Label>
+                      <Input
+                        value={set.name}
+                        onChange={(e) => {
+                          // Update sample set name
+                          setSampleSets(prev => ({
+                            ...prev,
+                            [activeArea]: prev[activeArea].map(s => 
+                              s.id === set.id ? { ...s, name: e.target.value } : s
+                            )
+                          }));
+                        }}
+                        className="mt-2"
+                        placeholder="Enter sample set name"
+                      />
+                    </div>
+                    <div>
+                      <Label>Confirming Party Name</Label>
+                      <Input
+                        value={set.samples?.[0]?.confirmingParty || ""}
+                        onChange={(e) => {
+                          // Update confirming party for all samples in the set
+                          setSampleSets(prev => ({
+                            ...prev,
+                            [activeArea]: prev[activeArea].map(s => 
+                              s.id === set.id ? {
+                                ...s,
+                                samples: (s.samples || []).map(sample => ({
+                                  ...sample,
+                                  confirmingParty: e.target.value
+                                }))
+                              } : s
+                            )
+                          }));
+                        }}
+                        className="mt-2"
+                        placeholder="Enter confirming party name"
+                      />
+                    </div>
+                    <div>
+                      <Label>Recipient Name</Label>
+                      <Input
+                        value={set.samples?.[0]?.recipientName || ""}
+                        onChange={(e) => {
+                          // Update recipient name for all samples in the set
+                          setSampleSets(prev => ({
+                            ...prev,
+                            [activeArea]: prev[activeArea].map(s => 
+                              s.id === set.id ? {
+                                ...s,
+                                samples: (s.samples || []).map(sample => ({
+                                  ...sample,
+                                  recipientName: e.target.value
+                                }))
+                              } : s
+                            )
+                          }));
+                        }}
+                        className="mt-2"
+                        placeholder="Enter recipient name"
+                      />
+                    </div>
+                    <div>
+                      <Label>Email ID</Label>
+                      <Input
+                        type="email"
+                        value={set.samples?.[0]?.recipientEmail || ""}
+                        onChange={(e) => {
+                          // Update email for all samples in the set
+                          setSampleSets(prev => ({
+                            ...prev,
+                            [activeArea]: prev[activeArea].map(s => 
+                              s.id === set.id ? {
+                                ...s,
+                                samples: (s.samples || []).map(sample => ({
+                                  ...sample,
+                                  recipientEmail: e.target.value
+                                }))
+                              } : s
+                            )
+                          }));
+                        }}
+                        className="mt-2"
+                        placeholder="Enter email ID"
+                      />
+                    </div>
+                    <div>
+                      <Label>Amount</Label>
+                      <Input
+                        type="number"
+                        value={set.samples?.[0]?.amount || ""}
+                        onChange={(e) => {
+                          // Update amount for all samples in the set
+                          setSampleSets(prev => ({
+                            ...prev,
+                            [activeArea]: prev[activeArea].map(s => 
+                              s.id === set.id ? {
+                                ...s,
+                                samples: (s.samples || []).map(sample => ({
+                                  ...sample,
+                                  amount: e.target.value
+                                }))
+                              } : s
+                            )
+                          }));
+                        }}
+                        className="mt-2"
+                        placeholder="Enter amount"
+                      />
+                    </div>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           ))}
         </div>
+
+        {/* Add New Sample Set Section */}
+        <Card className="mt-4">
+          <CardHeader>
+            <CardTitle>Add New Sample Set</CardTitle>
+            <CardDescription>Create a new sample set for {activeArea}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="pt-4 space-y-4">
+              <h3 className="text-sm font-semibold">Sample Details</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Sample Set Name</Label>
+                  <Input
+                    value={newSampleSetName}
+                    onChange={(e) => setNewSampleSetName(e.target.value)}
+                    className="mt-2"
+                    placeholder="Enter sample set name"
+                  />
+                </div>
+                <div>
+                  <Label>Confirming Party Name</Label>
+                  <Input
+                    value={newConfirmingPartyName}
+                    onChange={(e) => setNewConfirmingPartyName(e.target.value)}
+                    className="mt-2"
+                    placeholder="Enter confirming party name"
+                  />
+                </div>
+                <div>
+                  <Label>Recipient Name</Label>
+                  <Input
+                    value={newRecipientName}
+                    onChange={(e) => setNewRecipientName(e.target.value)}
+                    className="mt-2"
+                    placeholder="Enter recipient name"
+                  />
+                </div>
+                <div>
+                  <Label>Email ID</Label>
+                  <Input
+                    type="email"
+                    value={newRecipientEmail}
+                    onChange={(e) => setNewRecipientEmail(e.target.value)}
+                    className="mt-2"
+                    placeholder="Enter email ID"
+                  />
+                </div>
+                <div>
+                  <Label>Amount</Label>
+                  <Input
+                    type="number"
+                    value={newAmount}
+                    onChange={(e) => setNewAmount(e.target.value)}
+                    className="mt-2"
+                    placeholder="Enter amount"
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end pt-4">
+                <Button 
+                  onClick={handleAddSampleSetWithDetails} 
+                  disabled={!newSampleSetName || isSubmitting}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  {isSubmitting ? "Submitting..." : "Submit"}
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {(!sampleSets[activeArea] || sampleSets[activeArea].length === 0) && !showNewSetForm && (
           <Card className="p-12 text-center">
