@@ -595,8 +595,8 @@ export const WorkingPaper = () => {
                                 variant="outline"
                                 onClick={() => setSelectedConfirmation(confirmation)}
                               >
-                                <Eye className="h-4 w-4" />
-                              </Button>
+                            <Eye className="h-4 w-4" />
+                          </Button>
                             </DialogTrigger>
                             <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
                               <DialogHeader>
@@ -869,7 +869,7 @@ export const WorkingPaper = () => {
                 ₹{formatIndianNumber(
                   currentData.reduce((sum, item) => {
                     const amount = parseFloat(item.amountConfirmed?.replace(/[₹,$]/g, '') || '0');
-                    return sum + amount;
+                  return sum + amount;
                   }, 0)
                 )}
               </p>

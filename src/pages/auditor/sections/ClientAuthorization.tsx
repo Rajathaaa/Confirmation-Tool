@@ -3,9 +3,38 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CheckCircle, Clock, XCircle, Eye, Download } from "lucide-react";
 import { useState } from "react";
 import { formatIndianDateTime } from "@/lib/utils";
+
+interface ClientUser {
+  id: string;
+  name: string;
+  designation: string;
+  email: string;
+  role: "Authorizer" | "Viewer";
+  areas: string[];
+}
+
+const mockClientUsers: ClientUser[] = [
+  {
+    id: "CL-001",
+    name: "Sarah Johnson",
+    designation: "CFO",
+    email: "sarah.j@techcorp.com",
+    role: "Authorizer",
+    areas: ["Trade Receivables", "Trade Payables", "Cash & Cash Equivalents"]
+  },
+  {
+    id: "CL-002",
+    name: "Robert Chen",
+    designation: "Finance Manager",
+    email: "r.chen@techcorp.com",
+    role: "Viewer",
+    areas: ["Trade Receivables"]
+  }
+];
 
 interface ActivityLogEntry {
   timestamp: string;
@@ -325,10 +354,37 @@ export const ClientAuthorization = () => {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div>
-                        <p className="font-medium">{letter.clientName}</p>
-                        <p className="text-xs text-muted-foreground">{letter.clientEmail}</p>
-                      </div>
+                      <Select
+                        value={letter.clientEmail}
+                        onValueChange={(email) => {
+                          const selectedClient = mockClientUsers.find(client => client.email === email);
+                          if (selectedClient) {
+                            setLetters(letters.map(l => 
+                              l.id === letter.id 
+                                ? { ...l, clientName: selectedClient.name, clientEmail: selectedClient.email }
+                                : l
+                            ));
+                          }
+                        }}
+                      >
+                        <SelectTrigger className="w-[220px] h-auto py-2">
+                          <div className="flex flex-col items-start text-left flex-1 min-w-0">
+                            <span className="font-medium text-sm truncate w-full">{letter.clientName}</span>
+                            <span className="text-xs text-muted-foreground truncate w-full">{letter.clientEmail}</span>
+                          </div>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {mockClientUsers.map((client) => (
+                            <SelectItem key={client.id} value={client.email}>
+                              <div className="flex flex-col py-1">
+                                <span className="font-medium">{client.name}</span>
+                                <span className="text-xs text-muted-foreground">{client.email}</span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </TableCell>
                     <TableCell>{getStatusBadge(letter.status)}</TableCell>
                     <TableCell className="text-right">
