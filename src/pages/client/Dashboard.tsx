@@ -4,7 +4,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Shield, CheckCircle, Download, XCircle, AlertCircle, Eye, Clock, FileText } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { formatIndianDateTime, formatIndianNumber, formatIndianDate } from "@/lib/utils";
@@ -923,36 +923,239 @@ const ClientDashboard = () => {
   // Check if user has access
   const hasAccess = userRole !== null;
 
-  const handleAuthorize = (id: string) => {
-    if (userRole !== "Authorizer") return; // Safety check
-    
-    setRequests(requests.map(req => 
-      req.id === id 
-        ? { 
-            ...req, 
-            status: "authorized" as const,
-            authorizedBy: mockClientUsers.find(u => u.email === currentUserEmail)?.name || "Unknown",
-            authorizedDate: new Date().toISOString()
-          }
-        : req
-    ));
-    alert("Confirmation authorized successfully!");
+  // Fetch authorization requests from SharePoint on component mount
+  useEffect(() => {
+    fetchAuthorizationRequests();
+  }, []);
+
+  const fetchAuthorizationRequests = async () => {
+    try {
+      const response = await fetch('http://localhost:3002/api/get-authorization-requests');
+      if (!response.ok) {
+        throw new Error('Failed to fetch authorization requests');
+      }
+      const result = await response.json();
+      const requestsData = result.data || { requests: [] };
+      
+      console.log('📥 Fetched authorization_requests.json from SharePoint:', requestsData);
+      
+      // Convert SharePoint data to local format
+      if (requestsData.requests && requestsData.requests.length > 0) {
+        const convertedRequests = requestsData.requests.map((req: any) => ({
+          id: req.id || `AUTH-${Date.now()}`,
+          area: req.area || "",
+          confirmingParty: req.confirmingParty || "",
+          recipientEmail: req.recipientEmail || "",
+          recipientName: req.recipientName || "",
+          remarksByAuditor: req.remarksByAuditor || "",
+          attachmentByAuditor: req.attachmentByAuditor || [],
+          status: (req.status || "pending") as "pending" | "authorized" | "rejected",
+          authorizedBy: req.authorizedBy,
+          authorizedDate: req.authorizedDate,
+          confirmationStatus: (req.confirmationStatus || "pending") as "pending" | "confirmed" | "not-confirmed",
+          confirmedDate: req.confirmedDate,
+          formData: req.formData,
+          remarks: req.remarks,
+          attachments: req.attachments,
+          periodEndDate: req.periodEndDate || "",
+          clientOrganization: req.clientOrganization || ""
+        }));
+        setRequests(convertedRequests);
+      }
+    } catch (error: any) {
+      console.error('Error fetching authorization requests:', error);
+      // Keep using mock data if fetch fails
+    }
   };
 
-  const handleReject = (id: string) => {
+  const handleAuthorize = async (id: string) => {
     if (userRole !== "Authorizer") return; // Safety check
     
-    setRequests(requests.map(req => 
-      req.id === id 
-        ? { 
-            ...req, 
-            status: "rejected" as const,
-            authorizedBy: mockClientUsers.find(u => u.email === currentUserEmail)?.name || "Unknown",
-            authorizedDate: new Date().toISOString()
-          }
-        : req
-    ));
-    alert("Confirmation rejected.");
+    try {
+      const currentUser = mockClientUsers.find(u => u.email === currentUserEmail);
+      const authorizedBy = currentUser?.name || "Unknown";
+      const authorizedDate = new Date().toISOString();
+
+      // Extract letter ID from request ID
+      // Request ID format: AUTH-{letterId}
+      // Letter ID is the sample ID (e.g., TR_Q4_001 or 721952-001), not AL-prefixed
+      const letterId = id.replace('AUTH-', '');
+
+      // 1. Update authorization request status
+      const requestResponse = await fetch('http://localhost:3002/api/update-authorization-request-status', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          requestId: id,
+          status: "authorized",
+          authorizedBy: authorizedBy,
+          authorizedDate: authorizedDate
+        }),
+      });
+
+      if (!requestResponse.ok) {
+        const errorData = await requestResponse.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Failed to update authorization request status');
+      }
+
+      const requestResult = await requestResponse.json();
+      console.log('✅ Authorization request status update response:', requestResult);
+
+      // 2. Update authorization letter status
+      const letterResponse = await fetch('http://localhost:3002/api/update-authorization-letter-status', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          letterId: letterId,
+          status: "authorized"
+        }),
+      });
+
+      if (!letterResponse.ok) {
+        const errorData = await letterResponse.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Failed to update authorization letter status');
+      }
+
+      const letterResult = await letterResponse.json();
+      console.log('✅ Authorization letter status update response:', letterResult);
+
+      // 3. Add Stage 3 activity log entry
+      const activityLogResponse = await fetch('http://localhost:3002/api/add-activity-log', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          letterId: letterId,
+          stage: "Authorization by Client",
+          action: "Client authorization received",
+          performedBy: `${authorizedBy} (Client)`,
+          details: `Client approved sending confirmation to ${requests.find(r => r.id === id)?.confirmingParty || "Unknown"}`,
+          status: "completed"
+        }),
+      });
+
+      if (!activityLogResponse.ok) {
+        console.error('Failed to add activity log, but continuing...');
+      }
+
+      // 4. Update local state
+      setRequests(requests.map(req => 
+        req.id === id 
+          ? { 
+              ...req, 
+              status: "authorized" as const,
+              authorizedBy: authorizedBy,
+              authorizedDate: authorizedDate
+            }
+          : req
+      ));
+
+      alert("Confirmation authorized successfully!");
+      
+      // Refresh requests to get updated data after a short delay to ensure SharePoint update has propagated
+      setTimeout(() => {
+        fetchAuthorizationRequests();
+      }, 500);
+    } catch (error: any) {
+      console.error('Error authorizing request:', error);
+      alert(`Failed to authorize: ${error.message}`);
+    }
+  };
+
+  const handleReject = async (id: string) => {
+    if (userRole !== "Authorizer") return; // Safety check
+    
+    try {
+      const currentUser = mockClientUsers.find(u => u.email === currentUserEmail);
+      const authorizedBy = currentUser?.name || "Unknown";
+      const authorizedDate = new Date().toISOString();
+
+      // Extract letter ID from request ID
+      // Request ID format: AUTH-{letterId}
+      // Letter ID is the sample ID (e.g., TR_Q4_001 or 721952-001), not AL-prefixed
+      const letterId = id.replace('AUTH-', '');
+
+      // 1. Update authorization request status
+      const requestResponse = await fetch('http://localhost:3002/api/update-authorization-request-status', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          requestId: id,
+          status: "rejected",
+          authorizedBy: authorizedBy,
+          authorizedDate: authorizedDate
+        }),
+      });
+
+      if (!requestResponse.ok) {
+        throw new Error('Failed to update authorization request status');
+      }
+
+      // 2. Update authorization letter status
+      const letterResponse = await fetch('http://localhost:3002/api/update-authorization-letter-status', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          letterId: letterId,
+          status: "rejected",
+          authorizedBy: authorizedBy,
+          authorizedDate: authorizedDate
+        }),
+      });
+
+      if (!letterResponse.ok) {
+        throw new Error('Failed to update authorization letter status');
+      }
+
+      // 3. Add Stage 3 activity log entry
+      const activityLogResponse = await fetch('http://localhost:3002/api/add-activity-log', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          letterId: letterId,
+          stage: "Authorization by Client",
+          action: "Client authorization rejected",
+          performedBy: `${authorizedBy} (Client)`,
+          details: `Client rejected sending confirmation to ${requests.find(r => r.id === id)?.confirmingParty || "Unknown"}`,
+          status: "completed"
+        }),
+      });
+
+      if (!activityLogResponse.ok) {
+        console.error('Failed to add activity log, but continuing...');
+      }
+
+      // 4. Update local state
+      setRequests(requests.map(req => 
+        req.id === id 
+          ? { 
+              ...req, 
+              status: "rejected" as const,
+              authorizedBy: authorizedBy,
+              authorizedDate: authorizedDate
+            }
+          : req
+      ));
+
+      alert("Confirmation rejected.");
+      
+      // Refresh requests to get updated data
+      fetchAuthorizationRequests();
+    } catch (error: any) {
+      console.error('Error rejecting request:', error);
+      alert(`Failed to reject: ${error.message}`);
+    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -1094,8 +1297,6 @@ const ClientDashboard = () => {
                     <TableHead>Confirming Party</TableHead>
                     <TableHead>Recipient Email</TableHead>
                     <TableHead>Recipient Name</TableHead>
-                    <TableHead>Remarks by Auditor</TableHead>
-                    <TableHead>Attachment by Auditor</TableHead>
                     <TableHead>Confirmation Status</TableHead>
                     <TableHead className="text-right">Authorize?</TableHead>
                   </TableRow>
@@ -1111,57 +1312,6 @@ const ClientDashboard = () => {
                         </code>
                       </TableCell>
                       <TableCell>{request.recipientName}</TableCell>
-                      <TableCell>
-                        {request.remarksByAuditor ? (
-                          <Dialog>
-                            <DialogTrigger asChild>
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                className="text-left h-auto p-1"
-                                disabled={false}
-                              >
-                                <span className="text-sm text-muted-foreground line-clamp-1">
-                                  {request.remarksByAuditor}
-                                </span>
-                              </Button>
-                            </DialogTrigger>
-                            <DialogContent>
-                              <DialogHeader>
-                                <DialogTitle>Remarks by Auditor</DialogTitle>
-                                <DialogDescription>
-                                  Additional notes from the auditor
-                                </DialogDescription>
-                              </DialogHeader>
-                              <div className="p-4 bg-muted rounded-md">
-                                <p className="text-sm">{request.remarksByAuditor}</p>
-                              </div>
-                            </DialogContent>
-                          </Dialog>
-                        ) : (
-                          <span className="text-sm text-muted-foreground">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {request.attachmentByAuditor && request.attachmentByAuditor.length > 0 ? (
-                          <div className="flex flex-col gap-1">
-                            {request.attachmentByAuditor.map((file, index) => (
-                              <Button
-                                key={index}
-                                variant="outline"
-                                size="sm"
-                                className="w-fit"
-                                disabled={false}
-                              >
-                                <Download className="h-3 w-3 mr-1" />
-                                {file}
-                              </Button>
-                            ))}
-                          </div>
-                        ) : (
-                          <span className="text-sm text-muted-foreground">No attachments</span>
-                        )}
-                      </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
                           {getConfirmationStatusBadge(request.confirmationStatus, request.status)}

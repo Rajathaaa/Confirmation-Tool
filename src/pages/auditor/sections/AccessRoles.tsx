@@ -8,7 +8,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UserPlus, Trash2, Shield, Users, Building2, ChevronDown, ChevronUp } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useToast } from "@/hooks/use-toast";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface AuditorUser {
   id: string;
@@ -95,10 +97,109 @@ const mockConfirmingParties: ConfirmingPartyContact[] = [
 ];
 
 export const AccessRoles = () => {
+  const { toast } = useToast();
   const [auditors, setAuditors] = useState(mockAuditors);
   const [clients, setClients] = useState(mockClients);
   const [confirmingParties, setConfirmingParties] = useState(mockConfirmingParties);
   const [expandedClientAreas, setExpandedClientAreas] = useState<Set<string>>(new Set());
+  
+  // Fetch people data from SharePoint on component mount
+  useEffect(() => {
+    fetchPeopleData();
+  }, []);
+
+  const fetchPeopleData = async () => {
+    try {
+      const response = await fetch('http://localhost:3002/api/get-people-data');
+      if (!response.ok) {
+        throw new Error('Failed to fetch people data');
+      }
+      const result = await response.json();
+      const peopleData = result.data || { auditors: [], clients: [], confirming_parties: [] };
+      
+      console.log('📥 Fetched people_data.json from SharePoint:', peopleData);
+      
+      // Convert SharePoint data to local format
+      if (peopleData.auditors && peopleData.auditors.length > 0) {
+        const convertedAuditors = peopleData.auditors.map((auditor: any, index: number) => ({
+          id: `AU-${String(index + 1).padStart(3, '0')}`,
+          email: auditor.email || "",
+          name: auditor.name || "",
+          designation: auditor.designation || "",
+          role: auditor.role === "Engagement Partner" ? "Engagement Partner" as const
+            : auditor.role === "Engagement Owner" ? "Engagement Owner" as const
+            : "Engagement Team" as const
+        }));
+        setAuditors(convertedAuditors);
+      }
+      
+      if (peopleData.clients && peopleData.clients.length > 0) {
+        const convertedClients = peopleData.clients.map((client: any, index: number) => ({
+          id: `CL-${String(index + 1).padStart(3, '0')}`,
+          name: client.name || "",
+          designation: client.designation || "",
+          email: client.email || "",
+          role: client.role === "Authorizer" ? "Authorizer" as const : "Viewer" as const,
+          areas: client.areas || []
+        }));
+        setClients(convertedClients);
+      }
+      
+      if (peopleData.confirming_parties && peopleData.confirming_parties.length > 0) {
+        const convertedParties = peopleData.confirming_parties.map((party: any, index: number) => ({
+          id: `CP-${String(index + 1).padStart(3, '0')}`,
+          organization: party.organization || "",
+          recipientEmail: party.email || party.recipient_email || "",
+          recipientName: party.recipient_name || "",
+          recipientDesignation: party.designation || undefined
+        }));
+        setConfirmingParties(convertedParties);
+      }
+      
+    } catch (error: any) {
+      console.error('Error fetching people data:', error);
+      // Keep using mock data if fetch fails
+    }
+  };
+  
+  // Form states for Add Auditor
+  const [auditorDialogOpen, setAuditorDialogOpen] = useState(false);
+  const [auditorForm, setAuditorForm] = useState({
+    email: "",
+    name: "",
+    designation: "",
+    role: "" as "" | "partner" | "owner" | "team"
+  });
+  
+  // Form states for Add Client User
+  const [clientDialogOpen, setClientDialogOpen] = useState(false);
+  const [clientForm, setClientForm] = useState({
+    name: "",
+    designation: "",
+    email: "",
+    role: "" as "" | "authorizer" | "viewer",
+    areas: [] as string[]
+  });
+  
+  // Form states for Add Contact
+  const [contactDialogOpen, setContactDialogOpen] = useState(false);
+  const [contactForm, setContactForm] = useState({
+    organization: "",
+    recipientEmail: "",
+    recipientName: "",
+    recipientDesignation: ""
+  });
+  
+  const availableAreas = [
+    "Trade Receivables",
+    "Trade Payables",
+    "Cash & Cash Equivalents",
+    "Inventory",
+    "Fixed Assets",
+    "Investments",
+    "Loans & Advances",
+    "Other Current Assets"
+  ];
 
   const getRoleBadge = (role: string) => {
     if (role === "Engagement Partner") {
@@ -122,6 +223,208 @@ export const AccessRoles = () => {
         newSet.add(clientId);
       }
       return newSet;
+    });
+  };
+
+  const handleAddAuditor = async () => {
+    if (!auditorForm.email || !auditorForm.name || !auditorForm.designation || !auditorForm.role) {
+      toast({
+        title: "Error",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const roleMap: Record<string, string> = {
+      partner: "Engagement Partner",
+      owner: "Engagement Owner",
+      team: "Engagement Team"
+    };
+
+    const auditorData = {
+      name: auditorForm.name,
+      email: auditorForm.email,
+      designation: auditorForm.designation,
+      role: roleMap[auditorForm.role]
+    };
+
+    try {
+      const response = await fetch('http://localhost:3002/api/add-auditor', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          auditor: auditorData
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        // Update local state
+        const newAuditor: AuditorUser = {
+          id: `AU-${String(auditors.length + 1).padStart(3, '0')}`,
+          email: auditorForm.email,
+          name: auditorForm.name,
+          designation: auditorForm.designation,
+          role: roleMap[auditorForm.role] as "Engagement Partner" | "Engagement Owner" | "Engagement Team"
+        };
+
+        setAuditors([...auditors, newAuditor]);
+        setAuditorForm({ email: "", name: "", designation: "", role: "" });
+        setAuditorDialogOpen(false);
+        toast({
+          title: "Success",
+          description: "Auditor added successfully and saved to SharePoint",
+        });
+      } else {
+        throw new Error(result.message || 'Failed to add auditor');
+      }
+    } catch (error: any) {
+      console.error('Error adding auditor:', error);
+      toast({
+        title: "Error",
+        description: `Failed to add auditor: ${error.message}`,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleAddClient = async () => {
+    if (!clientForm.name || !clientForm.email || !clientForm.designation || !clientForm.role || clientForm.areas.length === 0) {
+      toast({
+        title: "Error",
+        description: "Please fill in all required fields and select at least one area",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const roleMap: Record<string, string> = {
+      authorizer: "Authorizer",
+      viewer: "Viewer"
+    };
+
+    const clientData = {
+      name: clientForm.name,
+      email: clientForm.email,
+      designation: clientForm.designation,
+      role: roleMap[clientForm.role],
+      areas: clientForm.areas
+    };
+
+    try {
+      const response = await fetch('http://localhost:3002/api/add-client', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          client: clientData
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        // Update local state
+        const newClient: ClientUser = {
+          id: `CL-${String(clients.length + 1).padStart(3, '0')}`,
+          name: clientForm.name,
+          designation: clientForm.designation,
+          email: clientForm.email,
+          role: roleMap[clientForm.role] as "Authorizer" | "Viewer",
+          areas: clientForm.areas
+        };
+
+        setClients([...clients, newClient]);
+        setClientForm({ name: "", designation: "", email: "", role: "", areas: [] });
+        setClientDialogOpen(false);
+        toast({
+          title: "Success",
+          description: "Client user added successfully and saved to SharePoint",
+        });
+      } else {
+        throw new Error(result.message || 'Failed to add client');
+      }
+    } catch (error: any) {
+      console.error('Error adding client:', error);
+      toast({
+        title: "Error",
+        description: `Failed to add client: ${error.message}`,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleAddContact = async () => {
+    if (!contactForm.organization || !contactForm.recipientEmail || !contactForm.recipientName) {
+      toast({
+        title: "Error",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const confirmingPartyData = {
+      organization: contactForm.organization,
+      recipient_name: contactForm.recipientName,
+      email: contactForm.recipientEmail,
+      designation: contactForm.recipientDesignation || ""
+    };
+
+    try {
+      const response = await fetch('http://localhost:3002/api/add-confirming-party', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          confirmingParty: confirmingPartyData
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        // Update local state
+        const newContact: ConfirmingPartyContact = {
+          id: `CP-${String(confirmingParties.length + 1).padStart(3, '0')}`,
+          organization: contactForm.organization,
+          recipientEmail: contactForm.recipientEmail,
+          recipientName: contactForm.recipientName,
+          recipientDesignation: contactForm.recipientDesignation || undefined
+        };
+
+        setConfirmingParties([...confirmingParties, newContact]);
+        setContactForm({ organization: "", recipientEmail: "", recipientName: "", recipientDesignation: "" });
+        setContactDialogOpen(false);
+        toast({
+          title: "Success",
+          description: "Contact added successfully and saved to SharePoint",
+        });
+      } else {
+        throw new Error(result.message || 'Failed to add contact');
+      }
+    } catch (error: any) {
+      console.error('Error adding contact:', error);
+      toast({
+        title: "Error",
+        description: `Failed to add contact: ${error.message}`,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const toggleClientArea = (area: string) => {
+    setClientForm(prev => {
+      const newAreas = prev.areas.includes(area)
+        ? prev.areas.filter(a => a !== area)
+        : [...prev.areas, area];
+      return { ...prev, areas: newAreas };
     });
   };
 
@@ -161,7 +464,7 @@ export const AccessRoles = () => {
                     Manage engagement partner, owner, and team members
                   </CardDescription>
                 </div>
-                <Dialog>
+                <Dialog open={auditorDialogOpen} onOpenChange={setAuditorDialogOpen}>
                   <DialogTrigger asChild>
                     <Button>
                       <UserPlus className="h-4 w-4 mr-2" />
@@ -178,19 +481,37 @@ export const AccessRoles = () => {
                     <div className="space-y-4 py-4">
                       <div>
                         <Label>Email</Label>
-                        <Input placeholder="email@auditfirm.com" className="mt-2" />
+                        <Input 
+                          placeholder="email@auditfirm.com" 
+                          className="mt-2"
+                          value={auditorForm.email}
+                          onChange={(e) => setAuditorForm({ ...auditorForm, email: e.target.value })}
+                        />
                       </div>
                       <div>
                         <Label>Name</Label>
-                        <Input placeholder="Full Name" className="mt-2" />
+                        <Input 
+                          placeholder="Full Name" 
+                          className="mt-2"
+                          value={auditorForm.name}
+                          onChange={(e) => setAuditorForm({ ...auditorForm, name: e.target.value })}
+                        />
                       </div>
                       <div>
                         <Label>Designation</Label>
-                        <Input placeholder="e.g., Senior Manager" className="mt-2" />
+                        <Input 
+                          placeholder="e.g., Senior Manager" 
+                          className="mt-2"
+                          value={auditorForm.designation}
+                          onChange={(e) => setAuditorForm({ ...auditorForm, designation: e.target.value })}
+                        />
                       </div>
                       <div>
                         <Label>Role</Label>
-                        <Select>
+                        <Select 
+                          value={auditorForm.role}
+                          onValueChange={(value: "partner" | "owner" | "team") => setAuditorForm({ ...auditorForm, role: value })}
+                        >
                           <SelectTrigger className="mt-2">
                             <SelectValue placeholder="Select role" />
                           </SelectTrigger>
@@ -201,7 +522,7 @@ export const AccessRoles = () => {
                           </SelectContent>
                         </Select>
                       </div>
-                      <Button className="w-full">Add Auditor</Button>
+                      <Button className="w-full" onClick={handleAddAuditor}>Add Auditor</Button>
                     </div>
                   </DialogContent>
                 </Dialog>
@@ -227,7 +548,44 @@ export const AccessRoles = () => {
                         <TableCell>{auditor.designation}</TableCell>
                         <TableCell>{getRoleBadge(auditor.role)}</TableCell>
                         <TableCell className="text-right">
-                          <Button size="sm" variant="ghost">
+                          <Button 
+                            size="sm" 
+                            variant="ghost"
+                            onClick={async () => {
+                              if (window.confirm(`Are you sure you want to delete ${auditor.name}?`)) {
+                                try {
+                                  const response = await fetch('http://localhost:3002/api/delete-auditor', {
+                                    method: 'POST',
+                                    headers: {
+                                      'Content-Type': 'application/json',
+                                    },
+                                    body: JSON.stringify({
+                                      email: auditor.email
+                                    }),
+                                  });
+
+                                  const result = await response.json();
+
+                                  if (result.success) {
+                                    setAuditors(auditors.filter(a => a.email !== auditor.email));
+                                    toast({
+                                      title: "Success",
+                                      description: "Auditor deleted successfully",
+                                    });
+                                  } else {
+                                    throw new Error(result.message || 'Failed to delete auditor');
+                                  }
+                                } catch (error: any) {
+                                  console.error('Error deleting auditor:', error);
+                                  toast({
+                                    title: "Error",
+                                    description: `Failed to delete auditor: ${error.message}`,
+                                    variant: "destructive",
+                                  });
+                                }
+                              }
+                            }}
+                          >
                             <Trash2 className="h-4 w-4 text-destructive" />
                           </Button>
                         </TableCell>
@@ -251,7 +609,7 @@ export const AccessRoles = () => {
                     Manage client authorizers and viewers
                   </CardDescription>
                 </div>
-                <Dialog>
+                <Dialog open={clientDialogOpen} onOpenChange={setClientDialogOpen}>
                   <DialogTrigger asChild>
                     <Button>
                       <UserPlus className="h-4 w-4 mr-2" />
@@ -268,19 +626,37 @@ export const AccessRoles = () => {
                     <div className="space-y-4 py-4">
                       <div>
                         <Label>Name</Label>
-                        <Input placeholder="Full Name" className="mt-2" />
+                        <Input 
+                          placeholder="Full Name" 
+                          className="mt-2"
+                          value={clientForm.name}
+                          onChange={(e) => setClientForm({ ...clientForm, name: e.target.value })}
+                        />
                       </div>
                       <div>
                         <Label>Designation</Label>
-                        <Input placeholder="e.g., CFO" className="mt-2" />
+                        <Input 
+                          placeholder="e.g., CFO" 
+                          className="mt-2"
+                          value={clientForm.designation}
+                          onChange={(e) => setClientForm({ ...clientForm, designation: e.target.value })}
+                        />
                       </div>
                       <div>
                         <Label>Email</Label>
-                        <Input placeholder="email@company.com" className="mt-2" />
+                        <Input 
+                          placeholder="email@company.com" 
+                          className="mt-2"
+                          value={clientForm.email}
+                          onChange={(e) => setClientForm({ ...clientForm, email: e.target.value })}
+                        />
                       </div>
                       <div>
                         <Label>Role</Label>
-                        <Select>
+                        <Select 
+                          value={clientForm.role}
+                          onValueChange={(value: "authorizer" | "viewer") => setClientForm({ ...clientForm, role: value })}
+                        >
                           <SelectTrigger className="mt-2">
                             <SelectValue placeholder="Select role" />
                           </SelectTrigger>
@@ -292,18 +668,25 @@ export const AccessRoles = () => {
                       </div>
                       <div>
                         <Label>Areas (Multiple Selection)</Label>
-                        <Select>
-                          <SelectTrigger className="mt-2">
-                            <SelectValue placeholder="Select areas" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="receivables">Trade Receivables</SelectItem>
-                            <SelectItem value="payables">Trade Payables</SelectItem>
-                            <SelectItem value="cash">Cash & Cash Equivalents</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        <div className="mt-2 space-y-2 border rounded-md p-3">
+                          {availableAreas.map((area) => (
+                            <div key={area} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`area-${area}`}
+                                checked={clientForm.areas.includes(area)}
+                                onCheckedChange={() => toggleClientArea(area)}
+                              />
+                              <label
+                                htmlFor={`area-${area}`}
+                                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                              >
+                                {area}
+                              </label>
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                      <Button className="w-full">Add Client User</Button>
+                      <Button className="w-full" onClick={handleAddClient}>Add Client User</Button>
                     </div>
                   </DialogContent>
                 </Dialog>
@@ -384,7 +767,44 @@ export const AccessRoles = () => {
                             )}
                           </TableCell>
                           <TableCell className="text-right">
-                            <Button size="sm" variant="ghost">
+                            <Button 
+                              size="sm" 
+                              variant="ghost"
+                              onClick={async () => {
+                                if (window.confirm(`Are you sure you want to delete ${client.name}?`)) {
+                                  try {
+                                    const response = await fetch('http://localhost:3002/api/delete-client', {
+                                      method: 'POST',
+                                      headers: {
+                                        'Content-Type': 'application/json',
+                                      },
+                                      body: JSON.stringify({
+                                        email: client.email
+                                      }),
+                                    });
+
+                                    const result = await response.json();
+
+                                    if (result.success) {
+                                      setClients(clients.filter(c => c.email !== client.email));
+                                      toast({
+                                        title: "Success",
+                                        description: "Client deleted successfully",
+                                      });
+                                    } else {
+                                      throw new Error(result.message || 'Failed to delete client');
+                                    }
+                                  } catch (error: any) {
+                                    console.error('Error deleting client:', error);
+                                    toast({
+                                      title: "Error",
+                                      description: `Failed to delete client: ${error.message}`,
+                                      variant: "destructive",
+                                    });
+                                  }
+                                }
+                              }}
+                            >
                               <Trash2 className="h-4 w-4 text-destructive" />
                             </Button>
                           </TableCell>
@@ -409,7 +829,7 @@ export const AccessRoles = () => {
                     Manage external confirming party contacts
                   </CardDescription>
                 </div>
-                <Dialog>
+                <Dialog open={contactDialogOpen} onOpenChange={setContactDialogOpen}>
                   <DialogTrigger asChild>
                     <Button>
                       <UserPlus className="h-4 w-4 mr-2" />
@@ -426,21 +846,41 @@ export const AccessRoles = () => {
                     <div className="space-y-4 py-4">
                       <div>
                         <Label>Organization</Label>
-                        <Input placeholder="Company Name" className="mt-2" />
+                        <Input 
+                          placeholder="Company Name" 
+                          className="mt-2"
+                          value={contactForm.organization}
+                          onChange={(e) => setContactForm({ ...contactForm, organization: e.target.value })}
+                        />
                       </div>
                       <div>
                         <Label>Recipient Email</Label>
-                        <Input placeholder="email@company.com" className="mt-2" />
+                        <Input 
+                          placeholder="email@company.com" 
+                          className="mt-2"
+                          value={contactForm.recipientEmail}
+                          onChange={(e) => setContactForm({ ...contactForm, recipientEmail: e.target.value })}
+                        />
                       </div>
                       <div>
                         <Label>Recipient Name</Label>
-                        <Input placeholder="Full Name" className="mt-2" />
+                        <Input 
+                          placeholder="Full Name" 
+                          className="mt-2"
+                          value={contactForm.recipientName}
+                          onChange={(e) => setContactForm({ ...contactForm, recipientName: e.target.value })}
+                        />
                       </div>
                       <div>
                         <Label>Recipient Designation (Optional)</Label>
-                        <Input placeholder="e.g., Accounts Manager" className="mt-2" />
+                        <Input 
+                          placeholder="e.g., Accounts Manager" 
+                          className="mt-2"
+                          value={contactForm.recipientDesignation}
+                          onChange={(e) => setContactForm({ ...contactForm, recipientDesignation: e.target.value })}
+                        />
                       </div>
-                      <Button className="w-full">Add Contact</Button>
+                      <Button className="w-full" onClick={handleAddContact}>Add Contact</Button>
                     </div>
                   </DialogContent>
                 </Dialog>
@@ -466,7 +906,44 @@ export const AccessRoles = () => {
                         <TableCell>{party.recipientEmail}</TableCell>
                         <TableCell>{party.recipientDesignation || "-"}</TableCell>
                         <TableCell className="text-right">
-                          <Button size="sm" variant="ghost">
+                          <Button 
+                            size="sm" 
+                            variant="ghost"
+                            onClick={async () => {
+                              if (window.confirm(`Are you sure you want to delete ${party.recipientName} from ${party.organization}?`)) {
+                                try {
+                                  const response = await fetch('http://localhost:3002/api/delete-confirming-party', {
+                                    method: 'POST',
+                                    headers: {
+                                      'Content-Type': 'application/json',
+                                    },
+                                    body: JSON.stringify({
+                                      email: party.recipientEmail
+                                    }),
+                                  });
+
+                                  const result = await response.json();
+
+                                  if (result.success) {
+                                    setConfirmingParties(confirmingParties.filter(cp => cp.recipientEmail !== party.recipientEmail));
+                                    toast({
+                                      title: "Success",
+                                      description: "Confirming party deleted successfully",
+                                    });
+                                  } else {
+                                    throw new Error(result.message || 'Failed to delete confirming party');
+                                  }
+                                } catch (error: any) {
+                                  console.error('Error deleting confirming party:', error);
+                                  toast({
+                                    title: "Error",
+                                    description: `Failed to delete confirming party: ${error.message}`,
+                                    variant: "destructive",
+                                  });
+                                }
+                              }
+                            }}
+                          >
                             <Trash2 className="h-4 w-4 text-destructive" />
                           </Button>
                         </TableCell>

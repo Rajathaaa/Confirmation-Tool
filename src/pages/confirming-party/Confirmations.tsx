@@ -4,6 +4,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Shield, Users, ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
 
 interface ConfirmationRequest {
   id: string;
@@ -17,176 +18,46 @@ interface ConfirmationRequest {
   createdAt: string;
 }
 
-const mockConfirmations: ConfirmationRequest[] = [
-  {
-    id: "CNF-001",
-    confirmationFor: "TechCorp Industries Ltd.",
-    auditFirm: "ABC Audit Firm",
-    auditorName: "Sarah Johnson",
-    auditorEmail: "sarah.j@auditfirm.com",
-    area: "Cash & Cash Equivalents",
-    status: "pending",
-    periodEndDate: "2024-12-31",
-    createdAt: "2025-01-15"
-  },
-  {
-    id: "CNF-002",
-    confirmationFor: "TechCorp Industries Ltd.",
-    auditFirm: "ABC Audit Firm",
-    auditorName: "Sarah Johnson",
-    auditorEmail: "sarah.j@auditfirm.com",
-    area: "Trade Receivables",
-    status: "draft",
-    periodEndDate: "2024-12-31",
-    createdAt: "2025-01-16"
-  },
-  {
-    id: "CNF-003",
-    confirmationFor: "TechCorp Industries Ltd.",
-    auditFirm: "ABC Audit Firm",
-    auditorName: "David Lee",
-    auditorEmail: "david.lee@auditfirm.com",
-    area: "Litigations & Claims",
-    status: "pending",
-    periodEndDate: "2024-12-31",
-    createdAt: "2025-01-17"
-  },
-  {
-    id: "CNF-004",
-    confirmationFor: "TechCorp Industries Ltd.",
-    auditFirm: "ABC Audit Firm",
-    auditorName: "Sarah Johnson",
-    auditorEmail: "sarah.j@auditfirm.com",
-    area: "Related Party Disclosure",
-    status: "pending",
-    periodEndDate: "2024-12-31",
-    createdAt: "2025-01-18"
-  },
-  {
-    id: "CNF-005",
-    confirmationFor: "TechCorp Industries Ltd.",
-    auditFirm: "ABC Audit Firm",
-    auditorName: "David Lee",
-    auditorEmail: "david.lee@auditfirm.com",
-    area: "Borrowings",
-    status: "pending",
-    periodEndDate: "2024-12-31",
-    createdAt: "2025-01-19"
-  },
-  {
-    id: "CNF-006",
-    confirmationFor: "TechCorp Industries Ltd.",
-    auditFirm: "ABC Audit Firm",
-    auditorName: "Sarah Johnson",
-    auditorEmail: "sarah.j@auditfirm.com",
-    area: "Inventory",
-    status: "pending",
-    periodEndDate: "2024-12-31",
-    createdAt: "2025-01-20"
-  },
-  {
-    id: "CNF-007",
-    confirmationFor: "TechCorp Industries Ltd.",
-    auditFirm: "ABC Audit Firm",
-    auditorName: "Sarah Johnson",
-    auditorEmail: "sarah.j@auditfirm.com",
-    area: "Other Assets - Security Deposits",
-    status: "pending",
-    periodEndDate: "2024-12-31",
-    createdAt: "2025-01-21"
-  },
-  {
-    id: "CNF-008",
-    confirmationFor: "TechCorp Industries Ltd.",
-    auditFirm: "ABC Audit Firm",
-    auditorName: "David Lee",
-    auditorEmail: "david.lee@auditfirm.com",
-    area: "Other Liabilities - Security Deposits",
-    status: "pending",
-    periodEndDate: "2024-12-31",
-    createdAt: "2025-01-22"
-  },
-  {
-    id: "CNF-009",
-    confirmationFor: "TechCorp Industries Ltd.",
-    auditFirm: "ABC Audit Firm",
-    auditorName: "Sarah Johnson",
-    auditorEmail: "sarah.j@auditfirm.com",
-    area: "Other Receivables - Advance to Supplier",
-    status: "pending",
-    periodEndDate: "2024-12-31",
-    createdAt: "2025-01-23"
-  },
-  {
-    id: "CNF-010",
-    confirmationFor: "TechCorp Industries Ltd.",
-    auditFirm: "ABC Audit Firm",
-    auditorName: "David Lee",
-    auditorEmail: "david.lee@auditfirm.com",
-    area: "Other Receivables - Capital Advances",
-    status: "pending",
-    periodEndDate: "2024-12-31",
-    createdAt: "2025-01-24"
-  },
-  {
-    id: "CNF-011",
-    confirmationFor: "TechCorp Industries Ltd.",
-    auditFirm: "ABC Audit Firm",
-    auditorName: "Sarah Johnson",
-    auditorEmail: "sarah.j@auditfirm.com",
-    area: "Other Liabilities - Advance from Customer",
-    status: "pending",
-    periodEndDate: "2024-12-31",
-    createdAt: "2025-01-25"
-  },
-  {
-    id: "CNF-012",
-    confirmationFor: "TechCorp Industries Ltd.",
-    auditFirm: "ABC Audit Firm",
-    auditorName: "David Lee",
-    auditorEmail: "david.lee@auditfirm.com",
-    area: "Other Liabilities - Capex Vendors",
-    status: "pending",
-    periodEndDate: "2024-12-31",
-    createdAt: "2025-01-26"
-  },
-  {
-    id: "CNF-013",
-    confirmationFor: "TechCorp Industries Ltd.",
-    auditFirm: "ABC Audit Firm",
-    auditorName: "Sarah Johnson",
-    auditorEmail: "sarah.j@auditfirm.com",
-    area: "Plan Assets",
-    status: "pending",
-    periodEndDate: "2024-12-31",
-    createdAt: "2025-01-27"
-  },
-  {
-    id: "CNF-014",
-    confirmationFor: "TechCorp Industries Ltd.",
-    auditFirm: "ABC Audit Firm",
-    auditorName: "David Lee",
-    auditorEmail: "david.lee@auditfirm.com",
-    area: "Trustee",
-    status: "pending",
-    periodEndDate: "2024-12-31",
-    createdAt: "2025-01-28"
-  },
-  {
-    id: "CNF-015",
-    confirmationFor: "TechCorp Industries Ltd.",
-    auditFirm: "ABC Audit Firm",
-    auditorName: "Sarah Johnson",
-    auditorEmail: "sarah.j@auditfirm.com",
-    area: "Trade Payables",
-    status: "pending",
-    periodEndDate: "2024-12-31",
-    createdAt: "2025-01-29"
-  }
-];
-
 const ConfirmingPartyConfirmations = () => {
   const navigate = useNavigate();
+  const [confirmations, setConfirmations] = useState<ConfirmationRequest[]>([]);
+
+  // Fetch pending confirmations from SharePoint on component mount
+  useEffect(() => {
+    fetchPendingConfirmations();
+  }, []);
+
+  const fetchPendingConfirmations = async () => {
+    try {
+      const response = await fetch('http://localhost:3002/api/get-pending-confirmations');
+      if (!response.ok) {
+        throw new Error('Failed to fetch pending confirmations');
+      }
+      const result = await response.json();
+      const pendingData = result.data || { confirmations: [] };
+      
+      console.log('📥 Fetched pending confirmations from SharePoint:', pendingData);
+      
+      // Convert SharePoint data to local format
+      if (pendingData.confirmations && pendingData.confirmations.length > 0) {
+        const convertedConfirmations = pendingData.confirmations.map((conf: any) => ({
+          id: conf.id || `CNF-${Date.now()}`,
+          confirmationFor: conf.confirmationFor || "",
+          auditFirm: conf.auditFirm || "",
+          auditorName: conf.auditorName || "",
+          auditorEmail: conf.auditorEmail || "",
+          area: conf.area || "",
+          status: (conf.status || "pending") as "pending" | "draft" | "submitted",
+          periodEndDate: conf.periodEndDate || "",
+          createdAt: conf.createdAt || conf.sentAt || ""
+        }));
+        setConfirmations(convertedConfirmations);
+      }
+    } catch (error: any) {
+      console.error('Error fetching pending confirmations:', error);
+      // Keep using empty array if fetch fails
+    }
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -244,34 +115,38 @@ const ConfirmingPartyConfirmations = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {mockConfirmations.map((confirmation) => (
-                    <TableRow key={confirmation.id}>
-                      <TableCell className="font-medium">
-                        {confirmation.confirmationFor}
-                      </TableCell>
-                      <TableCell>{confirmation.auditFirm}</TableCell>
-                      <TableCell>{confirmation.auditorName}</TableCell>
-                      <TableCell>
-                        <code className="text-xs bg-muted px-2 py-1 rounded">
-                          {confirmation.auditorEmail}
-                        </code>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{confirmation.area}</Badge>
-                      </TableCell>
-                      <TableCell>{getStatusBadge(confirmation.status)}</TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleNavigate(confirmation)}
-                        >
-                          <ArrowRight className="h-4 w-4 mr-1" />
-                          Open
-                        </Button>
+                  {confirmations.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                        No pending confirmations at this time.
                       </TableCell>
                     </TableRow>
-                  ))}
+                  ) : (
+                    confirmations.map((confirmation) => (
+                      <TableRow key={confirmation.id}>
+                        <TableCell className="font-medium">{confirmation.confirmationFor}</TableCell>
+                        <TableCell>{confirmation.auditFirm}</TableCell>
+                        <TableCell>{confirmation.auditorName}</TableCell>
+                        <TableCell>
+                          <code className="text-xs bg-muted px-2 py-1 rounded">
+                            {confirmation.auditorEmail}
+                          </code>
+                        </TableCell>
+                        <TableCell>{confirmation.area}</TableCell>
+                        <TableCell>{getStatusBadge(confirmation.status)}</TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleNavigate(confirmation)}
+                          >
+                            View Details
+                            <ArrowRight className="h-4 w-4 ml-2" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
                 </TableBody>
               </Table>
             </div>

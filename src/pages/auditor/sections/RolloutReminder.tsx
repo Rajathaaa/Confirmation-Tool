@@ -6,8 +6,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Send, Bell, Lock, CheckCircle, Clock, Upload, Eye, FileText, RotateCcw } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { formatIndianDate, formatIndianDateTime } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 interface ActivityLogEntry {
   timestamp: string;
@@ -16,6 +17,7 @@ interface ActivityLogEntry {
   performedBy: string;
   details: string;
   status: "completed" | "in-progress" | "pending";
+  ip_address?: string;
 }
 
 interface Confirmation {
@@ -233,7 +235,7 @@ const ConfirmationFormView = ({ confirmation }: { confirmation: Confirmation }) 
             <p className="text-sm text-muted-foreground mb-4">
               Kindly confirm to us the following information in respect of amounts {confirmation.area === "Trade Receivables" ? "receivable from" : "payable to"} you as on {confirmation.periodEndDate ? formatIndianDate(confirmation.periodEndDate) : "[Period-end Date]"}:
             </p>
-            {confirmation.formData.amounts && confirmation.formData.amounts.length > 0 && (
+            {confirmation.formData && confirmation.formData.amounts && Array.isArray(confirmation.formData.amounts) && confirmation.formData.amounts.length > 0 ? (
               <div className="rounded-md border">
                 <Table>
                   <TableHeader>
@@ -245,12 +247,18 @@ const ConfirmationFormView = ({ confirmation }: { confirmation: Confirmation }) 
                   <TableBody>
                     {confirmation.formData.amounts.map((row: any, index: number) => (
                       <TableRow key={index}>
-                        <TableCell className="font-medium">{row.amount || "-"}</TableCell>
+                        <TableCell className="font-medium">
+                          {row.amount ? (typeof row.amount === 'number' ? row.amount.toLocaleString() : row.amount) : "-"}
+                        </TableCell>
                         <TableCell>{row.currency || "-"}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
+              </div>
+            ) : (
+              <div className="text-center py-4 text-muted-foreground">
+                <p>No amount details provided yet.</p>
               </div>
             )}
           </div>
@@ -456,10 +464,144 @@ const ConfirmationFormView = ({ confirmation }: { confirmation: Confirmation }) 
 };
 
 export const RolloutReminder = () => {
-  const [confirmations, setConfirmations] = useState(mockConfirmations);
+  const { toast } = useToast();
+  const [confirmations, setConfirmations] = useState<Confirmation[]>([]);
   const [selectedConfirmation, setSelectedConfirmation] = useState<Confirmation | null>(null);
   const [resendDialogOpen, setResendDialogOpen] = useState(false);
   const [resendRemarks, setResendRemarks] = useState("");
+  const [sendRemarks, setSendRemarks] = useState("");
+  const [sendDialogOpen, setSendDialogOpen] = useState(false);
+
+  // Fetch confirmation requests from authorization letters on component mount
+  useEffect(() => {
+    fetchConfirmationRequests();
+  }, []);
+
+  const fetchConfirmationRequests = async () => {
+    try {
+      const response = await fetch('http://localhost:3002/api/get-authorization-letters');
+      if (!response.ok) {
+        throw new Error('Failed to fetch authorization letters');
+      }
+      const result = await response.json();
+      const lettersData = result.data || { letters: [] };
+      
+      console.log('📥 Fetched authorization letters from SharePoint:', lettersData);
+      
+      // Fetch activity logs from activity_log.json (same as ClientAuthorization)
+      let activityLogs: Record<string, ActivityLogEntry[]> = {};
+      try {
+        const activityResponse = await fetch('http://localhost:3002/api/get-activity-log');
+        if (activityResponse.ok) {
+          const activityResult = await activityResponse.json();
+          const activityData = activityResult.data || { timeline: [] };
+          
+          console.log('📥 Fetched activity_log.json from SharePoint:', activityData);
+          
+          // Group activity logs by letter_id
+          if (activityData.timeline && Array.isArray(activityData.timeline)) {
+            activityData.timeline.forEach((entry: any) => {
+              const letterId = entry.letter_id;
+              if (letterId) {
+                if (!activityLogs[letterId]) {
+                  activityLogs[letterId] = [];
+                }
+                activityLogs[letterId].push({
+                  timestamp: entry.timestamp || "",
+                  stage: entry.stage || "",
+                  action: entry.action || "",
+                  performedBy: entry.performed_by || "",
+                  details: entry.details || "",
+                  status: (entry.status || "completed") as "completed" | "in-progress" | "pending",
+                  ip_address: entry.ip_address
+                });
+              }
+            });
+            
+            // Sort each letter's activity log by timestamp
+            Object.keys(activityLogs).forEach(letterId => {
+              activityLogs[letterId].sort((a, b) => 
+                new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+              );
+            });
+          }
+        }
+      } catch (activityError) {
+        console.error('Error fetching activity logs:', activityError);
+      }
+      
+      // Convert authorization letters to confirmations (only authorized ones)
+      if (lettersData.letters && lettersData.letters.length > 0) {
+        const authorizedLetters = lettersData.letters.filter((letter: any) => 
+          letter.status === "authorized"
+        );
+        
+        const convertedConfirmations = authorizedLetters.map((letter: any) => ({
+          id: letter.id,
+          area: letter.area || "",
+          confirmingParty: letter.confirmingParty || "",
+          recipientEmail: letter.recipientEmail || "",
+          recipientName: letter.recipientName || "",
+          recipientOrg: letter.recipientOrg || letter.confirmingParty || "",
+          status: "not-sent" as const, // Default status, will be updated based on pending confirmations
+          sentDate: undefined,
+          confirmedDate: undefined,
+          confirmedBy: undefined,
+          confirmedIP: undefined,
+          lockedDate: undefined,
+          remarks: undefined,
+          attachments: [],
+          // Use activity logs from activity_log.json (same source as ClientAuthorization)
+          activityLog: activityLogs[letter.id] || [],
+          periodEndDate: letter.periodEndDate || ""
+        }));
+        
+        // Check pending confirmations to update status
+        const pendingResponse = await fetch('http://localhost:3002/api/get-pending-confirmations');
+        if (pendingResponse.ok) {
+          const pendingResult = await pendingResponse.json();
+          const pendingData = pendingResult.data || { confirmations: [] };
+          
+          // Update status and form data based on pending confirmations
+          convertedConfirmations.forEach((conf: Confirmation) => {
+            const pendingConf = pendingData.confirmations?.find((p: any) => 
+              p.letterId === conf.id
+            );
+            if (pendingConf) {
+              // Update status
+              if (pendingConf.status === "locked") {
+                conf.status = "locked" as const;
+                conf.lockedDate = pendingConf.lockedAt;
+              } else if (pendingConf.status === "submitted") {
+                conf.status = "confirmed" as const; // Display as "confirmed" in UI
+                conf.confirmedDate = pendingConf.confirmedAt || pendingConf.submittedAt;
+                conf.confirmedBy = pendingConf.confirmedBy;
+                conf.confirmedIP = pendingConf.confirmedIP;
+              } else if (pendingConf.status === "draft") {
+                conf.status = "sent" as const; // Keep as sent for draft
+              } else {
+                conf.status = "sent" as const;
+              }
+              
+              // Update form data and other fields
+              conf.sentDate = pendingConf.sentAt;
+              conf.remarks = pendingConf.remarks;
+              conf.attachments = pendingConf.attachments || [];
+              // Ensure formData is properly structured
+              if (pendingConf.formData) {
+                conf.formData = pendingConf.formData;
+              }
+            }
+          });
+        }
+        
+        setConfirmations(convertedConfirmations);
+      }
+    } catch (error: any) {
+      console.error('Error fetching confirmation requests:', error);
+      // Keep using empty array if fetch fails
+    }
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -494,50 +636,141 @@ export const RolloutReminder = () => {
     }
   };
 
-  const lockConfirmation = (id: string) => {
-    setConfirmations(confirmations.map(c =>
-      c.id === id ? { ...c, status: "locked" as const, lockedDate: new Date().toISOString() } : c
-    ));
+  const lockConfirmation = async (id: string) => {
+    try {
+      // Find the confirmation to get its confirmation ID (not letter ID)
+      const confirmation = confirmations.find(c => c.id === id);
+      if (!confirmation) {
+        throw new Error('Confirmation not found');
+      }
+
+      // Get the confirmation ID from pending_confirmations.json
+      // We need to fetch pending confirmations to find the matching confirmation
+      const pendingResponse = await fetch('http://localhost:3002/api/get-pending-confirmations');
+      if (!pendingResponse.ok) {
+        throw new Error('Failed to fetch pending confirmations');
+      }
+      const pendingResult = await pendingResponse.json();
+      const pendingData = pendingResult.data || { confirmations: [] };
+      
+      // Find the confirmation by matching letter ID or other identifiers
+      const pendingConf = pendingData.confirmations.find((c: any) => 
+        c.letterId === id || c.id === id
+      );
+      
+      if (!pendingConf) {
+        throw new Error('Pending confirmation not found');
+      }
+
+      const response = await fetch('http://localhost:3002/api/lock-confirmation', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          confirmationId: pendingConf.id
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to lock confirmation');
+      }
+
+      toast({
+        title: "Success",
+        description: "Confirmation locked successfully",
+      });
+
+      // Refresh confirmations
+      await fetchConfirmationRequests();
+    } catch (error: any) {
+      console.error('Error locking confirmation:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to lock confirmation",
+        variant: "destructive"
+      });
+    }
   };
 
-  const handleResendConfirmation = (id: string) => {
-    const confirmation = confirmations.find(c => c.id === id);
-    if (!confirmation) return;
+  const handleSendConfirmation = async (id: string) => {
+    try {
+      const response = await fetch('http://localhost:3002/api/send-confirmation-to-party', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          letterId: id,
+          isResend: false,
+          remarks: sendRemarks
+        }),
+      });
 
-    const now = new Date();
-    const formattedNow = formatIndianDateTime(now.toISOString());
-    
-    setConfirmations(confirmations.map(c => {
-      if (c.id === id) {
-        // Add resend activity log entry
-        const resendLogEntry: ActivityLogEntry = {
-          timestamp: formattedNow,
-          stage: "Rollout",
-          action: "Confirmation request resent",
-          performedBy: "Sarah Johnson (Auditor)",
-          details: resendRemarks 
-            ? `Confirmation resent to ${c.recipientEmail} due to issues with previous confirmation. Remarks: ${resendRemarks}`
-            : `Confirmation resent to ${c.recipientEmail} due to issues with previous confirmation.`,
-          status: "completed"
-        };
-
-        return {
-          ...c,
-          status: "sent" as const,
-          sentDate: formattedNow,
-          confirmedDate: undefined,
-          confirmedBy: undefined,
-          confirmedIP: undefined,
-          activityLog: [...c.activityLog, resendLogEntry]
-        };
+      if (!response.ok) {
+        throw new Error('Failed to send confirmation');
       }
-      return c;
-    }));
 
-    // Reset dialog state
-    setResendRemarks("");
-    setResendDialogOpen(false);
-    setSelectedConfirmation(null);
+      toast({
+        title: "Success",
+        description: "Confirmation request sent to confirming party",
+      });
+
+      // Reset dialog state
+      setSendRemarks("");
+      setSendDialogOpen(false);
+      setSelectedConfirmation(null);
+
+      // Refresh confirmations to get updated activity logs
+      await fetchConfirmationRequests();
+    } catch (error: any) {
+      console.error('Error sending confirmation:', error);
+      toast({
+        title: "Error",
+        description: `Failed to send confirmation: ${error.message}`,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleResendConfirmation = async (id: string) => {
+    try {
+      const response = await fetch('http://localhost:3002/api/send-confirmation-to-party', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          letterId: id,
+          isResend: true,
+          remarks: resendRemarks
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to resend confirmation');
+      }
+
+      toast({
+        title: "Success",
+        description: "Confirmation request resent to confirming party",
+      });
+
+      // Reset dialog state
+      setResendRemarks("");
+      setResendDialogOpen(false);
+      setSelectedConfirmation(null);
+
+      // Refresh confirmations to get updated activity logs
+      await fetchConfirmationRequests();
+    } catch (error: any) {
+      console.error('Error resending confirmation:', error);
+      toast({
+        title: "Error",
+        description: `Failed to resend confirmation: ${error.message}`,
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -707,35 +940,54 @@ export const RolloutReminder = () => {
                                       </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                      {confirmation.activityLog.map((log, index) => (
-                                        <TableRow key={index}>
-                                          <TableCell className="font-mono text-xs">{log.timestamp}</TableCell>
-                                          <TableCell className="font-medium">{log.stage}</TableCell>
-                                          <TableCell>{log.action}</TableCell>
-                                          <TableCell>{log.performedBy}</TableCell>
-                                          <TableCell className="text-sm text-muted-foreground">{log.details}</TableCell>
-                                          <TableCell>
-                                            {log.status === "completed" && (
-                                              <Badge className="bg-success text-success-foreground">
-                                                <CheckCircle className="h-3 w-3 mr-1" />
-                                                Completed
-                                              </Badge>
-                                            )}
-                                            {log.status === "in-progress" && (
-                                              <Badge className="bg-info text-info-foreground">
-                                                <Clock className="h-3 w-3 mr-1" />
-                                                In Progress
-                                              </Badge>
-                                            )}
-                                            {log.status === "pending" && (
-                                              <Badge variant="outline">
-                                                <Clock className="h-3 w-3 mr-1" />
-                                                Pending
-                                              </Badge>
-                                            )}
+                                      {confirmation.activityLog && confirmation.activityLog.length > 0 ? (
+                                        confirmation.activityLog.map((log, index) => (
+                                          <TableRow key={index}>
+                                            <TableCell className="font-mono text-xs">
+                                              {log.timestamp ? formatIndianDateTime(log.timestamp) : log.timestamp}
+                                            </TableCell>
+                                            <TableCell className="font-medium">{log.stage}</TableCell>
+                                            <TableCell>{log.action}</TableCell>
+                                            <TableCell>{log.performedBy}</TableCell>
+                                            <TableCell className="text-sm text-muted-foreground max-w-md">
+                                              <p className="line-clamp-2" title={log.details}>
+                                                {log.details}
+                                                {log.ip_address && log.ip_address !== "Unavailable" && (
+                                                  <span className="text-xs text-muted-foreground ml-2">
+                                                    (IP: {log.ip_address})
+                                                  </span>
+                                                )}
+                                              </p>
+                                            </TableCell>
+                                            <TableCell>
+                                              {log.status === "completed" && (
+                                                <Badge className="bg-success text-success-foreground">
+                                                  <CheckCircle className="h-3 w-3 mr-1" />
+                                                  Completed
+                                                </Badge>
+                                              )}
+                                              {log.status === "in-progress" && (
+                                                <Badge className="bg-info text-info-foreground">
+                                                  <Clock className="h-3 w-3 mr-1" />
+                                                  In Progress
+                                                </Badge>
+                                              )}
+                                              {log.status === "pending" && (
+                                                <Badge variant="outline">
+                                                  <Clock className="h-3 w-3 mr-1" />
+                                                  Pending
+                                                </Badge>
+                                              )}
+                                            </TableCell>
+                                          </TableRow>
+                                        ))
+                                      ) : (
+                                        <TableRow>
+                                          <TableCell colSpan={6} className="text-center py-4 text-muted-foreground">
+                                            No activity log entries yet.
                                           </TableCell>
                                         </TableRow>
-                                      ))}
+                                      )}
                                     </TableBody>
                                   </Table>
                                 </div>
@@ -744,40 +996,81 @@ export const RolloutReminder = () => {
                           </DialogContent>
                         </Dialog>
                         
-                        {confirmation.status === "not-sent" && (
-                          <Dialog>
+                        {(confirmation.status === "not-sent" || confirmation.status === "sent") && (
+                          <Dialog open={sendDialogOpen && selectedConfirmation?.id === confirmation.id} onOpenChange={(open) => {
+                            setSendDialogOpen(open);
+                            if (open) {
+                              setSelectedConfirmation(confirmation);
+                            } else {
+                              setSelectedConfirmation(null);
+                              setSendRemarks("");
+                            }
+                          }}>
                             <DialogTrigger asChild>
-                              <Button size="sm" onClick={() => setSelectedConfirmation(confirmation)}>
+                              <Button 
+                                size="sm" 
+                                onClick={() => {
+                                  setSelectedConfirmation(confirmation);
+                                  setSendDialogOpen(true);
+                                }}
+                              >
                                 <Send className="h-4 w-4 mr-1" />
-                                Send
+                                {confirmation.status === "not-sent" ? "Send" : "Resend"}
                               </Button>
                             </DialogTrigger>
                             <DialogContent>
                               <DialogHeader>
-                                <DialogTitle>Send Confirmation Request</DialogTitle>
+                                <DialogTitle>
+                                  {confirmation.status === "not-sent" ? "Send" : "Resend"} Confirmation Request
+                                </DialogTitle>
                                 <DialogDescription>
-                                  Add remarks or attachments before sending to {confirmation.recipientName}
+                                  {confirmation.status === "not-sent" 
+                                    ? `Send confirmation request to ${confirmation.recipientName} at ${confirmation.recipientEmail}`
+                                    : `Resend the confirmation request to ${confirmation.recipientName} at ${confirmation.recipientEmail}. The previous confirmation will be voided and a new request will be sent.`
+                                  }
                                 </DialogDescription>
                               </DialogHeader>
                               <div className="space-y-4 py-4">
                                 <div>
                                   <Label>Remarks (Optional)</Label>
                                   <Textarea
-                                    placeholder="Add any additional notes or instructions..."
+                                    placeholder={confirmation.status === "not-sent" 
+                                      ? "Add any additional notes or instructions..."
+                                      : "Please specify the reason for resending (e.g., issues with previous confirmation, missing information, etc.)..."
+                                    }
                                     className="mt-2"
+                                    value={sendRemarks}
+                                    onChange={(e) => setSendRemarks(e.target.value)}
+                                    rows={4}
                                   />
                                 </div>
-                                <div>
-                                  <Label>Attachment (Optional)</Label>
-                                  <Button variant="outline" className="w-full mt-2">
-                                    <Upload className="h-4 w-4 mr-2" />
-                                    Choose File
+                                {confirmation.status === "sent" && (
+                                  <div className="bg-warning/10 border border-warning rounded-md p-3">
+                                    <p className="text-sm text-warning-foreground">
+                                      <strong>Note:</strong> This action will reset the confirmation status and the previous confirmation response will be voided.
+                                    </p>
+                                  </div>
+                                )}
+                                <div className="flex gap-2">
+                                  <Button
+                                    variant="outline"
+                                    className="flex-1"
+                                    onClick={() => {
+                                      setSendDialogOpen(false);
+                                      setSelectedConfirmation(null);
+                                      setSendRemarks("");
+                                    }}
+                                  >
+                                    Cancel
+                                  </Button>
+                                  <Button
+                                    className="flex-1"
+                                    onClick={() => handleSendConfirmation(confirmation.id)}
+                                  >
+                                    <Send className="h-4 w-4 mr-2" />
+                                    {confirmation.status === "not-sent" ? "Send" : "Resend"} Confirmation
                                   </Button>
                                 </div>
-                                <Button className="w-full">
-                                  <Send className="h-4 w-4 mr-2" />
-                                  Send Confirmation Request
-                                </Button>
                               </div>
                             </DialogContent>
                           </Dialog>
@@ -849,20 +1142,20 @@ export const RolloutReminder = () => {
                                     >
                                       <RotateCcw className="h-4 w-4 mr-2" />
                                       Resend Confirmation
-                          </Button>
+                                    </Button>
                                   </div>
                                 </div>
                               </DialogContent>
                             </Dialog>
                             
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => lockConfirmation(confirmation.id)}
-                          >
-                            <Lock className="h-4 w-4 mr-1" />
-                            Lock
-                          </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => lockConfirmation(confirmation.id)}
+                            >
+                              <Lock className="h-4 w-4 mr-1" />
+                              Lock
+                            </Button>
                           </>
                         )}
                       </div>

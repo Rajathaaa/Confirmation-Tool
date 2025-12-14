@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Upload, FileText, Trash2, Download, GripVertical, MoveUp, MoveDown, ScrollText } from "lucide-react";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -167,26 +167,7 @@ interface CustomTemplateStructure {
 }
 
 // Inbuilt templates (static)
-const INBUILT_TEMPLATES: AuthorizationTemplate[] = [
-  {
-    id: "TMPL-001",
-    name: "Standard Authorization Template",
-    content: "This is a standard authorization letter template for confirmation requests...",
-    type: "inbuilt"
-  },
-  {
-    id: "TMPL-002",
-    name: "Formal Authorization Template",
-    content: "This is a formal authorization letter template...",
-    type: "inbuilt"
-  },
-  {
-    id: "TMPL-003",
-    name: "Brief Authorization Template",
-    content: "This is a brief authorization letter template...",
-    type: "inbuilt"
-  }
-];
+const INBUILT_TEMPLATES: AuthorizationTemplate[] = [];
 
 // Sample Calculator Matrix
 // Format: { multipleOfPM: { notRelying: { lower, higher, significant }, relying: { lower, higher, significant } } }
@@ -279,62 +260,14 @@ const CONFIRMATION_FORM_NAMES = [
   "Trustee"
 ];
 
-// Mock confirmation requests data - in production, this would come from an API or shared state
-const mockConfirmationRequests = [
-  {
-    id: "CNF-001",
-    area: "Trade Receivables",
-    confirmingParty: "ABC Corporation Ltd.",
-    recipientEmail: "john.smith@abccorp.com",
-    recipientName: "John Smith",
-  },
-  {
-    id: "CNF-002",
-    area: "Trade Receivables",
-    confirmingParty: "XYZ Industries",
-    recipientEmail: "e.chen@xyzind.com",
-    recipientName: "Emily Chen",
-  },
-  {
-    id: "CNF-003",
-    area: "Trade Payables",
-    confirmingParty: "Global Supplies Inc.",
-    recipientEmail: "m.brown@globalsupplies.com",
-    recipientName: "Michael Brown",
-  },
-];
-
-// Function to get unique recipients from confirmation requests
-const getRecipientsFromConfirmations = () => {
-  const recipientsMap = new Map<string, { name: string; email: string }>();
-  mockConfirmationRequests.forEach((req) => {
-    if (req.recipientEmail && req.recipientName) {
-      recipientsMap.set(req.recipientEmail, {
-        name: req.recipientName,
-        email: req.recipientEmail,
-      });
-    }
-  });
-  return Array.from(recipientsMap.values());
-};
-
 export const SampleGeneration = () => {
   const { toast } = useToast();
-  const [selectedAreas, setSelectedAreas] = useState<string[]>(["Trade Receivables"]);
+  const [selectedAreas, setSelectedAreas] = useState<string[]>([]);
   const [activeArea, setActiveArea] = useState("Trade Receivables");
-  const [sampleSets, setSampleSets] = useState<Record<string, SampleSet[]>>({
-    "Trade Receivables": [
-      {
-        id: "SS-001",
-        name: "Q4 Receivables Sample",
-        fileName: "receivables_data.xlsx",
-        samplingMethod: "mus",
-        sampleSize: 45,
-        populationSize: 1250,
-        status: "generated"
-      }
-    ]
-  });
+  // State for locked sampling methods and selections
+  const [lockedSamplingMethods, setLockedSamplingMethods] = useState<Record<string, { method: string; simpleMethod?: string; locked: boolean }>>({});
+  const [lockedSelections, setLockedSelections] = useState<Record<string, Record<string, { recipientName: string; recipientEmail: string; templateName: string }>>>({});
+  const [sampleSets, setSampleSets] = useState<Record<string, SampleSet[]>>({});
 
   const [newSetName, setNewSetName] = useState("");
   const [showNewSetForm, setShowNewSetForm] = useState(false);
@@ -349,6 +282,62 @@ export const SampleGeneration = () => {
   const [confirmationData, setConfirmationData] = useState<Record<string, any>>({});
   const [isLoadingConfirmationData, setIsLoadingConfirmationData] = useState(false);
   const [samplesFromJson, setSamplesFromJson] = useState<Record<string, Sample[]>>({});
+  
+  // State for confirming party contacts from Access & Roles
+  const [confirmingPartyContacts, setConfirmingPartyContacts] = useState<Array<{ name: string; email: string }>>([]);
+
+  // Fetch confirming party contacts from SharePoint on component mount
+  useEffect(() => {
+    fetchConfirmingPartyContacts();
+  }, []);
+
+  const fetchConfirmingPartyContacts = async () => {
+    try {
+      const response = await fetch('http://localhost:3002/api/get-people-data');
+      if (!response.ok) {
+        throw new Error('Failed to fetch people data');
+      }
+      const result = await response.json();
+      const peopleData = result.data || { confirming_parties: [] };
+      
+      console.log('📥 Fetched confirming party contacts from SharePoint:', peopleData);
+      
+      // Convert SharePoint data to recipient format
+      if (peopleData.confirming_parties && peopleData.confirming_parties.length > 0) {
+        const recipients = peopleData.confirming_parties
+          .filter((party: any) => {
+            // Filter out entries without recipient name or email
+            const hasName = party.recipient_name && party.recipient_name.trim() !== "";
+            const hasEmail = (party.email && party.email.trim() !== "") || (party.recipient_email && party.recipient_email.trim() !== "");
+            return hasName && hasEmail;
+          })
+          .map((party: any) => ({
+            name: party.recipient_name || "",
+            email: party.email || party.recipient_email || ""
+          }));
+        
+        // Remove duplicates by email (case-insensitive)
+        const recipientsMap = new Map<string, { name: string; email: string }>();
+        recipients.forEach(r => {
+          recipientsMap.set(r.email.toLowerCase(), r);
+        });
+        const uniqueRecipients: Array<{ name: string; email: string }> = Array.from(recipientsMap.values());
+        
+        setConfirmingPartyContacts(uniqueRecipients);
+        console.log(`✅ Loaded ${uniqueRecipients.length} confirming party contacts for recipient dropdown`);
+      } else {
+        console.log('ℹ️ No confirming party contacts found in SharePoint');
+      }
+    } catch (error: any) {
+      console.error('Error fetching confirming party contacts:', error);
+      // Keep empty array if fetch fails
+    }
+  };
+
+  // Function to get unique recipients from confirming party contacts
+  const getRecipientsFromConfirmations = () => {
+    return confirmingPartyContacts;
+  };
 
   // New state for templates and template selection
   const [customTemplates, setCustomTemplates] = useState<AuthorizationTemplate[]>([]);
@@ -374,6 +363,8 @@ export const SampleGeneration = () => {
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const [samplingLogs, setSamplingLogs] = useState<Record<string, SamplingLog>>({}); // Store sampling logs per sample set
   const [samplingLogDialogOpen, setSamplingLogDialogOpen] = useState<Record<string, boolean>>({}); // Track which log dialog is open
+  const [samplingLogsFromSharePoint, setSamplingLogsFromSharePoint] = useState<Record<string, any[]>>({}); // Store sampling logs from SharePoint per sample set
+  const [isLoadingSamplingLog, setIsLoadingSamplingLog] = useState(false); // Loading state for sampling log
   const [generatedSamples, setGeneratedSamples] = useState<Record<string, Sample[]>>({}); // Store generated samples per sample set
   const [addSampleManuallyDialogOpen, setAddSampleManuallyDialogOpen] = useState<Record<string, boolean>>({}); // Track add sample manually dialog
   const [manualSampleData, setManualSampleData] = useState<Record<string, { confirmingParty: string; amount: string; recipientName: string; recipientEmail: string }>>({}); // Store manual sample input data
@@ -434,6 +425,112 @@ export const SampleGeneration = () => {
     return `*${elementFootnotes.length + 1}`;
   };
 
+  // Load audit areas when component mounts
+  useEffect(() => {
+    fetchAuditAreas();
+    fetchLockedData();
+  }, []); // Run once on mount
+
+  // Reload audit areas when activeArea changes
+  useEffect(() => {
+    fetchAuditAreas();
+    fetchLockedData();
+  }, [activeArea]); // Reload when activeArea changes
+
+  // Fetch locked sampling methods and selections
+  const fetchLockedData = async () => {
+    try {
+      // Fetch locked sampling methods from audit_areas.json
+      const response = await fetch('http://localhost:3002/api/get-audit-areas');
+      if (response.ok) {
+        const result = await response.json();
+        const auditAreasData = result.data || {};
+        const areaCode = AREA_MAP[activeArea] || "";
+        
+        if (areaCode && auditAreasData[areaCode] && Array.isArray(auditAreasData[areaCode])) {
+          const lockedMethods: Record<string, { method: string; simpleMethod?: string; locked: boolean }> = {};
+          auditAreasData[areaCode].forEach((item: any) => {
+            if (typeof item === 'object' && item !== null) {
+              // New format: array of objects like [{"Sample Set Name": {...}}]
+              const sampleSetName = Object.keys(item)[0];
+              const setData = item[sampleSetName];
+              if (setData && typeof setData === 'object' && setData.locked) {
+                // Find the sample set by name
+                const sampleSet = Object.values(sampleSets).flat().find(s => s.name === sampleSetName);
+                if (sampleSet) {
+                  lockedMethods[sampleSet.id] = {
+                    method: setData.samplingMethod || "",
+                    simpleMethod: setData.simpleMethod,
+                    locked: true
+                  };
+                }
+              }
+            }
+          });
+          setLockedSamplingMethods(lockedMethods);
+          
+          // Also initialize samplingConfigs with locked values
+          Object.keys(lockedMethods).forEach(sampleSetId => {
+            const locked = lockedMethods[sampleSetId];
+            setSamplingConfigs(prev => ({
+              ...prev,
+              [sampleSetId]: {
+                ...prev[sampleSetId],
+                method: locked.method as "random" | "mus",
+                simpleMethod: locked.simpleMethod as "number" | "calculator" | undefined,
+                randomType: locked.method === "random" ? "simple" : undefined,
+                scope: locked.method === "mus" ? "all" : undefined
+              }
+            }));
+          });
+        }
+      }
+
+      // Fetch locked selections from confirmation_{area_code}.json
+      const confResponse = await fetch('http://localhost:3002/api/get-confirmation-by-area', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ area: activeArea })
+      });
+      if (confResponse.ok) {
+        const confResult = await confResponse.json();
+        const confData = confResult.data || {};
+        const lockedSelectionsData: Record<string, Record<string, { recipientName: string; recipientEmail: string; templateName: string }>> = {};
+        
+        // Group by sample set name (extract from sample_id)
+        Object.keys(confData).forEach(sampleId => {
+          const sampleData = confData[sampleId];
+          if (sampleData.selectionsLocked) {
+            // Extract sample set name from sample_id (format: TR_Q4_001 -> Q4)
+            const parts = sampleId.split('_');
+            if (parts.length >= 2) {
+              const sampleSetName = parts.slice(0, -1).join('_'); // Everything except last part
+              const sampleSet = Object.values(sampleSets).flat().find(s => {
+                // Match sample set name pattern
+                return sampleId.startsWith(AREA_MAP[activeArea] || "") && 
+                       sampleId.includes(sampleSet.name.replace(/\s+/g, '_'));
+              });
+              
+              if (sampleSet) {
+                if (!lockedSelectionsData[sampleSet.id]) {
+                  lockedSelectionsData[sampleSet.id] = {};
+                }
+                lockedSelectionsData[sampleSet.id][sampleId] = {
+                  recipientName: sampleData.recipientName || "",
+                  recipientEmail: sampleData.recipientEmail || "",
+                  templateName: sampleData.selectedTemplate || ""
+                };
+              }
+            }
+          }
+        });
+        setLockedSelections(lockedSelectionsData);
+      }
+    } catch (error) {
+      console.error('Error fetching locked data:', error);
+    }
+  };
+
   const addArea = (area: string) => {
     if (!selectedAreas.includes(area)) {
       setSelectedAreas([...selectedAreas, area]);
@@ -441,8 +538,55 @@ export const SampleGeneration = () => {
     }
   };
 
-  const addSampleSet = () => {
+  const addSampleSet = async () => {
     if (newSetName && activeArea) {
+      // Call backend API to append sample set to audit_areas.json
+      try {
+        const response = await fetch('http://localhost:3002/api/append-sample-set-to-area', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            area: activeArea,
+            sampleSetName: newSetName,
+          }),
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          console.log('✅ Sample set added to audit_areas.json:', data);
+          toast({
+            title: "Success",
+            description: `Sample set "${newSetName}" added successfully`,
+          });
+        } else {
+          console.error('❌ Error adding sample set:', data.message);
+          toast({
+            title: "Warning",
+            description: `Failed to save to SharePoint: ${data.message}`,
+            variant: "destructive",
+          });
+        }
+      } catch (error: any) {
+        console.error('❌ Error calling append-sample-set-to-area API:', error);
+        // Check if it's a connection error (server not running)
+        if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+          toast({
+            title: "Warning",
+            description: `Sample set created locally. To save to SharePoint, please start the Python backend server (port 3002).`,
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Warning",
+            description: `Sample set created but failed to save to SharePoint: ${error.message}`,
+            variant: "destructive",
+          });
+        }
+      }
+
       const newSet: SampleSet = {
         id: `SS-${Date.now()}`,
         name: newSetName,
@@ -667,13 +811,8 @@ export const SampleGeneration = () => {
     });
   };
 
-  // Generate random seed
-  const generateSeed = (): string => {
-    return Math.floor(Math.random() * 1000000).toString();
-  };
-
   // Generate samples based on configuration
-  const handleGenerateSamples = (sampleSetId: string) => {
+  const handleGenerateSamples = async (sampleSetId: string) => {
     const config = samplingConfigs[sampleSetId];
     if (!config) {
       toast({
@@ -684,7 +823,6 @@ export const SampleGeneration = () => {
       return;
     }
 
-    const seed = generateSeed();
     const dateTime = new Date().toISOString();
     let samples: Sample[] = [];
     let log: SamplingLog;
@@ -721,7 +859,6 @@ export const SampleGeneration = () => {
           sampleSetId,
           method: "number",
           dateTime,
-          seed,
           numberOfSamples: config.numberOfSamples,
         };
       } else if (config.simpleMethod === "calculator") {
@@ -766,7 +903,6 @@ export const SampleGeneration = () => {
           sampleSetId,
           method: "calculator",
           dateTime,
-          seed,
           performanceMateriality: config.performanceMateriality,
           assessedRisk: config.assessedRisk,
           relianceOnControls: config.controlReliance,
@@ -874,7 +1010,6 @@ export const SampleGeneration = () => {
         sampleSetId,
         method: "mus",
         dateTime,
-        seed,
         performanceMateriality: config.performanceMateriality,
         assessedRisk: config.assessedRisk,
         relianceOnControls: config.controlReliance,
@@ -919,10 +1054,220 @@ export const SampleGeneration = () => {
       return updated;
     });
 
-    toast({
-      title: "Success",
-      description: `Generated ${samples.length} samples successfully`,
-    });
+    // Call backend API to generate JSON and upload to SharePoint
+    const sampleSet = Object.values(sampleSets).flat().find(s => s.id === sampleSetId);
+    if (sampleSet) {
+      try {
+        const response = await fetch('http://localhost:3002/api/generate-and-upload-samples', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            samples: samples.map(s => ({
+              confirmingParty: s.confirmingParty,
+              recipientName: s.recipientName || "",
+              recipientEmail: s.recipientEmail || "",
+              amount: s.amount,
+            })),
+            auditArea: activeArea,
+            sampleSetName: sampleSet.name, // This is the "name" parameter
+          }),
+        });
+        
+        const data = await response.json();
+        
+        if (data.success && data.generatedIds && data.generatedIds.length === samples.length) {
+          console.log('✅ Samples generated and uploaded to SharePoint:', data.generatedIds);
+          
+          // Update sample IDs with the correct IDs from backend (format: TR_Q4_001)
+          setGeneratedSamples(prev => {
+            const updated = { ...prev };
+            if (updated[sampleSetId]) {
+              updated[sampleSetId] = updated[sampleSetId].map((sample, index) => ({
+                ...sample,
+                id: data.generatedIds[index] // Update with correct ID from backend
+              }));
+            }
+            return updated;
+          });
+          
+          // Save sampling log to SharePoint
+          try {
+            const logResponse = await fetch('http://localhost:3002/api/save-sampling-log', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                area: activeArea,
+                sampleSetName: sampleSet.name,
+                logData: log,
+              }),
+            });
+            
+            const logData = await logResponse.json();
+            if (logData.success) {
+              console.log('✅ Sampling log saved to SharePoint:', logData);
+            } else {
+              console.error('❌ Error saving sampling log:', logData.message);
+            }
+          } catch (logError) {
+            console.error('❌ Error calling save-sampling-log API:', logError);
+          }
+          
+          // Lock sampling method after successful generation
+          try {
+            const lockResponse = await fetch('http://localhost:3002/api/lock-sampling-method', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                area: activeArea,
+                sampleSetName: sampleSet.name,
+                samplingMethod: config.method,
+                simpleMethod: config.simpleMethod
+              })
+            });
+            
+            if (lockResponse.ok) {
+              const lockData = await lockResponse.json();
+              console.log('✅ Sampling method locked:', lockData);
+              // Update locked state
+              setLockedSamplingMethods(prev => ({
+                ...prev,
+                [sampleSetId]: {
+                  method: config.method,
+                  simpleMethod: config.simpleMethod,
+                  locked: true
+                }
+              }));
+            }
+          } catch (lockError) {
+            console.error('Error locking sampling method:', lockError);
+          }
+          
+          toast({
+            title: "Success",
+            description: `Generated ${samples.length} samples and saved to SharePoint (${data.filename})`,
+          });
+        } else {
+          console.error('❌ Error generating/uploading samples:', data.message);
+          toast({
+            title: "Warning",
+            description: `Samples generated but failed to save to SharePoint: ${data.message}`,
+            variant: "destructive",
+          });
+          
+          // Still try to lock the sampling method even if upload failed
+          try {
+            const lockResponse = await fetch('http://localhost:3002/api/lock-sampling-method', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                area: activeArea,
+                sampleSetName: sampleSet.name,
+                samplingMethod: config.method,
+                simpleMethod: config.simpleMethod
+              })
+            });
+            
+            if (lockResponse.ok) {
+              const lockData = await lockResponse.json();
+              console.log('✅ Sampling method locked:', lockData);
+              setLockedSamplingMethods(prev => ({
+                ...prev,
+                [sampleSetId]: {
+                  method: config.method,
+                  simpleMethod: config.simpleMethod,
+                  locked: true
+                }
+              }));
+            }
+          } catch (lockError) {
+            console.error('Error locking sampling method:', lockError);
+          }
+        }
+      } catch (error: any) {
+        console.error('❌ Error calling generate-and-upload-samples API:', error);
+        // Check if it's a connection error (server not running)
+        if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+          toast({
+            title: "Warning",
+            description: `Samples generated locally. To save to SharePoint, please start the Python backend server (port 3002).`,
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Warning",
+            description: `Samples generated but failed to save to SharePoint: ${error.message}`,
+            variant: "destructive",
+          });
+        }
+        
+        // Still try to lock the sampling method even if API call failed
+        try {
+          const lockResponse = await fetch('http://localhost:3002/api/lock-sampling-method', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              area: activeArea,
+              sampleSetName: sampleSet.name,
+              samplingMethod: config.method,
+              simpleMethod: config.simpleMethod
+            })
+          });
+          
+          if (lockResponse.ok) {
+            const lockData = await lockResponse.json();
+            console.log('✅ Sampling method locked:', lockData);
+            setLockedSamplingMethods(prev => ({
+              ...prev,
+              [sampleSetId]: {
+                method: config.method,
+                simpleMethod: config.simpleMethod,
+                locked: true
+              }
+            }));
+          }
+        } catch (lockError) {
+          console.error('Error locking sampling method:', lockError);
+        }
+      }
+    } else {
+      // Lock sampling method even if no sample set found
+      try {
+        const lockResponse = await fetch('http://localhost:3002/api/lock-sampling-method', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            area: activeArea,
+            sampleSetName: "Unknown",
+            samplingMethod: config.method,
+            simpleMethod: config.simpleMethod
+          })
+        });
+        
+        if (lockResponse.ok) {
+          const lockData = await lockResponse.json();
+          console.log('✅ Sampling method locked:', lockData);
+          setLockedSamplingMethods(prev => ({
+            ...prev,
+            [sampleSetId]: {
+              method: config.method,
+              simpleMethod: config.simpleMethod,
+              locked: true
+            }
+          }));
+        }
+      } catch (lockError) {
+        console.error('Error locking sampling method:', lockError);
+      }
+      
+      toast({
+        title: "Success",
+        description: `Generated ${samples.length} samples successfully`,
+      });
+    }
   };
 
   // Calculate total amount from file data based on selected amount column and scope
@@ -1113,11 +1458,180 @@ export const SampleGeneration = () => {
     return [...INBUILT_TEMPLATES, ...customTemplates];
   };
 
-  // Fetch confirmation data from SharePoint
-  const fetchConfirmationData = async (): Promise<Record<string, any>> => {
+  // Area mapping (same as backend)
+  const AREA_MAP: Record<string, string> = {
+    "Trade Receivables": "TR",
+    "Cash & Cash Equivalents": "CCE",
+    "Trade Payables": "TP",
+    "Other Current Assets": "OCA",
+    "Inventory": "INV",
+    "Fixed Assets": "FA",
+    "Investments": "INST",
+    "Loans & Advances": "LA"
+  };
+
+  // Fetch audit areas JSON from SharePoint
+  const fetchAuditAreas = async (): Promise<void> => {
+    try {
+      const response = await fetch('http://localhost:3002/api/get-audit-areas');
+      if (!response.ok) {
+        throw new Error('Failed to fetch audit areas');
+      }
+      const result = await response.json();
+      const auditAreasData = result.data || {};
+      
+      console.log('📥 Fetched audit_areas.json from SharePoint:', auditAreasData);
+      
+      // Convert audit areas JSON to sampleSets format
+      const newSampleSets: Record<string, SampleSet[]> = {};
+      
+      // Iterate through each area code in the JSON
+      Object.keys(auditAreasData).forEach((areaCode) => {
+        // Find the full area name from AREA_MAP
+        const areaName = Object.keys(AREA_MAP).find(
+          key => AREA_MAP[key] === areaCode
+        );
+        
+        if (areaName && auditAreasData[areaCode]) {
+          // Handle both old string array and new object array formats
+          let sampleSetData: Array<{name: string, locked: boolean}> = [];
+          if (Array.isArray(auditAreasData[areaCode])) {
+            sampleSetData = auditAreasData[areaCode].map((item: any) => {
+              if (typeof item === 'string') {
+                // Old format: array of strings
+                return { name: item, locked: false };
+              } else if (typeof item === 'object' && item !== null) {
+                // New format: array of objects like [{"Sample Set Name": {...}}]
+                const setName = Object.keys(item)[0] || "";
+                const setData = item[setName] || {};
+                return { name: setName, locked: setData.locked || false };
+              }
+              return { name: "", locked: false };
+            }).filter((data: {name: string, locked: boolean}) => data.name !== "");
+          }
+          
+          // Convert each sample set name to a SampleSet object
+          const sets: SampleSet[] = sampleSetData.map((data: {name: string, locked: boolean}, index: number) => ({
+            id: `${areaCode}-${index + 1}`, // Generate a unique ID
+            name: data.name,
+            fileName: "",
+            samplingMethod: "random" as const,
+            sampleSize: 0,
+            populationSize: 0,
+            // If locked is true, samples have been generated, so status should be "generated"
+            status: data.locked ? "generated" as const : "pending" as const,
+          }));
+          
+          newSampleSets[areaName] = sets;
+        }
+      });
+      
+      // Merge with existing sampleSets (preserve any local changes)
+      setSampleSets(prev => {
+        const merged: Record<string, SampleSet[]> = { ...prev };
+        
+        // Update each area with data from SharePoint
+        Object.keys(newSampleSets).forEach(areaName => {
+          // Merge sample sets, avoiding duplicates by name
+          const existingSets = merged[areaName] || [];
+          const sharePointSets = newSampleSets[areaName];
+          
+          // Create a map of existing sets by name
+          const existingByName = new Map(existingSets.map(set => [set.name, set]));
+          
+          // Add or update sets from SharePoint
+          const mergedSets: SampleSet[] = sharePointSets.map(spSet => {
+            const existing = existingByName.get(spSet.name);
+            if (existing) {
+              // Preserve existing set with its current state
+              return existing;
+            }
+            return spSet;
+          });
+          
+          merged[areaName] = mergedSets;
+        });
+        
+        return merged;
+      });
+      
+      // Also update selectedAreas to include all areas that have sample sets
+      setSelectedAreas(prev => {
+        const allAreas = Object.keys(newSampleSets);
+        const uniqueAreas = Array.from(new Set([...prev, ...allAreas]));
+        return uniqueAreas;
+      });
+      
+    } catch (error: any) {
+      console.error('Error fetching audit areas:', error);
+      toast({
+        title: "Warning",
+        description: "Failed to fetch sample sets from SharePoint. Using local data.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Fetch sampling log from SharePoint
+  const fetchSamplingLog = async (): Promise<void> => {
+    setIsLoadingSamplingLog(true);
+    try {
+      const response = await fetch('http://localhost:3002/api/get-sampling-log');
+      if (!response.ok) {
+        throw new Error('Failed to fetch sampling log');
+      }
+      const result = await response.json();
+      const samplingLogData = result.data || {};
+      
+      console.log('📥 Fetched sampling_log.json from SharePoint:', samplingLogData);
+      
+      // Convert SharePoint log data to local format for display
+      const logsBySampleSet: Record<string, any[]> = {};
+      
+      // Iterate through areas and sample sets
+      Object.keys(samplingLogData).forEach((area) => {
+        const areaData = samplingLogData[area];
+        if (typeof areaData === 'object' && areaData !== null) {
+          Object.keys(areaData).forEach((sampleSetName) => {
+            const logs = areaData[sampleSetName];
+            if (Array.isArray(logs)) {
+              // Find the sample set ID by name
+              const sampleSet = Object.values(sampleSets).flat().find(s => s.name === sampleSetName);
+              if (sampleSet) {
+                logsBySampleSet[sampleSet.id] = logs;
+              }
+            }
+          });
+        }
+      });
+      
+      setSamplingLogsFromSharePoint(logsBySampleSet);
+      
+    } catch (error: any) {
+      console.error('Error fetching sampling log:', error);
+      toast({
+        title: "Warning",
+        description: "Failed to fetch sampling log from SharePoint. Using local data.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingSamplingLog(false);
+    }
+  };
+
+  // Fetch confirmation data from SharePoint by area
+  const fetchConfirmationData = async (area: string): Promise<Record<string, any>> => {
     setIsLoadingConfirmationData(true);
     try {
-      const response = await fetch('http://localhost:3001/api/get-confirmation-data');
+      const response = await fetch('http://localhost:3002/api/get-confirmation-by-area', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          area: area,
+        }),
+      });
       if (!response.ok) {
         throw new Error('Failed to fetch confirmation data');
       }
@@ -1147,6 +1661,13 @@ export const SampleGeneration = () => {
       return parts[0].toUpperCase();
     }
     return parts.map((p) => p[0].toUpperCase()).join("");
+  };
+
+  // Helper function to get sample set name abbreviation (first 2 chars after removing spaces)
+  const getSampleSetAbbr = (sampleSetName: string): string => {
+    if (!sampleSetName) return "";
+    const cleaned = sampleSetName.replace(/\s+/g, "");
+    return cleaned.substring(0, 2).toUpperCase();
   };
 
   // Convert confirmation JSON data to Sample format - ALL DATA FROM JSON ONLY
@@ -1179,38 +1700,38 @@ export const SampleGeneration = () => {
       sampleSets[area].some(set => set.id === sampleSetId)
     ) || activeArea;
     
-    console.log('📍 Audit area:', auditArea, 'Sample set name:', sampleSet.name, 'Sample set ID:', sampleSetId);
+    // Get area code from AREA_MAP
+    const areaCode = AREA_MAP[auditArea] || "";
     
-    // SIMPLIFIED MATCHING - Process ALL samples from JSON
+    // Get sample set name abbreviation (first 2 chars after removing spaces)
+    const sampleSetAbbr = getSampleSetAbbr(sampleSet.name);
+    
+    // Create the pattern to match: {AREA_CODE}_{SAMPLE_SET_ABBR}_*
+    // Example: "TR_Q4_001", "TR_Q4_002" for "Q4 Receivables Sample" in "Trade Receivables"
+    const expectedPrefix = `${areaCode}_${sampleSetAbbr}_`;
+    
+    console.log('📍 Audit area:', auditArea, 'Area code:', areaCode, 'Sample set name:', sampleSet.name, 'Sample set abbr:', sampleSetAbbr, 'Expected prefix:', expectedPrefix);
+    
+    // Filter samples that match the pattern {AREA_CODE}_{SAMPLE_SET_ABBR}_*
     Object.keys(confirmationDataToUse).forEach((sampleId) => {
       const sampleData = confirmationDataToUse[sampleId];
       const partyDetails = sampleData?.partydetails || {};
       let matches = false;
       
-      // Pattern 1: "SMPL-SS-001-X" format - extract sample set ID from sample ID
-      // Example: "SMPL-SS-001-1" and "SMPL-SS-001-2" match sample set "SS-001"
-      const smplMatch = sampleId.match(/^SMPL-(SS-\d+)-(\d+)$/);
-      if (smplMatch && smplMatch[1] === sampleSetId) {
+      // Pattern 1: Match samples with pattern {AREA_CODE}_{SAMPLE_SET_ABBR}_*
+      // Example: "TR_Q4_001", "TR_Q4_002" for "Q4 Receivables Sample" in "Trade Receivables"
+      if (sampleId.startsWith(expectedPrefix)) {
         matches = true;
-        console.log(`✅ Pattern 1 match: ${sampleId} -> ${sampleSetId}`);
+        console.log(`✅ Pattern match: ${sampleId} -> matches prefix ${expectedPrefix}`);
       }
       
-      // Pattern 2: Match by area field in partydetails from JSON
-      // This matches samples where area field matches the audit area
+      // Pattern 2: "SMPL-SS-001-X" format - extract sample set ID from sample ID (legacy support)
+      // Example: "SMPL-SS-001-1" and "SMPL-SS-001-2" match sample set "SS-001"
       if (!matches) {
-        const sampleArea = partyDetails.area || "";
-        if (sampleArea && sampleArea === auditArea) {
-          // Also check if sample set name abbreviation is in the sample ID
-          const sampleAbbr = abbreviate(sampleSet.name);
-          const auditAbbr = abbreviate(auditArea);
-          
-          // Match if sample ID contains sample set abbreviation or matches audit area pattern
-          if (sampleId.includes(sampleAbbr) || 
-              sampleId.startsWith(auditAbbr) ||
-              sampleId.match(new RegExp(`^${auditAbbr}.*`))) {
-            matches = true;
-            console.log(`✅ Pattern 2 match: ${sampleId} -> area: ${sampleArea}, auditArea: ${auditArea}`);
-          }
+        const smplMatch = sampleId.match(/^SMPL-(SS-\d+)-(\d+)$/);
+        if (smplMatch && smplMatch[1] === sampleSetId) {
+          matches = true;
+          console.log(`✅ Pattern 1 match: ${sampleId} -> ${sampleSetId}`);
         }
       }
       
@@ -1238,7 +1759,32 @@ export const SampleGeneration = () => {
           amount, // From JSON only
           recipientName, // From JSON only
           recipientEmail, // From JSON only
+          selectedTemplateId: sampleData.selectedTemplate || "",
         });
+        
+        // If selections are locked, update locked selections state
+        if (sampleData.selectionsLocked) {
+          setLockedSelections(prev => {
+            const updated = { ...prev };
+            if (!updated[sampleSetId]) {
+              updated[sampleSetId] = {};
+            }
+            updated[sampleSetId][sampleId] = {
+              recipientName: sampleData.recipientName || "",
+              recipientEmail: sampleData.recipientEmail || "",
+              templateName: sampleData.selectedTemplate || ""
+            };
+            return updated;
+          });
+          
+          // Also update sampleTemplateSelections
+          if (sampleData.selectedTemplate) {
+            setSampleTemplateSelections(prev => ({
+              ...prev,
+              [sampleId]: sampleData.selectedTemplate
+            }));
+          }
+        }
       } else {
         console.log(`❌ Sample ${sampleId} did not match sample set ${sampleSetId}`);
       }
@@ -1262,10 +1808,18 @@ export const SampleGeneration = () => {
       return updated;
     });
     
-    // Always fetch fresh confirmation data from SharePoint
-    console.log('📥 Fetching confirmation data from SharePoint...');
-    const data = await fetchConfirmationData();
+    // Find the audit area for this sample set
+    const auditArea = Object.keys(sampleSets).find(area => 
+      sampleSets[area].some(set => set.id === sampleSetId)
+    ) || activeArea;
+    
+    // Always fetch fresh confirmation data from SharePoint for the specific area
+    console.log('📥 Fetching confirmation data from SharePoint for area:', auditArea);
+    const data = await fetchConfirmationData(auditArea);
     console.log('✅ Fetched data:', data);
+    
+    // Also fetch locked data to update locked selections
+    await fetchLockedData();
     
     // Get samples from confirmation data ONLY (no fallback to hardcoded data)
     const samples = convertConfirmationDataToSamples(sampleSetId, data);
@@ -1678,7 +2232,7 @@ export const SampleGeneration = () => {
   };
 
   // Generate authorization letters after template selection
-  const handleGenerateLetters = () => {
+  const handleGenerateLetters = async () => {
     if (!selectedSampleSetId) return;
     
     const samples = getSamplesForSet(selectedSampleSetId);
@@ -1690,17 +2244,173 @@ export const SampleGeneration = () => {
     );
     
     if (samplesWithoutTemplates.length > 0) {
-      alert("Please select a template for all samples before generating letters.");
+      toast({
+        title: "Error",
+        description: "Please select a template for all samples before generating letters.",
+        variant: "destructive",
+      });
       return;
     }
 
-    // Generate authorization letters (in real app, this would create the letters)
-    console.log("Generating authorization letters with templates:", sampleTemplateSelections);
-    
-    // Close dialog and reset
-    setTemplateSelectionDialogOpen(false);
-    setSelectedSampleSetId(null);
-    setSampleTemplateSelections({});
+    // Find the sample set to get area and other details
+    const sampleSet = Object.values(sampleSets).flat().find(s => s.id === selectedSampleSetId);
+    if (!sampleSet) {
+      toast({
+        title: "Error",
+        description: "Sample set not found",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Create authorization letters from samples
+    const letters = samples.map((sample, index) => {
+      // Use sample ID as the letter ID (same as sample set ID format)
+      const letterId = sample.id;
+      
+      // Get the selected template name for this sample
+      // Priority: 1) Locked selections, 2) Current template selections state, 3) Sample's selectedTemplateId (which is actually template name from JSON), 4) activeArea
+      let templateName = activeArea; // Default fallback
+      
+      // Check if selections are locked for this sample (locked selections store template name directly)
+      if (lockedSelections[selectedSampleSetId] && lockedSelections[selectedSampleSetId][sample.id]) {
+        templateName = lockedSelections[selectedSampleSetId][sample.id].templateName || activeArea;
+      } else if (sampleTemplateSelections[sample.id]) {
+        // If not locked, check current template selection state (stores template name directly, not ID)
+        templateName = sampleTemplateSelections[sample.id] || activeArea;
+      } else if (sample.selectedTemplateId) {
+        // Fallback to sample's selectedTemplateId property (from JSON - this is actually the template name, not ID)
+        templateName = sample.selectedTemplateId || activeArea;
+      }
+      
+      console.log(`📋 Sample ${sample.id}: templateName=${templateName}, selection=${sampleTemplateSelections[sample.id] || sample.selectedTemplateId || 'none'}`);
+      
+      return {
+        id: letterId,
+        area: templateName, // Use selected template name as area
+        confirmingParty: sample.confirmingParty || "",
+        amount: sample.amount || "",
+        recipientName: sample.recipientName || "",
+        recipientOrg: sample.confirmingParty || "",
+        recipientEmail: sample.recipientEmail || "",
+        clientName: "", // Leave empty - user must select a client
+        clientEmail: "", // Leave empty - user must select a client
+        status: "draft",
+        activityLog: [
+          {
+            timestamp: new Date().toISOString(),
+            stage: "Creation",
+            action: "Confirmation request created",
+            performedBy: "System",
+            details: `Initial confirmation request generated for ${templateName} - ${sample.confirmingParty || "Unknown"}`,
+            status: "completed"
+          }
+        ]
+      };
+    });
+
+    try {
+      const response = await fetch('http://localhost:3002/api/create-authorization-letters', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          letters: letters
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        console.log("✅ Authorization letters created:", result);
+        
+        // Lock recipient and template selections after successful generation
+        const sampleSet = Object.values(sampleSets).flat().find(s => s.id === selectedSampleSetId);
+        if (sampleSet) {
+          const selections = samples.map(sample => ({
+            sampleId: sample.id,
+            recipientName: sample.recipientName || "",
+            recipientEmail: sample.recipientEmail || "",
+            templateName: sampleTemplateSelections[sample.id] || ""
+          }));
+          
+          try {
+            const lockResponse = await fetch('http://localhost:3002/api/lock-recipient-template-selections', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                area: activeArea,
+                sampleSetName: sampleSet.name,
+                selections: selections
+              })
+            });
+            
+            if (lockResponse.ok) {
+              const lockData = await lockResponse.json();
+              console.log('✅ Recipient/template selections locked:', lockData);
+              // Update locked state
+              setLockedSelections(prev => ({
+                ...prev,
+                [selectedSampleSetId]: selections.reduce((acc, sel) => {
+                  acc[sel.sampleId] = {
+                    recipientName: sel.recipientName,
+                    recipientEmail: sel.recipientEmail,
+                    templateName: sel.templateName
+                  };
+                  return acc;
+                }, {} as Record<string, { recipientName: string; recipientEmail: string; templateName: string }>)
+              }));
+            }
+          } catch (lockError) {
+            console.error('Error locking selections:', lockError);
+          }
+        }
+        
+        // Add Stage 1: Creation activity log entry for each letter
+        const performedBy = "Auditor"; // TODO: Get actual auditor name from auth context
+        for (const letter of letters) {
+          try {
+            await fetch('http://localhost:3002/api/add-activity-log', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                letterId: letter.id,
+                stage: "Creation",
+                action: "Confirmation request created",
+                performedBy: performedBy,
+                details: `Initial confirmation request generated for ${activeArea} - ${letter.confirmingParty || "Unknown"}`,
+                status: "completed"
+              }),
+            });
+            console.log(`✅ Added Creation activity log for letter ${letter.id}`);
+          } catch (logError: any) {
+            console.error('Error adding activity log:', logError);
+          }
+        }
+        
+        toast({
+          title: "Success",
+          description: `Successfully created ${letters.length} authorization letter(s)`,
+        });
+        
+        // Close dialog and reset
+        setTemplateSelectionDialogOpen(false);
+        setSelectedSampleSetId(null);
+        setSampleTemplateSelections({});
+      } else {
+        throw new Error(result.message || 'Failed to create authorization letters');
+      }
+    } catch (error: any) {
+      console.error('Error creating authorization letters:', error);
+      toast({
+        title: "Error",
+        description: `Failed to create authorization letters: ${error.message}`,
+        variant: "destructive",
+      });
+    }
   };
 
   // Add functions for footnote management
@@ -2260,22 +2970,21 @@ export const SampleGeneration = () => {
             <CardTitle className="text-sm">Audit Areas</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            {selectedAreas.map((area) => (
-              <Button
-                key={area}
-                variant={activeArea === area ? "default" : "outline"}
-                className="w-full justify-start text-sm"
-                onClick={() => setActiveArea(area)}
-              >
-                {area}
-              </Button>
-            ))}
-            <Select onValueChange={addArea}>
+            <Select value={activeArea} onValueChange={(value) => {
+              setActiveArea(value);
+              // Automatically add the area to selectedAreas if not already present
+              if (!selectedAreas.includes(value)) {
+                setSelectedAreas([...selectedAreas, value]);
+                if (!sampleSets[value]) {
+                  setSampleSets({ ...sampleSets, [value]: [] });
+                }
+              }
+            }}>
               <SelectTrigger>
-                <SelectValue placeholder="Add Area" />
+                <SelectValue placeholder="Select Area" />
               </SelectTrigger>
               <SelectContent>
-                {AUDIT_AREAS.filter(area => !selectedAreas.includes(area)).map((area) => (
+                {AUDIT_AREAS.map((area) => (
                   <SelectItem key={area} value={area}>{area}</SelectItem>
                 ))}
               </SelectContent>
@@ -2366,125 +3075,144 @@ export const SampleGeneration = () => {
                   </div>
                   <div>
                     <Label>Sampling Method</Label>
-                    <Select 
-                      value={samplingConfigs[set.id]?.method || ""}
-                      onValueChange={(value: "random" | "mus") => {
-                        setSamplingConfigs(prev => {
-                          const currentConfig = prev[set.id];
-                          // If switching methods, clear all previous configuration and reset status
-                          if (currentConfig?.method && currentConfig.method !== value) {
+                    {lockedSamplingMethods[set.id]?.locked ? (
+                      <div className="mt-2 p-2 bg-muted rounded-md">
+                        <p className="text-sm font-medium">
+                          {lockedSamplingMethods[set.id].method === "random" ? "Random Sampling" : "Monetary Unit Sampling (MUS)"}
+                        </p>
+                      </div>
+                    ) : (
+                      <Select 
+                        value={samplingConfigs[set.id]?.method || ""}
+                        disabled={set.status === "generated" || lockedSamplingMethods[set.id]?.locked}
+                        onValueChange={(value: "random" | "mus") => {
+                          setSamplingConfigs(prev => {
+                            const currentConfig = prev[set.id];
+                            // If switching methods, clear all previous configuration and reset status
+                            if (currentConfig?.method && currentConfig.method !== value) {
+                              resetSampleSetStatus(set.id);
+                              return {
+                                ...prev,
+                                [set.id]: {
+                                  method: value,
+                                  // Clear all other fields when switching methods
+                                  // For random, automatically set randomType to "simple"
+                                  randomType: value === "random" ? "simple" : undefined,
+                                  // For MUS, set default scope to "all"
+                                  scope: value === "mus" ? "all" : undefined,
+                                  // Explicitly clear all other fields
+                                  simpleMethod: undefined,
+                                  numberOfSamples: undefined,
+                                  controlReliance: undefined,
+                                  assessedRisk: undefined,
+                                  performanceMateriality: undefined,
+                                  amountColumn: undefined,
+                                  confirmingPartyColumn: undefined,
+                                }
+                              };
+                            }
+                            // If same method or new config, just update method and reset status
                             resetSampleSetStatus(set.id);
                             return {
                               ...prev,
                               [set.id]: {
+                                ...prev[set.id],
                                 method: value,
-                                // Clear all other fields when switching methods
-                                // For random, automatically set randomType to "simple"
                                 randomType: value === "random" ? "simple" : undefined,
-                                // For MUS, set default scope to "all"
-                                scope: value === "mus" ? "all" : undefined,
-                                // Explicitly clear all other fields
-                                simpleMethod: undefined,
-                                numberOfSamples: undefined,
-                                controlReliance: undefined,
-                                assessedRisk: undefined,
-                                performanceMateriality: undefined,
-                                amountColumn: undefined,
-                                confirmingPartyColumn: undefined,
+                                // For MUS, ensure scope is set to "all" if not already set
+                                scope: value === "mus" ? (prev[set.id]?.scope || "all") : prev[set.id]?.scope,
                               }
                             };
-                          }
-                          // If same method or new config, just update method and reset status
-                          resetSampleSetStatus(set.id);
-                          return {
-                            ...prev,
-                            [set.id]: {
-                              ...prev[set.id],
-                              method: value,
-                              randomType: value === "random" ? "simple" : undefined,
-                              // For MUS, ensure scope is set to "all" if not already set
-                              scope: value === "mus" ? (prev[set.id]?.scope || "all") : prev[set.id]?.scope,
-                            }
-                          };
-                        });
-                      }}
-                    >
+                          });
+                        }}
+                        disabled={set.status === "generated" || lockedSamplingMethods[set.id]?.locked}
+                      >
                       <SelectTrigger className="mt-2">
-                        <SelectValue placeholder="Choose an option" />
+                          <SelectValue placeholder="Choose an option" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="random">Random Sampling</SelectItem>
                         <SelectItem value="mus">Monetary Unit Sampling (MUS)</SelectItem>
                       </SelectContent>
                     </Select>
+                    )}
                   </div>
                 </div>
 
                 {/* Sampling Configuration UI */}
-                {samplingConfigs[set.id]?.method === "random" && (
+                {samplingConfigs[set.id]?.method === "random" && !lockedSamplingMethods[set.id]?.locked && (
                   <div className="space-y-4 pt-4 border-t">
                     <div className="space-y-4">
                     <div>
                         <Label>Simple Random Sampling Method</Label>
-                        <Select 
-                          value={samplingConfigs[set.id]?.simpleMethod || ""}
-                          onValueChange={(value: "number" | "calculator") => {
-                            setSamplingConfigs(prev => {
-                              const currentConfig = prev[set.id];
-                              // If switching between number and calculator, clear the other method's fields
-                              if (currentConfig?.simpleMethod && currentConfig.simpleMethod !== value) {
-                                if (value === "number") {
-                                  // Switching to number - clear calculator fields
-                                  return {
-                                    ...prev,
-                                    [set.id]: {
-                                      ...prev[set.id],
-                                      method: "random",
-                                      randomType: "simple",
-                                      simpleMethod: value,
-                                      // Clear calculator-specific fields
-                                      controlReliance: undefined,
-                                      assessedRisk: undefined,
-                                      performanceMateriality: undefined,
-                                      scope: undefined,
-                                    }
-                                  };
-                                } else {
-                                  // Switching to calculator - clear number fields
-                                  return {
-                                    ...prev,
-                                    [set.id]: {
-                                      ...prev[set.id],
-                                      method: "random",
-                                      randomType: "simple",
-                                      simpleMethod: value,
-                                      // Clear number-specific fields
-                                      numberOfSamples: undefined,
-                                    }
-                                  };
+                        {lockedSamplingMethods[set.id]?.locked && lockedSamplingMethods[set.id].simpleMethod ? (
+                          <div className="mt-2 p-2 bg-muted rounded-md">
+                            <p className="text-sm font-medium">
+                              {lockedSamplingMethods[set.id].simpleMethod === "number" ? "Number of Samples" : "Sample Calculator"}
+                            </p>
+                    </div>
+                        ) : (
+                          <Select 
+                            value={samplingConfigs[set.id]?.simpleMethod || ""}
+                            onValueChange={(value: "number" | "calculator") => {
+                              setSamplingConfigs(prev => {
+                                const currentConfig = prev[set.id];
+                                // If switching between number and calculator, clear the other method's fields
+                                if (currentConfig?.simpleMethod && currentConfig.simpleMethod !== value) {
+                                  if (value === "number") {
+                                    // Switching to number - clear calculator fields
+                                    return {
+                                      ...prev,
+                                      [set.id]: {
+                                        ...prev[set.id],
+                                        method: "random",
+                                        randomType: "simple",
+                                        simpleMethod: value,
+                                        // Clear calculator-specific fields
+                                        controlReliance: undefined,
+                                        assessedRisk: undefined,
+                                        performanceMateriality: undefined,
+                                        scope: undefined,
+                                      }
+                                    };
+                                  } else {
+                                    // Switching to calculator - clear number fields
+                                    return {
+                                      ...prev,
+                                      [set.id]: {
+                                        ...prev[set.id],
+                                        method: "random",
+                                        randomType: "simple",
+                                        simpleMethod: value,
+                                        // Clear number-specific fields
+                                        numberOfSamples: undefined,
+                                      }
+                                    };
+                                  }
                                 }
-                              }
-                              // If same method or new config, just update
-                              return {
-                                ...prev,
-                                [set.id]: {
-                                  ...prev[set.id],
-                                  method: "random",
-                                  randomType: "simple",
-                                  simpleMethod: value,
-                                }
-                              };
-                            });
-                          }}
-                        >
-                            <SelectTrigger className="mt-2">
-                              <SelectValue placeholder="Choose an option" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="number">Number of Samples</SelectItem>
-                              <SelectItem value="calculator">Sample Calculator</SelectItem>
-                            </SelectContent>
-                          </Select>
+                                // If same method or new config, just update
+                                return {
+                                  ...prev,
+                                  [set.id]: {
+                                    ...prev[set.id],
+                                    method: "random",
+                                    randomType: "simple",
+                                    simpleMethod: value,
+                                  }
+                                };
+                              });
+                            }}
+                            disabled={set.status === "generated" || lockedSamplingMethods[set.id]?.locked}
+                          >
+                              <SelectTrigger className="mt-2">
+                                <SelectValue placeholder="Choose an option" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="number">Number of Samples</SelectItem>
+                                <SelectItem value="calculator">Sample Calculator</SelectItem>
+                              </SelectContent>
+                            </Select>
+                        )}
                     </div>
 
                         {samplingConfigs[set.id]?.simpleMethod === "number" && (
@@ -2763,7 +3491,7 @@ export const SampleGeneration = () => {
                 )}
 
                 {/* MUS Configuration UI */}
-                {samplingConfigs[set.id]?.method === "mus" && (
+                {samplingConfigs[set.id]?.method === "mus" && !lockedSamplingMethods[set.id]?.locked && (
                   <div className="space-y-4 pt-4 border-t">
                     <p className="text-sm text-muted-foreground">
                       Monetary Unit Sampling uses the same calculator as Simple Random Sampling, 
@@ -2954,7 +3682,7 @@ export const SampleGeneration = () => {
                     <Button 
                       className="flex-1" 
                       onClick={() => handleGenerateSamples(set.id)}
-                      disabled={set.status === "generated" || (() => {
+                      disabled={set.status === "generated" || lockedSamplingMethods[set.id]?.locked || (() => {
                         const config = samplingConfigs[set.id];
                         const hasFileData = fileData[set.id] && Array.isArray(fileData[set.id]) && fileData[set.id].length > 0;
                         
@@ -3006,9 +3734,9 @@ export const SampleGeneration = () => {
                         return true;
                       })()}
                     >
-                      <Download className="h-4 w-4 mr-2" />
+                        <Download className="h-4 w-4 mr-2" />
                       Generate Sample
-                    </Button>
+                      </Button>
                     <Dialog 
                           open={templateSelectionDialogOpen && selectedSampleSetId === set.id}
                           onOpenChange={(open) => {
@@ -3029,8 +3757,8 @@ export const SampleGeneration = () => {
                               View Sample
                       </Button>
                           </DialogTrigger>
-                        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
-                          <DialogHeader>
+                          <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+                            <DialogHeader>
                             <DialogTitle>Select Authorization Letter Templates</DialogTitle>
                             <DialogDescription>
                               Choose templates for each sample in "{set.name}". 
@@ -3155,8 +3883,8 @@ export const SampleGeneration = () => {
                                                       size="sm"
                                                       onClick={() => removeElement(element.id)}
                                                     >
-                                                      <Trash2 className="h-4 w-4" />
-                                                    </Button>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                                                   </div>
                                                 </div>
 
@@ -4273,96 +5001,109 @@ export const SampleGeneration = () => {
                                           <TableCell className="font-medium">{sample.id}</TableCell>
                                           <TableCell>{sample.confirmingParty}</TableCell>
                                           <TableCell>
-                                            <Select
-                                              value={sample.recipientEmail || ""}
-                                              onValueChange={(value) => {
-                                                // Find the selected recipient from confirmation requests
-                                                const selectedRecipient = getRecipientsFromConfirmations().find(
-                                                  r => r.email === value
-                                                );
-                                                if (selectedRecipient) {
-                                                  // Update the sample's recipient
-                                                  setGeneratedSamples(prev => {
-                                                    const updated = { ...prev };
-                                                    if (updated[set.id]) {
-                                                      updated[set.id] = updated[set.id].map(s =>
-                                                        s.id === sample.id
-                                                          ? { ...s, recipientName: selectedRecipient.name, recipientEmail: selectedRecipient.email }
-                                                          : s
-                                                      );
-                                                    }
-                                                    return updated;
-                                                  });
-                                                  // Also update samplesFromJson if it exists
-                                                  setSamplesFromJson(prev => {
-                                                    const updated = { ...prev };
-                                                    if (updated[set.id]) {
-                                                      updated[set.id] = updated[set.id].map(s =>
-                                                        s.id === sample.id
-                                                          ? { ...s, recipientName: selectedRecipient.name, recipientEmail: selectedRecipient.email }
-                                                          : s
-                                                      );
-                                                    }
-                                                    return updated;
-                                                  });
-                                                }
-                                              }}
-                                            >
-                                              <SelectTrigger 
-                                                className="w-[280px]"
-                                                onClick={(e) => {
-                                                  e.stopPropagation();
+                                            {lockedSelections[set.id]?.[sample.id] ? (
+                                              <div className="p-2 bg-muted rounded-md">
+                                                <p className="text-sm font-medium">{lockedSelections[set.id][sample.id].recipientName}</p>
+                                                <p className="text-xs text-muted-foreground">{lockedSelections[set.id][sample.id].recipientEmail}</p>
+                                              </div>
+                                            ) : (
+                                              <Select
+                                                value={sample.recipientEmail || ""}
+                                                onValueChange={(value) => {
+                                                  // Find the selected recipient from confirmation requests
+                                                  const selectedRecipient = getRecipientsFromConfirmations().find(
+                                                    r => r.email === value
+                                                  );
+                                                  if (selectedRecipient) {
+                                                    // Update the sample's recipient
+                                                    setGeneratedSamples(prev => {
+                                                      const updated = { ...prev };
+                                                      if (updated[set.id]) {
+                                                        updated[set.id] = updated[set.id].map(s =>
+                                                          s.id === sample.id
+                                                            ? { ...s, recipientName: selectedRecipient.name, recipientEmail: selectedRecipient.email }
+                                                            : s
+                                                        );
+                                                      }
+                                                      return updated;
+                                                    });
+                                                    // Also update samplesFromJson if it exists
+                                                    setSamplesFromJson(prev => {
+                                                      const updated = { ...prev };
+                                                      if (updated[set.id]) {
+                                                        updated[set.id] = updated[set.id].map(s =>
+                                                          s.id === sample.id
+                                                            ? { ...s, recipientName: selectedRecipient.name, recipientEmail: selectedRecipient.email }
+                                                            : s
+                                                        );
+                                                      }
+                                                      return updated;
+                                                    });
+                                                  }
                                                 }}
                                               >
-                                                <SelectValue placeholder="Select recipient...">
-                                                  {sample.recipientEmail 
-                                                    ? sample.recipientName
-                                                    : "Select recipient..."
-                                                  }
-                                                </SelectValue>
-                                              </SelectTrigger>
-                                              <SelectContent className="w-[280px]">
-                                                {getRecipientsFromConfirmations().map((recipient) => (
-                                                  <SelectItem key={recipient.email} value={recipient.email} className="py-2">
-                                                    <div className="flex flex-col items-start text-left w-full">
-                                                      <span className="font-medium text-sm leading-tight">{recipient.name}</span>
-                                                      <span className="text-xs text-muted-foreground leading-tight">{recipient.email}</span>
-                                                    </div>
-                                                  </SelectItem>
-                                                ))}
-                                              </SelectContent>
-                                            </Select>
+                                                <SelectTrigger 
+                                                  className="w-[280px]"
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                  }}
+                                                >
+                                                  <SelectValue placeholder="Select recipient...">
+                                                    {sample.recipientEmail 
+                                                      ? sample.recipientName
+                                                      : "Select recipient..."
+                                                    }
+                                                  </SelectValue>
+                                                </SelectTrigger>
+                                                <SelectContent className="w-[280px]">
+                                                  {getRecipientsFromConfirmations().map((recipient) => (
+                                                    <SelectItem key={recipient.email} value={recipient.email} className="py-2">
+                                                      <div className="flex flex-col items-start text-left w-full">
+                                                        <span className="font-medium text-sm leading-tight">{recipient.name}</span>
+                                                        <span className="text-xs text-muted-foreground leading-tight">{recipient.email}</span>
+                                                      </div>
+                                                    </SelectItem>
+                                                  ))}
+                                                </SelectContent>
+                                              </Select>
+                                            )}
                                           </TableCell>
                                           <TableCell>{sample.amount}</TableCell>
                                           <TableCell>
-                                            <Select
-                                              value={selectedFormNameForSample || ""}
-                                              onValueChange={(value) => {
-                                                handleFormNameSelection(sample.id, value);
-                                              }}
-                                            >
-                                              <SelectTrigger 
-                                                className="w-[280px]"
-                                                onClick={(e) => {
-                                                  // Prevent row click when clicking on dropdown
-                                                  e.stopPropagation();
+                                            {lockedSelections[set.id]?.[sample.id] ? (
+                                              <div className="p-2 bg-muted rounded-md">
+                                                <p className="text-sm font-medium">{lockedSelections[set.id][sample.id].templateName}</p>
+                                              </div>
+                                            ) : (
+                                              <Select
+                                                value={selectedFormNameForSample || ""}
+                                                onValueChange={(value) => {
+                                                  handleFormNameSelection(sample.id, value);
                                                 }}
                                               >
-                                                <SelectValue placeholder="Select a form..." />
-                                              </SelectTrigger>
-                                              <SelectContent>
-                                                {CONFIRMATION_FORM_NAMES.map((formName) => (
-                                                  <SelectItem key={formName} value={formName}>
-                                                    {formName}
-                                                  </SelectItem>
-                                                ))}
-                                                {customFormNames.map((formName) => (
-                                                  <SelectItem key={formName} value={formName}>
-                                                    {formName}
-                                                  </SelectItem>
-                                                ))}
-                                              </SelectContent>
-                                            </Select>
+                                                <SelectTrigger 
+                                                  className="w-[280px]"
+                                                  onClick={(e) => {
+                                                    // Prevent row click when clicking on dropdown
+                                                    e.stopPropagation();
+                                                  }}
+                                                >
+                                                  <SelectValue placeholder="Select a form..." />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                  {CONFIRMATION_FORM_NAMES.map((formName) => (
+                                                    <SelectItem key={formName} value={formName}>
+                                                      {formName}
+                                                    </SelectItem>
+                                                  ))}
+                                                  {customFormNames.map((formName) => (
+                                                    <SelectItem key={formName} value={formName}>
+                                                      {formName}
+                                                    </SelectItem>
+                                                  ))}
+                                                </SelectContent>
+                                              </Select>
+                                            )}
                                           </TableCell>
                                         </TableRow>
                                       );
@@ -4392,7 +5133,103 @@ export const SampleGeneration = () => {
                           </div>
                         </DialogContent>
                       </Dialog>
-                      <Button variant="outline" size="icon">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-10 w-10 p-0"
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          e.preventDefault();
+                          console.log('🗑️ Delete button clicked for sample set:', set.name);
+                          if (window.confirm(`Are you sure you want to delete "${set.name}"? This action cannot be undone.`)) {
+                            try {
+                              // Call backend API to delete sample set from audit_areas.json
+                              const response = await fetch('http://localhost:3002/api/delete-sample-set-from-area', {
+                                method: 'POST',
+                                headers: {
+                                  'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify({
+                                  area: activeArea,
+                                  sampleSetName: set.name,
+                                }),
+                              });
+
+                              const data = await response.json();
+
+                              if (data.success) {
+                                console.log('✅ Sample set deleted from audit_areas.json:', data);
+                                
+                                // Remove from local state
+                                setSampleSets(prev => {
+                                  const updated = { ...prev };
+                                  if (updated[activeArea]) {
+                                    updated[activeArea] = updated[activeArea].filter(s => s.id !== set.id);
+                                  }
+                                  return updated;
+                                });
+                                
+                                // Clean up related state
+                                setGeneratedSamples(prev => {
+                                  const updated = { ...prev };
+                                  delete updated[set.id];
+                                  return updated;
+                                });
+                                setSamplingLogs(prev => {
+                                  const updated = { ...prev };
+                                  delete updated[set.id];
+                                  return updated;
+                                });
+                                setSamplesFromJson(prev => {
+                                  const updated = { ...prev };
+                                  delete updated[set.id];
+                                  return updated;
+                                });
+                                setSamplingConfigs(prev => {
+                                  const updated = { ...prev };
+                                  delete updated[set.id];
+                                  return updated;
+                                });
+                                setFileData(prev => {
+                                  const updated = { ...prev };
+                                  delete updated[set.id];
+                                  return updated;
+                                });
+                                setFileColumns(prev => {
+                                  const updated = { ...prev };
+                                  delete updated[set.id];
+                                  return updated;
+                                });
+                                
+                                // Show success message with sample deletion info
+                                const deletedCount = data.deletedSamplesCount || 0;
+                                const message = deletedCount > 0 
+                                  ? `Sample set "${set.name}" and ${deletedCount} related sample(s) deleted successfully`
+                                  : `Sample set "${set.name}" deleted successfully`;
+                                
+                                toast({
+                                  title: "Success",
+                                  description: message,
+                                });
+                              } else {
+                                console.error('❌ Error deleting sample set:', data.message);
+                                toast({
+                                  title: "Error",
+                                  description: `Failed to delete from SharePoint: ${data.message}`,
+                                  variant: "destructive",
+                                });
+                              }
+                            } catch (error: any) {
+                              console.error('❌ Error calling delete-sample-set-from-area API:', error);
+                              toast({
+                                title: "Error",
+                                description: `Failed to delete sample set: ${error.message}`,
+                                variant: "destructive",
+                              });
+                            }
+                          }
+                        }}
+                      >
                         <Trash2 className="h-4 w-4" />
                       </Button>
                       </div>
@@ -4409,11 +5246,13 @@ export const SampleGeneration = () => {
                           <Button 
                             className="w-full" 
                             variant="outline"
-                            onClick={() => {
+                            onClick={async () => {
                               setSamplingLogDialogOpen(prev => ({
                                 ...prev,
                                 [set.id]: true
                               }));
+                              // Fetch sampling log from SharePoint when dialog opens
+                              await fetchSamplingLog();
                             }}
                           >
                             <ScrollText className="h-4 w-4 mr-2" />
@@ -4428,7 +5267,126 @@ export const SampleGeneration = () => {
                             </DialogDescription>
                           </DialogHeader>
                           <div className="space-y-4 py-4">
-                            {samplingLogs[set.id] ? (
+                            {isLoadingSamplingLog ? (
+                              <div className="text-center py-8 text-muted-foreground">
+                                <ScrollText className="h-12 w-12 mx-auto mb-4 opacity-50 animate-spin" />
+                                <p>Loading sampling log from SharePoint...</p>
+                              </div>
+                            ) : (samplingLogsFromSharePoint[set.id] && samplingLogsFromSharePoint[set.id].length > 0) ? (
+                              // Display logs from SharePoint (most recent first)
+                              samplingLogsFromSharePoint[set.id].slice().reverse().map((logEntry: any, index: number) => {
+                                // Determine if this is a "number" method log (Simple Random Sampling with only number_of_samples, no performance_materiality)
+                                const isNumberMethod = logEntry["sampling type"] === "Simple Random Sampling" && 
+                                                      !logEntry["performance_materiality"] && 
+                                                      logEntry["number_of_samples"] !== undefined;
+                                
+                                return (
+                                  <div key={index} className="border rounded-lg p-4 space-y-3">
+                                    <h3 className="font-semibold text-lg mb-4">
+                                      {logEntry["sampling type"] || "Sampling Log"} - Entry {samplingLogsFromSharePoint[set.id].length - index}
+                                    </h3>
+                                    <div className="grid grid-cols-2 gap-4">
+                                      {isNumberMethod ? (
+                                        // For "Number of Samples" method, show only these 4 fields
+                                        <>
+                                          <div>
+                                            <Label className="text-sm text-muted-foreground">Random Sampling</Label>
+                                            <p className="font-medium">Simple Random Sampling</p>
+                                          </div>
+                                          <div>
+                                            <Label className="text-sm text-muted-foreground">Date & Time</Label>
+                                            <p className="font-medium">{logEntry["date_time"] || "N/A"}</p>
+                                          </div>
+                                          <div>
+                                            <Label className="text-sm text-muted-foreground">Number of samples</Label>
+                                            <p className="font-medium">{logEntry["number_of_samples"] || "N/A"}</p>
+                                          </div>
+                                        </>
+                                      ) : (
+                                        // For "Calculator" and "MUS" methods, show all relevant fields
+                                        <>
+                                          <div>
+                                            <Label className="text-sm text-muted-foreground">Date & Time</Label>
+                                            <p className="font-medium">{logEntry["date_time"] || "N/A"}</p>
+                                          </div>
+                                          <div>
+                                            <Label className="text-sm text-muted-foreground">Sampling Type</Label>
+                                            <p className="font-medium">{logEntry["sampling type"] || "N/A"}</p>
+                                          </div>
+                                          {logEntry["performance_materiality"] !== undefined && logEntry["performance_materiality"] > 0 && (
+                                            <div>
+                                              <Label className="text-sm text-muted-foreground">Performance Materiality</Label>
+                                              <p className="font-medium">
+                                                {logEntry["performance_materiality"] 
+                                                  ? `₹${Number(logEntry["performance_materiality"]).toLocaleString('en-IN')}` 
+                                                  : "N/A"}
+                                              </p>
+                                            </div>
+                                          )}
+                                          {logEntry["assessed_risk"] && (
+                                            <div>
+                                              <Label className="text-sm text-muted-foreground">Assessed Risk</Label>
+                                              <p className="font-medium capitalize">{logEntry["assessed_risk"] || "N/A"}</p>
+                                            </div>
+                                          )}
+                                          {logEntry["reliance_on_controls"] && (
+                                            <div>
+                                              <Label className="text-sm text-muted-foreground">Reliance on Controls</Label>
+                                              <p className="font-medium">{logEntry["reliance_on_controls"] || "N/A"}</p>
+                                            </div>
+                                          )}
+                                          {logEntry["amount_column"] && (
+                                            <div>
+                                              <Label className="text-sm text-muted-foreground">Amount Column</Label>
+                                              <p className="font-medium">{logEntry["amount_column"] || "N/A"}</p>
+                                            </div>
+                                          )}
+                                          {logEntry["type_of_items"] && (
+                                            <div>
+                                              <Label className="text-sm text-muted-foreground">Type of Items</Label>
+                                              <p className="font-medium capitalize">{logEntry["type_of_items"] || "N/A"}</p>
+                                            </div>
+                                          )}
+                                          {logEntry["total_amount"] !== undefined && logEntry["total_amount"] > 0 && (
+                                            <div>
+                                              <Label className="text-sm text-muted-foreground">Total Amount</Label>
+                                              <p className="font-medium">
+                                                {logEntry["total_amount"] 
+                                                  ? `₹${Number(logEntry["total_amount"]).toLocaleString('en-IN')}` 
+                                                  : "N/A"}
+                                              </p>
+                                            </div>
+                                          )}
+                                          {logEntry["net_population_subject_to_sampling"] !== undefined && (
+                                            <div>
+                                              <Label className="text-sm text-muted-foreground">Net Population Subject to Sampling</Label>
+                                              <p className="font-medium">
+                                                {logEntry["net_population_subject_to_sampling"] !== undefined
+                                                  ? Number(logEntry["net_population_subject_to_sampling"]).toLocaleString('en-IN')
+                                                  : "N/A"}
+                                              </p>
+                                            </div>
+                                          )}
+                                          {logEntry["number_of_samples"] !== undefined && (
+                                            <div>
+                                              <Label className="text-sm text-muted-foreground">Number of Samples</Label>
+                                              <p className="font-medium text-lg">{logEntry["number_of_samples"] || "N/A"}</p>
+                                            </div>
+                                          )}
+                                          {logEntry["high_value_samples"] !== undefined && logEntry["high_value_samples"] > 0 && (
+                                            <div>
+                                              <Label className="text-sm text-muted-foreground">High Value Samples</Label>
+                                              <p className="font-medium">{logEntry["high_value_samples"] || "N/A"}</p>
+                                            </div>
+                                          )}
+                                        </>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })
+                            ) : samplingLogs[set.id] ? (
+                              // Fallback to local log if SharePoint log not available
                               <div className="space-y-4">
                                 <div className="border rounded-lg p-4 space-y-3">
                                   <h3 className="font-semibold text-lg mb-4">
@@ -4438,7 +5396,7 @@ export const SampleGeneration = () => {
                                   </h3>
                                   
                                   {samplingLogs[set.id].method === "number" ? (
-                                    // Number method log
+                                    // Number method log - show only these 4 fields
                                     <div className="space-y-3">
                                       <div className="grid grid-cols-2 gap-4">
                                         <div>
@@ -4452,10 +5410,6 @@ export const SampleGeneration = () => {
                                         <div>
                                           <Label className="text-sm text-muted-foreground">Number of samples</Label>
                                           <p className="font-medium">{samplingLogs[set.id].numberOfSamples || "N/A"}</p>
-                                        </div>
-                                        <div>
-                                          <Label className="text-sm text-muted-foreground">Seed</Label>
-                                          <p className="font-medium font-mono text-sm">{samplingLogs[set.id].seed || "N/A"}</p>
                                         </div>
                                       </div>
                                     </div>
@@ -4532,10 +5486,6 @@ export const SampleGeneration = () => {
                                           <p className="font-medium text-lg">
                                             {samplingLogs[set.id].calculatedNumberOfSamples || "N/A"}
                                           </p>
-                                        </div>
-                                        <div>
-                                          <Label className="text-sm text-muted-foreground">Seed</Label>
-                                          <p className="font-medium font-mono text-sm">{samplingLogs[set.id].seed || "N/A"}</p>
                                         </div>
                                       </div>
                                     </div>
@@ -4621,10 +5571,6 @@ export const SampleGeneration = () => {
                                             {samplingLogs[set.id].calculatedNumberOfSamples || "N/A"}
                                           </p>
                                         </div>
-                                        <div>
-                                          <Label className="text-sm text-muted-foreground">Seed</Label>
-                                          <p className="font-medium font-mono text-sm">{samplingLogs[set.id].seed || "N/A"}</p>
-                                        </div>
                                       </div>
                                     </div>
                                   ) : null}
@@ -4659,6 +5605,7 @@ export const SampleGeneration = () => {
                           <Button 
                             className="w-full" 
                             variant="secondary"
+                            disabled={lockedSamplingMethods[set.id]?.locked}
                             onClick={() => {
                               setAddSampleManuallyDialogOpen(prev => ({
                                 ...prev,
@@ -4696,7 +5643,7 @@ export const SampleGeneration = () => {
                               />
                             </div>
                             <div>
-                              <Label>Amount *</Label>
+                              <Label>Amount</Label>
                               <Input
                                 type="number"
                                 value={manualSampleData[set.id]?.amount || ""}
@@ -4710,43 +5657,43 @@ export const SampleGeneration = () => {
                                   }));
                                 }}
                                 className="mt-2"
-                                placeholder="Enter amount"
+                                placeholder="Enter amount (optional)"
                               />
                             </div>
                             <div>
-                              <Label>Recipient Name *</Label>
-                              <Input
-                                value={manualSampleData[set.id]?.recipientName || ""}
-                                onChange={(e) => {
-                                  setManualSampleData(prev => ({
-                                    ...prev,
-                                    [set.id]: {
-                                      ...prev[set.id] || { confirmingParty: "", amount: "", recipientName: "", recipientEmail: "" },
-                                      recipientName: e.target.value
-                                    }
-                                  }));
-                                }}
-                                className="mt-2"
-                                placeholder="Enter recipient name"
-                              />
-                            </div>
-                            <div>
-                              <Label>Recipient Email *</Label>
-                              <Input
-                                type="email"
+                              <Label>Recipient *</Label>
+                              <Select
                                 value={manualSampleData[set.id]?.recipientEmail || ""}
-                                onChange={(e) => {
-                                  setManualSampleData(prev => ({
-                                    ...prev,
-                                    [set.id]: {
-                                      ...prev[set.id] || { confirmingParty: "", amount: "", recipientName: "", recipientEmail: "" },
-                                      recipientEmail: e.target.value
-                                    }
-                                  }));
+                                onValueChange={(value) => {
+                                  const selectedRecipient = getRecipientsFromConfirmations().find(
+                                    r => r.email === value
+                                  );
+                                  if (selectedRecipient) {
+                                    setManualSampleData(prev => ({
+                                      ...prev,
+                                      [set.id]: {
+                                        ...prev[set.id] || { confirmingParty: "", amount: "", recipientName: "", recipientEmail: "" },
+                                        recipientName: selectedRecipient.name,
+                                        recipientEmail: selectedRecipient.email
+                                      }
+                                    }));
+                                  }
                                 }}
-                                className="mt-2"
-                                placeholder="Enter recipient email"
-                              />
+                              >
+                                <SelectTrigger className="mt-2">
+                                  <SelectValue placeholder="Select recipient..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {getRecipientsFromConfirmations().map((recipient) => (
+                                    <SelectItem key={recipient.email} value={recipient.email}>
+                                      <div className="flex flex-col items-start">
+                                        <span className="font-medium">{recipient.name}</span>
+                                        <span className="text-xs text-muted-foreground">{recipient.email}</span>
+                                      </div>
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
                             </div>
                             <div className="flex gap-2 justify-end pt-4">
                               <Button
@@ -4765,61 +5712,114 @@ export const SampleGeneration = () => {
                                 Cancel
                               </Button>
                               <Button
-                                onClick={() => {
+                                onClick={async () => {
                                   const data = manualSampleData[set.id];
-                                  if (!data || !data.confirmingParty || !data.amount || !data.recipientName || !data.recipientEmail) {
+                                  if (!data || !data.confirmingParty || !data.recipientName || !data.recipientEmail) {
                                     toast({
                                       title: "Validation Error",
-                                      description: "Please fill in all fields",
+                                      description: "Please fill in confirming party name and select a recipient",
                                       variant: "destructive",
                                     });
                                     return;
                                   }
 
-                                  const newSample: Sample = {
-                                    id: `S-${set.id}-${Date.now()}`,
-                                    sampleSetId: set.id,
-                                    confirmingParty: data.confirmingParty,
-                                    amount: data.amount,
-                                    recipientName: data.recipientName,
-                                    recipientEmail: data.recipientEmail,
-                                  };
+                                  // Find the audit area for this sample set
+                                  const auditArea = Object.keys(sampleSets).find(area => 
+                                    sampleSets[area].some(s => s.id === set.id)
+                                  ) || activeArea;
 
-                                  setGeneratedSamples(prev => {
-                                    const updated = {
-                                      ...prev,
-                                      [set.id]: [...(prev[set.id] || []), newSample]
-                                    };
-                                    
-                                    // Update sample set with new sample count
-                                    setSampleSets(prevSets => {
-                                      const updatedSets = { ...prevSets };
-                                      Object.keys(updatedSets).forEach(area => {
-                                        updatedSets[area] = updatedSets[area].map(s => 
-                                          s.id === set.id 
-                                            ? { ...s, sampleSize: updated[set.id].length }
-                                            : s
-                                        );
-                                      });
-                                      return updatedSets;
+                                  try {
+                                    // Call backend API to generate sample ID and upload to SharePoint
+                                    const response = await fetch('http://localhost:3002/api/generate-and-upload-samples', {
+                                      method: 'POST',
+                                      headers: {
+                                        'Content-Type': 'application/json',
+                                      },
+                                      body: JSON.stringify({
+                                        samples: [{
+                                          confirmingParty: data.confirmingParty,
+                                          recipientName: data.recipientName,
+                                          recipientEmail: data.recipientEmail,
+                                          amount: data.amount || "0"
+                                        }],
+                                        auditArea: auditArea,
+                                        sampleSetName: set.name,
+                                      }),
                                     });
-                                    
-                                    return updated;
-                                  });
 
-                                  setAddSampleManuallyDialogOpen(prev => ({
-                                    ...prev,
-                                    [set.id]: false
-                                  }));
-                                  setManualSampleData(prev => ({
-                                    ...prev,
-                                    [set.id]: { confirmingParty: "", amount: "", recipientName: "", recipientEmail: "" }
-                                  }));
+                                    const result = await response.json();
 
-                                  toast({
-                                    title: "Success",
-                                    description: "Sample added successfully",
-                                  });
+                                    if (result.success && result.generatedIds && result.generatedIds.length > 0) {
+                                      const generatedSampleId = result.generatedIds[0];
+                                      
+                                      // Create sample object with the generated ID
+                                      const newSample: Sample = {
+                                        id: generatedSampleId,
+                                        sampleSetId: set.id,
+                                        confirmingParty: data.confirmingParty,
+                                        amount: data.amount || "",
+                                        recipientName: data.recipientName,
+                                        recipientEmail: data.recipientEmail,
+                                      };
+
+                                      // Update local state
+                                      setGeneratedSamples(prev => {
+                                        const updated = {
+                                          ...prev,
+                                          [set.id]: [...(prev[set.id] || []), newSample]
+                                        };
+                                        
+                                        // Update sample set with new sample count
+                                        setSampleSets(prevSets => {
+                                          const updatedSets = { ...prevSets };
+                                          Object.keys(updatedSets).forEach(area => {
+                                            updatedSets[area] = updatedSets[area].map(s => 
+                                              s.id === set.id 
+                                                ? { ...s, sampleSize: updated[set.id].length }
+                                                : s
+                                            );
+                                          });
+                                          return updatedSets;
+                                        });
+                                        
+                                        return updated;
+                                      });
+
+                                      // Also update samplesFromJson to ensure it appears in "View Sample"
+                                      // Refresh confirmation data for this area
+                                      const updatedConfirmationData = await fetchConfirmationData(auditArea);
+                                      
+                                      // Convert the updated confirmation data to samples and update samplesFromJson
+                                      const updatedSamples = convertConfirmationDataToSamples(set.id, updatedConfirmationData);
+                                      setSamplesFromJson(prev => ({
+                                        ...prev,
+                                        [set.id]: updatedSamples
+                                      }));
+
+                                      setAddSampleManuallyDialogOpen(prev => ({
+                                        ...prev,
+                                        [set.id]: false
+                                      }));
+                                      setManualSampleData(prev => ({
+                                        ...prev,
+                                        [set.id]: { confirmingParty: "", amount: "", recipientName: "", recipientEmail: "" }
+                                      }));
+
+                                      toast({
+                                        title: "Success",
+                                        description: `Sample added successfully with ID: ${generatedSampleId}`,
+                                      });
+                                    } else {
+                                      throw new Error(result.message || 'Failed to add sample');
+                                    }
+                                  } catch (error: any) {
+                                    console.error('Error adding manual sample:', error);
+                                    toast({
+                                      title: "Error",
+                                      description: `Failed to add sample: ${error.message || 'Unknown error'}`,
+                                      variant: "destructive",
+                                    });
+                                  }
                                 }}
                               >
                                 Add Sample

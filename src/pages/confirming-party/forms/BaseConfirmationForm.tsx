@@ -31,7 +31,7 @@ export const BaseConfirmationForm = ({
   const [designation, setDesignation] = useState("");
   const [isCertified, setIsCertified] = useState(false);
 
-  const handleSaveDraft = () => {
+  const handleSaveDraft = async () => {
     const draftData = {
       ...formData,
       remarks,
@@ -42,12 +42,41 @@ export const BaseConfirmationForm = ({
       attachments: attachments.map(f => f.name),
       status: "draft"
     };
-    // Save to localStorage or API
-    localStorage.setItem(`confirmation_${confirmation.id}_draft`, JSON.stringify(draftData));
-    alert("Draft saved successfully!");
+    
+    // Call backend API to save draft
+    try {
+      const response = await fetch('http://localhost:3002/api/submit-confirmation', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          confirmationId: confirmation.id,
+          formData: draftData,
+          remarks: remarks,
+          attachments: attachments.map(f => f.name),
+          name: name,
+          designation: designation,
+          organizationName: organizationName,
+          status: "draft"
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to save draft');
+      }
+
+      alert("Draft saved successfully!");
+      // Refresh the page to update status
+      window.location.reload();
+    } catch (error: any) {
+      console.error('Error saving draft:', error);
+      alert(`Failed to save draft: ${error.message}`);
+    }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!isCertified) {
       alert("Please certify the confirmation before submitting.");
       return;
@@ -67,7 +96,41 @@ export const BaseConfirmationForm = ({
       status: "submitted",
       submittedAt: new Date().toISOString()
     };
-    onSubmit(submitData);
+    
+    // Call backend API to submit confirmation (Stage 6)
+    try {
+      const response = await fetch('http://localhost:3002/api/submit-confirmation', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          confirmationId: confirmation.id,
+          formData: formData, // Only send the actual form data, not the entire submitData
+          remarks: remarks,
+          attachments: attachments.map(f => f.name),
+          name: name,
+          designation: designation,
+          organizationName: organizationName,
+          status: "submitted"
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to submit confirmation');
+      }
+
+      alert("Confirmation submitted successfully!");
+      // Call the onSubmit callback for any additional handling
+      onSubmit(submitData);
+      
+      // Navigate back to confirmations list
+      window.location.href = "/confirming-party/confirmations";
+    } catch (error: any) {
+      console.error('Error submitting confirmation:', error);
+      alert(`Failed to submit confirmation: ${error.message}`);
+    }
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {

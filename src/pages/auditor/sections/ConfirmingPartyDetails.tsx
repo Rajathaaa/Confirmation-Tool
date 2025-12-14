@@ -4,7 +4,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Globe, CheckCircle, AlertTriangle, XCircle, Play } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 interface ConfirmingParty {
   id: string;
@@ -23,79 +24,173 @@ interface ConfirmingParty {
   };
 }
 
-const mockParties: ConfirmingParty[] = [
-  {
-    id: "CP-001",
-    area: "Trade Receivables",
-    name: "ABC Corporation Ltd.",
-    recipientEmail: "john.smith@abccorp.com",
-    recipientName: "John Smith",
-    recipientOrg: "ABC Corporation Ltd.",
-    domainTestStatus: "passed",
-    domainInfo: {
-      domain: "abccorp.com",
-      creationDate: "2010-05-15",
-      expiryDate: "2026-05-15",
-      status: "Active",
-      registrar: "GoDaddy LLC"
-    }
-  },
-  {
-    id: "CP-002",
-    area: "Trade Receivables",
-    name: "XYZ Industries",
-    recipientEmail: "e.chen@xyzind.com",
-    recipientName: "Emily Chen",
-    recipientOrg: "XYZ Industries",
-    domainTestStatus: "not-run"
-  },
-  {
-    id: "CP-003",
-    area: "Trade Payables",
-    name: "Global Supplies Inc.",
-    recipientEmail: "m.brown@gmail.com",
-    recipientName: "Michael Brown",
-    recipientOrg: "Global Supplies Inc.",
-    domainTestStatus: "general-domain"
-  }
-];
 
 export const ConfirmingPartyDetails = () => {
-  const [parties, setParties] = useState(mockParties);
+  const { toast } = useToast();
+  const [parties, setParties] = useState<ConfirmingParty[]>([]);
   const [selectedPartyId, setSelectedPartyId] = useState<string | null>(null);
 
-  const runDomainTest = (id: string) => {
+  // Fetch confirming parties and domain test data from SharePoint on component mount
+  useEffect(() => {
+    const loadData = async () => {
+      await fetchConfirmingParties();
+      // Fetch domain test data after parties are loaded so we can match them
+      await fetchDomainTestData();
+    };
+    loadData();
+  }, []);
+
+  const fetchConfirmingParties = async () => {
+    try {
+      const response = await fetch('http://localhost:3002/api/get-people-data');
+      if (!response.ok) {
+        throw new Error('Failed to fetch people data');
+      }
+      const result = await response.json();
+      const peopleData = result.data || { confirming_parties: [] };
+      
+      console.log('📥 Fetched confirming parties from SharePoint:', peopleData);
+      
+      // Convert SharePoint data to local format
+      if (peopleData.confirming_parties && peopleData.confirming_parties.length > 0) {
+        const convertedParties = peopleData.confirming_parties.map((party: any, index: number) => ({
+          id: `CP-${String(index + 1).padStart(3, '0')}`,
+          area: party.area || "",
+          name: party.organization || "",
+          recipientEmail: party.email || party.recipient_email || "",
+          recipientName: party.recipient_name || "",
+          recipientOrg: party.organization || "",
+          domainTestStatus: "not-run" as const
+        }));
+        setParties(convertedParties);
+      }
+    } catch (error: any) {
+      console.error('Error fetching confirming parties:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch confirming parties from SharePoint",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const fetchDomainTestData = async () => {
+    try {
+      const response = await fetch('http://localhost:3002/api/get-domain-info');
+      if (!response.ok) {
+        throw new Error('Failed to fetch domain test data');
+      }
+      const result = await response.json();
+      const domainData = result.data || { domain_records: [] };
+      
+      console.log('📥 Fetched domain_info.json from SharePoint:', domainData);
+      
+      // Update parties with domain test results from SharePoint
+      setParties(prevParties => {
+        if (prevParties.length === 0) {
+          return prevParties; // No parties loaded yet, skip
+        }
+        
+        if (domainData.domain_records && domainData.domain_records.length > 0) {
+          return prevParties.map(party => {
+            // Find matching domain record by email (case-insensitive)
+            const matchingRecord = domainData.domain_records.find((record: any) => {
+              const recordEmail = record.confirming_party_info?.email_address?.toLowerCase() || "";
+              const partyEmail = party.recipientEmail?.toLowerCase() || "";
+              return recordEmail === partyEmail;
+            });
+            
+            if (matchingRecord) {
+              const domainInfo = matchingRecord.domain_info;
+              const status = domainInfo.status;
+              
+              let testStatus: "not-run" | "running" | "passed" | "failed" | "general-domain" = "passed";
+              if (status === "General Domain") {
+                testStatus = "general-domain";
+              } else if (status === "Not Found" || status === "Inactive/Not Found") {
+                testStatus = "failed";
+              }
+              
+              console.log(`✅ Found saved domain test for ${party.recipientEmail}: ${testStatus}`);
+              
+              return {
+                ...party,
+                domainTestStatus: testStatus,
+                domainInfo: {
+                  domain: domainInfo.domain,
+                  creationDate: domainInfo.creation_date || "",
+                  expiryDate: domainInfo.expiry_date || "",
+                  status: domainInfo.status,
+                  registrar: domainInfo.registrar || ""
+                }
+              };
+            }
+            return party;
+          });
+        }
+        return prevParties;
+      });
+    } catch (error: any) {
+      console.error('Error fetching domain test data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch domain test data from SharePoint",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const runDomainTest = async (id: string) => {
+    const party = parties.find(p => p.id === id);
+    if (!party) return;
+
+    // Set status to running
     setParties(parties.map(p => 
       p.id === id ? { ...p, domainTestStatus: "running" as const } : p
     ));
-    
-    // Simulate API call
-    setTimeout(() => {
-      setParties(parties.map(p => {
-        if (p.id === id) {
-          const email = p.recipientEmail;
-          const domain = email.split('@')[1];
-          const generalDomains = ['gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com'];
-          
-          if (generalDomains.includes(domain)) {
-            return { ...p, domainTestStatus: "general-domain" as const };
-          }
-          
-          return {
-            ...p,
-            domainTestStatus: "passed" as const,
-            domainInfo: {
-              domain,
-              creationDate: "2015-03-20",
-              expiryDate: "2027-03-20",
-              status: "Active",
-              registrar: "Network Solutions LLC"
-            }
-          };
-        }
-        return p;
-      }));
-    }, 2000);
+
+    try {
+      const email = party.recipientEmail;
+      const domain = email.split('@')[1];
+
+      const response = await fetch('http://localhost:3002/api/run-domain-test', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          domain: domain,
+          organization: party.recipientOrg || "",
+          recipient_name: party.recipientName || "",
+          area: party.area || "",
+          email: email
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        // Refresh domain test data from SharePoint to ensure persistence
+        await fetchDomainTestData();
+
+        toast({
+          title: "Success",
+          description: `Domain test completed for ${domain}`,
+        });
+      } else {
+        throw new Error(result.message || 'Failed to run domain test');
+      }
+    } catch (error: any) {
+      console.error('Error running domain test:', error);
+      setParties(parties.map(p => 
+        p.id === id ? { ...p, domainTestStatus: "failed" as const } : p
+      ));
+      toast({
+        title: "Error",
+        description: `Failed to run domain test: ${error.message}`,
+        variant: "destructive",
+      });
+    }
   };
 
   const getStatusBadge = (status: string, partyId: string, isClickable: boolean = false) => {
@@ -270,15 +365,19 @@ export const ConfirmingPartyDetails = () => {
                       {getStatusBadge(party.domainTestStatus, party.id, party.domainTestStatus === "passed")}
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => runDomainTest(party.id)}
-                        disabled={party.domainTestStatus === "running"}
-                      >
-                        <Play className="h-4 w-4 mr-1" />
-                        Run Test
-                      </Button>
+                      {party.domainTestStatus === "not-run" ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => runDomainTest(party.id)}
+                          disabled={party.domainTestStatus === "running"}
+                        >
+                          <Play className="h-4 w-4 mr-1" />
+                          Run Test
+                        </Button>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">Test completed</span>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}

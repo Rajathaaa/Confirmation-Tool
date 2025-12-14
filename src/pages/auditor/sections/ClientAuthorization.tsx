@@ -4,9 +4,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CheckCircle, Clock, XCircle, Eye, Download } from "lucide-react";
-import { useState } from "react";
+import { CheckCircle, Clock, XCircle, Eye, Download, Send } from "lucide-react";
+import { useState, useEffect } from "react";
 import { formatIndianDateTime } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 interface ClientUser {
   id: string;
@@ -17,24 +18,6 @@ interface ClientUser {
   areas: string[];
 }
 
-const mockClientUsers: ClientUser[] = [
-  {
-    id: "CL-001",
-    name: "Sarah Johnson",
-    designation: "CFO",
-    email: "sarah.j@techcorp.com",
-    role: "Authorizer",
-    areas: ["Trade Receivables", "Trade Payables", "Cash & Cash Equivalents"]
-  },
-  {
-    id: "CL-002",
-    name: "Robert Chen",
-    designation: "Finance Manager",
-    email: "r.chen@techcorp.com",
-    role: "Viewer",
-    areas: ["Trade Receivables"]
-  }
-];
 
 interface ActivityLogEntry {
   timestamp: string;
@@ -43,6 +26,7 @@ interface ActivityLogEntry {
   performedBy: string;
   details: string;
   status: "completed" | "in-progress" | "pending";
+  ip_address?: string;
 }
 
 interface AuthorizationLetter {
@@ -55,207 +39,141 @@ interface AuthorizationLetter {
   recipientEmail: string;
   clientName: string;
   clientEmail: string;
-  status: "pending" | "authorized" | "rejected";
+  status: "draft" | "pending" | "authorized" | "rejected";
   authorizedBy?: string;
   authorizedDate?: string;
   authorizedIP?: string;
   activityLog: ActivityLogEntry[];
 }
 
-const mockLetters: AuthorizationLetter[] = [
-  {
-    id: "AL-001",
-    area: "Trade Receivables",
-    confirmingParty: "ABC Corporation Ltd.",
-    amount: "$125,450.00",
-    recipientName: "John Smith",
-    recipientOrg: "ABC Corporation Ltd.",
-    recipientEmail: "john.smith@abccorp.com",
-    clientName: "Sarah Johnson",
-    clientEmail: "sarah.j@techcorp.com",
-    status: "authorized",
-    authorizedBy: "Sarah Johnson",
-    authorizedDate: "2025-01-20 14:35:22",
-    authorizedIP: "192.168.1.105",
-    activityLog: [
-      {
-        timestamp: "2025-01-10 09:00:00",
-        stage: "Creation",
-        action: "Confirmation request created",
-        performedBy: "Sarah Johnson (Auditor)",
-        details: "Initial confirmation request generated for Trade Receivables - ABC Corporation Ltd.",
-        status: "completed"
-      },
-      {
-        timestamp: "2025-01-12 10:30:00",
-        stage: "Send to Client",
-        action: "Sent to client for authorization",
-        performedBy: "Sarah Johnson (Auditor)",
-        details: "Authorization request sent to Sarah Johnson (sarah.j@techcorp.com) for approval",
-        status: "completed"
-      },
-      {
-        timestamp: "2025-01-20 14:35:22",
-        stage: "Authorization by Client",
-        action: "Client authorization received",
-        performedBy: "Sarah Johnson (Client Finance Director)",
-        details: "Client approved sending confirmation to ABC Corporation Ltd.",
-        status: "completed"
-      },
-      {
-        timestamp: "2025-01-21 10:15:00",
-        stage: "Domain Testing",
-        action: "Email domain verified",
-        performedBy: "System",
-        details: "Domain abccorp.com verified and email deliverability confirmed",
-        status: "completed"
-      },
-      {
-        timestamp: "2025-01-21 11:00:00",
-        stage: "Send to Confirming Party",
-        action: "Sent to confirming party for confirmation",
-        performedBy: "Sarah Johnson (Auditor)",
-        details: "Confirmation request sent to John Smith (john.smith@abccorp.com) at ABC Corporation Ltd.",
-        status: "completed"
-      },
-      {
-        timestamp: "2025-01-22 11:30:00",
-        stage: "Confirmation Receipt",
-        action: "Confirmation received",
-        performedBy: "John Smith (ABC Corporation)",
-        details: "Confirming party submitted response with attachments. IP: 203.45.67.89",
-        status: "completed"
-      }
-    ]
-  },
-  {
-    id: "AL-002",
-    area: "Trade Receivables",
-    confirmingParty: "XYZ Industries",
-    amount: "$89,230.50",
-    recipientName: "Emily Chen",
-    recipientOrg: "XYZ Industries",
-    recipientEmail: "e.chen@xyzind.com",
-    clientName: "Sarah Johnson",
-    clientEmail: "sarah.j@techcorp.com",
-    status: "pending",
-    activityLog: [
-      {
-        timestamp: "2025-01-18 10:00:00",
-        stage: "Creation",
-        action: "Confirmation request created",
-        performedBy: "Sarah Johnson (Auditor)",
-        details: "Initial confirmation request generated for Trade Receivables - XYZ Industries",
-        status: "completed"
-      },
-      {
-        timestamp: "2025-01-18 14:00:00",
-        stage: "Send to Client",
-        action: "Sent to client for authorization",
-        performedBy: "Sarah Johnson (Auditor)",
-        details: "Authorization request sent to Sarah Johnson (sarah.j@techcorp.com) for approval",
-        status: "completed"
-      },
-      {
-        timestamp: "2025-01-19 15:45:00",
-        stage: "Authorization by Client",
-        action: "Pending client approval",
-        performedBy: "System",
-        details: "Awaiting client authorization to proceed",
-        status: "pending"
-      },
-      {
-        timestamp: "2025-01-19 15:45:00",
-        stage: "Domain Testing",
-        action: "Not started",
-        performedBy: "System",
-        details: "Domain testing will begin after client authorization",
-        status: "pending"
-      },
-      {
-        timestamp: "2025-01-19 15:45:00",
-        stage: "Send to Confirming Party",
-        action: "Not started",
-        performedBy: "System",
-        details: "Will be sent to confirming party after client authorization and domain testing",
-        status: "pending"
-      },
-      {
-        timestamp: "2025-01-19 15:45:00",
-        stage: "Confirmation Receipt",
-        action: "Not started",
-        performedBy: "System",
-        details: "Awaiting confirmation rollout",
-        status: "pending"
-      }
-    ]
-  },
-  {
-    id: "AL-003",
-    area: "Trade Payables",
-    confirmingParty: "Global Supplies Inc.",
-    amount: "$45,890.00",
-    recipientName: "Michael Brown",
-    recipientOrg: "Global Supplies Inc.",
-    recipientEmail: "m.brown@globalsupplies.com",
-    clientName: "Sarah Johnson",
-    clientEmail: "sarah.j@techcorp.com",
-    status: "pending",
-    activityLog: [
-      {
-        timestamp: "2025-01-22 11:00:00",
-        stage: "Creation",
-        action: "Confirmation request created",
-        performedBy: "Sarah Johnson (Auditor)",
-        details: "Initial confirmation request generated for Trade Payables - Global Supplies Inc.",
-        status: "completed"
-      },
-      {
-        timestamp: "2025-01-22 11:00:00",
-        stage: "Send to Client",
-        action: "Pending",
-        performedBy: "System",
-        details: "Authorization request will be sent to client for approval",
-        status: "pending"
-      },
-      {
-        timestamp: "2025-01-22 11:00:00",
-        stage: "Authorization by Client",
-        action: "Not started",
-        performedBy: "System",
-        details: "Awaiting client authorization to proceed",
-        status: "pending"
-      },
-      {
-        timestamp: "2025-01-22 11:00:00",
-        stage: "Domain Testing",
-        action: "Not started",
-        performedBy: "System",
-        details: "Domain testing will begin after client authorization",
-        status: "pending"
-      },
-      {
-        timestamp: "2025-01-22 11:00:00",
-        stage: "Send to Confirming Party",
-        action: "Not started",
-        performedBy: "System",
-        details: "Will be sent to confirming party after client authorization and domain testing",
-        status: "pending"
-      },
-      {
-        timestamp: "2025-01-22 11:00:00",
-        stage: "Confirmation Receipt",
-        action: "Not started",
-        performedBy: "System",
-        details: "Awaiting confirmation rollout",
-        status: "pending"
-      }
-    ]
-  }
-];
 
 export const ClientAuthorization = () => {
-  const [letters, setLetters] = useState(mockLetters);
+  const { toast } = useToast();
+  const [letters, setLetters] = useState<AuthorizationLetter[]>([]);
+  const [clientUsers, setClientUsers] = useState<ClientUser[]>([]);
+
+  // Fetch authorization letters, activity logs, and client users from SharePoint on component mount
+  useEffect(() => {
+    fetchAuthorizationLetters();
+    fetchClientUsers();
+  }, []);
+
+  const fetchClientUsers = async () => {
+    try {
+      const response = await fetch('http://localhost:3002/api/get-people-data');
+      if (!response.ok) {
+        throw new Error('Failed to fetch people data');
+      }
+      const result = await response.json();
+      const peopleData = result.data || { clients: [] };
+      
+      console.log('📥 Fetched client users from SharePoint:', peopleData);
+      
+      // Convert SharePoint data to local format
+      if (peopleData.clients && peopleData.clients.length > 0) {
+        const convertedClients = peopleData.clients.map((client: any, index: number) => ({
+          id: `CL-${String(index + 1).padStart(3, '0')}`,
+          name: client.name || "",
+          designation: client.designation || "",
+          email: client.email || "",
+          role: (client.role === "Authorizer" ? "Authorizer" : "Viewer") as "Authorizer" | "Viewer",
+          areas: client.areas || []
+        }));
+        setClientUsers(convertedClients);
+        console.log(`✅ Loaded ${convertedClients.length} client users for dropdown`);
+      }
+    } catch (error: any) {
+      console.error('Error fetching client users:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch client users from SharePoint",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const fetchAuthorizationLetters = async () => {
+    try {
+      const response = await fetch('http://localhost:3002/api/get-authorization-letters');
+      if (!response.ok) {
+        throw new Error('Failed to fetch authorization letters');
+      }
+      const result = await response.json();
+      const lettersData = result.data || { letters: [] };
+      
+      console.log('📥 Fetched authorization_letters.json from SharePoint:', lettersData);
+      
+      // Fetch activity logs
+      let activityLogs: Record<string, ActivityLogEntry[]> = {};
+      try {
+        const activityResponse = await fetch('http://localhost:3002/api/get-activity-log');
+        if (activityResponse.ok) {
+          const activityResult = await activityResponse.json();
+          const activityData = activityResult.data || { timeline: [] };
+          
+          console.log('📥 Fetched activity_log.json from SharePoint:', activityData);
+          
+          // Group activity logs by letter_id
+          if (activityData.timeline && Array.isArray(activityData.timeline)) {
+            activityData.timeline.forEach((entry: any) => {
+              const letterId = entry.letter_id;
+              if (letterId) {
+                if (!activityLogs[letterId]) {
+                  activityLogs[letterId] = [];
+                }
+                activityLogs[letterId].push({
+                  timestamp: entry.timestamp || "",
+                  stage: entry.stage || "",
+                  action: entry.action || "",
+                  performedBy: entry.performed_by || "",
+                  details: entry.details || "",
+                  status: (entry.status || "completed") as "completed" | "in-progress" | "pending",
+                  ip_address: entry.ip_address
+                });
+              }
+            });
+            
+            // Sort each letter's activity log by timestamp
+            Object.keys(activityLogs).forEach(letterId => {
+              activityLogs[letterId].sort((a, b) => 
+                new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+              );
+            });
+          }
+        }
+      } catch (activityError) {
+        console.error('Error fetching activity logs:', activityError);
+      }
+      
+      // Convert SharePoint data to local format
+      if (lettersData.letters && lettersData.letters.length > 0) {
+        const convertedLetters = lettersData.letters.map((letter: any) => ({
+          id: letter.id || `AL-${Date.now()}`,
+          area: letter.area || "",
+          confirmingParty: letter.confirmingParty || "",
+          amount: letter.amount || "",
+          recipientName: letter.recipientName || "",
+          recipientOrg: letter.recipientOrg || letter.confirmingParty || "",
+          recipientEmail: letter.recipientEmail || "",
+          clientName: letter.clientName || "",
+          clientEmail: letter.clientEmail || "",
+          status: (letter.status || "draft") as "draft" | "pending" | "authorized" | "rejected",
+          authorizedBy: letter.authorizedBy,
+          authorizedDate: letter.authorizedDate,
+          authorizedIP: letter.authorizedIP,
+          // Merge activity logs from both sources (letter.activityLog and activity_log.json)
+          activityLog: activityLogs[letter.id] || letter.activityLog || []
+        }));
+        setLetters(convertedLetters);
+      } else {
+        // Clear letters if no data
+        setLetters([]);
+      }
+    } catch (error: any) {
+      console.error('Error fetching authorization letters:', error);
+      // Keep using mock data if fetch fails
+    }
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -355,45 +273,293 @@ export const ClientAuthorization = () => {
                     </TableCell>
                     <TableCell>
                       <Select
-                        value={letter.clientEmail}
+                        value={letter.clientEmail && clientUsers.some(c => c.email === letter.clientEmail) ? letter.clientEmail : ""}
                         onValueChange={(email) => {
-                          const selectedClient = mockClientUsers.find(client => client.email === email);
+                          const selectedClient = clientUsers.find(client => client.email === email);
                           if (selectedClient) {
+                            // Update local state
                             setLetters(letters.map(l => 
                               l.id === letter.id 
                                 ? { ...l, clientName: selectedClient.name, clientEmail: selectedClient.email }
                                 : l
                             ));
+                            
+                            // Update in SharePoint
+                            fetch(`http://localhost:3002/api/update-authorization-letter-client`, {
+                              method: 'POST',
+                              headers: {
+                                'Content-Type': 'application/json',
+                              },
+                              body: JSON.stringify({
+                                letterId: letter.id,
+                                clientName: selectedClient.name,
+                                clientEmail: selectedClient.email
+                              }),
+                            }).catch(error => {
+                              console.error('Error updating client in SharePoint:', error);
+                            });
                           }
                         }}
                       >
                         <SelectTrigger className="w-[220px] h-auto py-2">
-                          <div className="flex flex-col items-start text-left flex-1 min-w-0">
-                            <span className="font-medium text-sm truncate w-full">{letter.clientName}</span>
-                            <span className="text-xs text-muted-foreground truncate w-full">{letter.clientEmail}</span>
-                          </div>
-                          <SelectValue />
+                          <SelectValue placeholder="Select a client">
+                            {letter.clientEmail && clientUsers.some(c => c.email === letter.clientEmail) ? (
+                              <div className="flex flex-col items-start text-left flex-1 min-w-0">
+                                <span className="font-medium text-sm truncate w-full">{letter.clientName}</span>
+                                <span className="text-xs text-muted-foreground truncate w-full">{letter.clientEmail}</span>
+                              </div>
+                            ) : (
+                              <span className="text-muted-foreground">Select a client</span>
+                            )}
+                          </SelectValue>
                         </SelectTrigger>
                         <SelectContent>
-                          {mockClientUsers.map((client) => (
-                            <SelectItem key={client.id} value={client.email}>
-                              <div className="flex flex-col py-1">
-                                <span className="font-medium">{client.name}</span>
-                                <span className="text-xs text-muted-foreground">{client.email}</span>
-                              </div>
-                            </SelectItem>
-                          ))}
+                          {clientUsers.length > 0 ? (
+                            clientUsers.map((client) => (
+                              <SelectItem key={client.id} value={client.email}>
+                                <div className="flex flex-col py-1">
+                                  <span className="font-medium">{client.name}</span>
+                                  <span className="text-xs text-muted-foreground">{client.email}</span>
+                                </div>
+                              </SelectItem>
+                            ))
+                          ) : (
+                            <SelectItem value="" disabled>No clients available</SelectItem>
+                          )}
                         </SelectContent>
                       </Select>
                     </TableCell>
-                    <TableCell>{getStatusBadge(letter.status)}</TableCell>
+                    <TableCell>
+                      {letter.status === "draft" ? (
+                        <Button
+                          size="sm"
+                          variant="default"
+                          onClick={async () => {
+                            try {
+                              // Validate that a client is selected
+                              if (!letter.clientEmail || !letter.clientName) {
+                                toast({
+                                  title: "Error",
+                                  description: "Please select a client before sending the authorization letter",
+                                  variant: "destructive",
+                                });
+                                return;
+                              }
+
+                              // 1. Update letter status to "pending" in SharePoint
+                              const statusResponse = await fetch('http://localhost:3002/api/update-authorization-letter-status', {
+                                method: 'POST',
+                                headers: {
+                                  'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify({
+                                  letterId: letter.id,
+                                  status: "pending"
+                                }),
+                              });
+
+                              if (!statusResponse.ok) {
+                                const errorData = await statusResponse.json().catch(() => ({}));
+                                throw new Error(errorData.message || 'Failed to update letter status');
+                              }
+
+                              const statusResult = await statusResponse.json();
+                              console.log('✅ Status update response:', statusResult);
+
+                              // 2. Create authorization request
+                              const requestId = `AUTH-${letter.id.replace('AL-', '')}`;
+                              const authorizationRequest = {
+                                id: requestId,
+                                area: letter.area,
+                                confirmingParty: letter.confirmingParty,
+                                recipientEmail: letter.recipientEmail,
+                                recipientName: letter.recipientName,
+                                remarksByAuditor: `Please review and authorize this confirmation request for ${letter.area} - ${letter.confirmingParty}`,
+                                attachmentByAuditor: [],
+                                status: "pending",
+                                confirmationStatus: "pending",
+                                periodEndDate: "",
+                                clientOrganization: letter.clientName
+                              };
+
+                              const requestResponse = await fetch('http://localhost:3002/api/create-authorization-request', {
+                                method: 'POST',
+                                headers: {
+                                  'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify({
+                                  request: authorizationRequest
+                                }),
+                              });
+
+                              if (!requestResponse.ok) {
+                                throw new Error('Failed to create authorization request');
+                              }
+
+                              // 3. Add Stage 2 activity log entry
+                              const performedBy = "Auditor"; // TODO: Get actual auditor name from auth context
+                              const activityLogResponse = await fetch('http://localhost:3002/api/add-activity-log', {
+                                method: 'POST',
+                                headers: {
+                                  'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify({
+                                  letterId: letter.id,
+                                  stage: "Send to Client",
+                                  action: "Sent to client for authorization",
+                                  performedBy: performedBy,
+                                  details: `Authorization request sent to ${letter.clientName} (${letter.clientEmail}) for approval`,
+                                  status: "completed"
+                                }),
+                              });
+
+                              if (!activityLogResponse.ok) {
+                                console.error('Failed to add activity log, but continuing...');
+                              }
+
+                              toast({
+                                title: "Success",
+                                description: `Authorization letter sent to ${letter.clientName}`,
+                              });
+
+                              // Refresh authorization letters to get updated status and activity logs
+                              // Wait a bit to ensure SharePoint update has propagated
+                              setTimeout(() => {
+                                fetchAuthorizationLetters();
+                              }, 500);
+                            } catch (error: any) {
+                              console.error('Error sending authorization letter:', error);
+                              toast({
+                                title: "Error",
+                                description: `Failed to send authorization letter: ${error.message}`,
+                                variant: "destructive",
+                              });
+                            }
+                          }}
+                        >
+                          <Send className="h-3 w-3 mr-1" />
+                          Send
+                        </Button>
+                      ) : letter.status === "rejected" ? (
+                        <div className="flex items-center gap-2">
+                          {getStatusBadge(letter.status)}
+                          <Button
+                            size="sm"
+                            variant="default"
+                            onClick={async () => {
+                              try {
+                                // Validate that a client is selected
+                                if (!letter.clientEmail || !letter.clientName) {
+                                  toast({
+                                    title: "Error",
+                                    description: "Please select a client before resending the authorization letter",
+                                    variant: "destructive",
+                                  });
+                                  return;
+                                }
+
+                                // 1. Update letter status to "pending" in SharePoint
+                                const statusResponse = await fetch('http://localhost:3002/api/update-authorization-letter-status', {
+                                  method: 'POST',
+                                  headers: {
+                                    'Content-Type': 'application/json',
+                                  },
+                                  body: JSON.stringify({
+                                    letterId: letter.id,
+                                    status: "pending"
+                                  }),
+                                });
+
+                                if (!statusResponse.ok) {
+                                  throw new Error('Failed to update letter status');
+                                }
+
+                                // 2. Create/update authorization request (resend)
+                                const requestId = `AUTH-${letter.id.replace('AL-', '')}`;
+                                const authorizationRequest = {
+                                  id: requestId,
+                                  area: letter.area,
+                                  confirmingParty: letter.confirmingParty,
+                                  recipientEmail: letter.recipientEmail,
+                                  recipientName: letter.recipientName,
+                                  remarksByAuditor: `Please review and authorize this confirmation request for ${letter.area} - ${letter.confirmingParty}`,
+                                  attachmentByAuditor: [],
+                                  status: "pending",
+                                  confirmationStatus: "pending",
+                                  periodEndDate: "",
+                                  clientOrganization: letter.clientName
+                                };
+
+                                const requestResponse = await fetch('http://localhost:3002/api/create-authorization-request', {
+                                  method: 'POST',
+                                  headers: {
+                                    'Content-Type': 'application/json',
+                                  },
+                                  body: JSON.stringify({
+                                    request: authorizationRequest
+                                  }),
+                                });
+
+                                if (!requestResponse.ok) {
+                                  throw new Error('Failed to create authorization request');
+                                }
+
+                                // 3. Add Stage 2 activity log entry (resend)
+                                const performedBy = "Auditor"; // TODO: Get actual auditor name from auth context
+                                const activityLogResponse = await fetch('http://localhost:3002/api/add-activity-log', {
+                                  method: 'POST',
+                                  headers: {
+                                    'Content-Type': 'application/json',
+                                  },
+                                  body: JSON.stringify({
+                                    letterId: letter.id,
+                                    stage: "Send to Client",
+                                    action: "Sent to client for authorization",
+                                    performedBy: performedBy,
+                                    details: `Authorization request resent to ${letter.clientName} (${letter.clientEmail}) for approval`,
+                                    status: "completed"
+                                  }),
+                                });
+
+                                if (!activityLogResponse.ok) {
+                                  console.error('Failed to add activity log, but continuing...');
+                                }
+
+                                toast({
+                                  title: "Success",
+                                  description: `Authorization letter resent to ${letter.clientName}`,
+                                });
+
+                                // Refresh authorization letters to get updated status and activity logs
+                                // Wait a bit to ensure SharePoint update has propagated
+                                setTimeout(() => {
+                                  fetchAuthorizationLetters();
+                                }, 500);
+                              } catch (error: any) {
+                                console.error('Error resending authorization letter:', error);
+                                toast({
+                                  title: "Error",
+                                  description: `Failed to resend authorization letter: ${error.message}`,
+                                  variant: "destructive",
+                                });
+                              }
+                            }}
+                          >
+                            <Send className="h-3 w-3 mr-1" />
+                            Resend
+                          </Button>
+                      </div>
+                      ) : (
+                        getStatusBadge(letter.status)
+                      )}
+                    </TableCell>
                     <TableCell className="text-right">
                       <div className="flex gap-2 justify-end">
                         <Dialog>
                           <DialogTrigger asChild>
-                            <Button size="sm" variant="outline">
-                              <Eye className="h-4 w-4" />
-                            </Button>
+                        <Button size="sm" variant="outline">
+                          <Eye className="h-4 w-4" />
+                        </Button>
                           </DialogTrigger>
                           <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
                             <DialogHeader>
@@ -450,20 +616,35 @@ export const ClientAuthorization = () => {
                                       </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                      {letter.activityLog.map((log, logIndex) => (
-                                        <TableRow key={logIndex}>
-                                          <TableCell className="font-mono text-xs">
-                                            {formatIndianDateTime(log.timestamp)}
+                                      {letter.activityLog && letter.activityLog.length > 0 ? (
+                                        letter.activityLog.map((log, logIndex) => (
+                                          <TableRow key={logIndex}>
+                                            <TableCell className="font-mono text-xs">
+                                              {formatIndianDateTime(log.timestamp)}
+                                            </TableCell>
+                                            <TableCell className="font-medium">{log.stage}</TableCell>
+                                            <TableCell>{log.action}</TableCell>
+                                            <TableCell>{log.performedBy}</TableCell>
+                                            <TableCell className="text-sm text-muted-foreground max-w-md">
+                                              <p className="line-clamp-2" title={log.details}>
+                                                {log.details}
+                                                {log.ip_address && log.ip_address !== "Unavailable" && (
+                                                  <span className="text-xs text-muted-foreground ml-2">
+                                                    (IP: {log.ip_address})
+                                                  </span>
+                                                )}
+                                              </p>
+                                            </TableCell>
+                                            <TableCell>{getLogStatusBadge(log.status)}</TableCell>
+                                          </TableRow>
+                                        ))
+                                      ) : (
+                                        <TableRow>
+                                          <TableCell colSpan={6} className="text-center py-4 text-muted-foreground">
+                                            No activity log entries yet.
                                           </TableCell>
-                                          <TableCell className="font-medium">{log.stage}</TableCell>
-                                          <TableCell>{log.action}</TableCell>
-                                          <TableCell>{log.performedBy}</TableCell>
-                                          <TableCell className="text-sm text-muted-foreground max-w-md">
-                                            <p className="line-clamp-2" title={log.details}>{log.details}</p>
-                                          </TableCell>
-                                          <TableCell>{getLogStatusBadge(log.status)}</TableCell>
                                         </TableRow>
-                                      ))}
+                                      )}
                                     </TableBody>
                                   </Table>
                                 </div>

@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Upload, Download, Eye, FileText, Send, Lock, CheckCircle, Clock, RotateCcw } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { formatIndianDate, formatIndianDateTime, formatIndianNumber } from "@/lib/utils";
 
 // Update interface to match RolloutReminder structure
@@ -46,8 +46,18 @@ const AUDIT_AREAS = [
   "Trade Receivables",
   "Trade Payables",
   "Cash & Cash Equivalents",
+  "Litigations & Claims",
+  "Related Party Disclosure",
+  "Borrowings",
   "Inventory",
-  "Fixed Assets",
+  "Other Assets - Security Deposits",
+  "Other Liabilities - Security Deposits",
+  "Other Receivables - Advance to Supplier",
+  "Other Receivables - Capital Advances",
+  "Other Liabilities - Advance from Customer",
+  "Other Liabilities - Capex Vendors",
+  "Plan Assets",
+  "Trustee",
 ];
 
 // Convert mockData to Confirmation format
@@ -431,8 +441,133 @@ export const WorkingPaper = () => {
   const [selectedConfirmation, setSelectedConfirmation] = useState<Confirmation | null>(null);
   const [resendDialogOpen, setResendDialogOpen] = useState(false);
   const [resendRemarks, setResendRemarks] = useState("");
+  const [confirmations, setConfirmations] = useState<Record<string, Confirmation[]>>({});
 
-  const currentData = mockConfirmations[selectedArea] || [];
+  // Fetch confirmed confirmations from SharePoint on component mount
+  useEffect(() => {
+    fetchConfirmedConfirmations();
+  }, []);
+
+  const fetchConfirmedConfirmations = async () => {
+    try {
+      const response = await fetch('http://localhost:3002/api/get-pending-confirmations');
+      if (!response.ok) {
+        throw new Error('Failed to fetch confirmed confirmations');
+      }
+      const result = await response.json();
+      const pendingData = result.data || { confirmations: [] };
+      
+      console.log('📥 Fetched pending confirmations from SharePoint:', pendingData);
+      
+      // Filter only locked confirmations (which should appear in working paper)
+      // Also fetch activity logs
+      let activityLogs: Record<string, ActivityLogEntry[]> = {};
+      try {
+        const activityResponse = await fetch('http://localhost:3002/api/get-activity-log');
+        if (activityResponse.ok) {
+          const activityResult = await activityResponse.json();
+          const activityData = activityResult.data || { timeline: [] };
+          
+          // Group activity logs by letter_id
+          if (activityData.timeline && Array.isArray(activityData.timeline)) {
+            activityData.timeline.forEach((entry: any) => {
+              const letterId = entry.letter_id;
+              if (letterId) {
+                if (!activityLogs[letterId]) {
+                  activityLogs[letterId] = [];
+                }
+                activityLogs[letterId].push({
+                  timestamp: entry.timestamp || "",
+                  stage: entry.stage || "",
+                  action: entry.action || "",
+                  performedBy: entry.performed_by || "",
+                  details: entry.details || "",
+                  status: (entry.status || "completed") as "completed" | "in-progress" | "pending"
+                });
+              }
+            });
+          }
+        }
+      } catch (activityError) {
+        console.error('Error fetching activity logs:', activityError);
+      }
+      
+      // Filter only locked confirmations and group by area
+      const lockedByArea: Record<string, Confirmation[]> = {};
+      
+      if (pendingData.confirmations && pendingData.confirmations.length > 0) {
+        const locked = pendingData.confirmations.filter((conf: any) => 
+          conf.status === "locked"
+        );
+        
+        locked.forEach((conf: any) => {
+          const area = conf.area || "Other";
+          if (!lockedByArea[area]) {
+            lockedByArea[area] = [];
+          }
+          
+          // Extract form data to determine balance type and amount
+          const formData = conf.formData || {};
+          let balanceType = "";
+          let amountConfirmed = "";
+          
+          // Try to extract from form data based on area
+          if (formData.amounts && Array.isArray(formData.amounts) && formData.amounts.length > 0) {
+            const total = formData.amounts.reduce((sum: number, item: any) => {
+              const amount = typeof item === 'object' ? parseFloat(item.amount || 0) : parseFloat(item || 0);
+              return sum + (isNaN(amount) ? 0 : amount);
+            }, 0);
+            amountConfirmed = `$${total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            balanceType = area === "Trade Receivables" ? "Accounts Receivable" : 
+                         area === "Trade Payables" ? "Accounts Payable" : area;
+          } else if (formData.amount) {
+            // Handle single amount field
+            const amount = parseFloat(formData.amount || 0);
+            amountConfirmed = `$${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            balanceType = area === "Trade Receivables" ? "Accounts Receivable" : 
+                         area === "Trade Payables" ? "Accounts Payable" : area;
+          }
+          
+          // If still no amount, set default
+          if (!amountConfirmed) {
+            amountConfirmed = "N/A";
+            balanceType = area;
+          }
+          
+          lockedByArea[area].push({
+            id: conf.id || `CNF-${Date.now()}`,
+            area: conf.area || area,
+            confirmingParty: conf.confirmingParty || conf.recipientOrg || "",
+            recipientEmail: conf.recipientEmail || "",
+            recipientName: conf.recipientName || conf.confirmedBy || "",
+            recipientOrg: conf.recipientOrg || conf.confirmingParty || conf.confirmedOrganization || "",
+            status: "locked" as const,
+            sentDate: conf.sentAt,
+            confirmedDate: conf.confirmedAt,
+            confirmedBy: conf.confirmedBy || conf.name || "",
+            confirmedIP: conf.confirmedIP,
+            lockedDate: conf.lockedAt,
+            remarks: conf.remarks || "",
+            attachments: conf.attachments || [],
+            formData: formData,
+            balanceType: balanceType,
+            amountConfirmed: amountConfirmed,
+            periodEndDate: conf.periodEndDate || "",
+            activityLog: activityLogs[conf.letterId] || []
+          });
+        });
+      }
+      
+      console.log('✅ Locked confirmations by area:', lockedByArea);
+      setConfirmations(lockedByArea);
+    } catch (error: any) {
+      console.error('Error fetching confirmed confirmations:', error);
+      // Fall back to mock data if fetch fails
+      setConfirmations(mockConfirmations);
+    }
+  };
+
+  const currentData = confirmations[selectedArea] || [];
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -541,12 +676,18 @@ export const WorkingPaper = () => {
                 {currentData.length} confirmation{currentData.length !== 1 ? 's' : ''} received
               </CardDescription>
             </div>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={fetchConfirmedConfirmations}>
+                <RotateCcw className="h-4 w-4 mr-2" />
+                Refresh
+              </Button>
             {currentData.length > 0 && (
               <Button>
                 <Upload className="h-4 w-4 mr-2" />
                 Push to Main Software
               </Button>
             )}
+            </div>
           </div>
         </CardHeader>
         <CardContent>
