@@ -3627,6 +3627,10 @@ def submit_confirmation():
             }), 400
 
         print(f"🚀 Submitting confirmation {confirmation_id} with status: {status}")
+        print(f"📋 Form data received: {json.dumps(form_data, indent=2)}")
+        print(f"📋 Remarks: {remarks}")
+        print(f"📋 Attachments: {attachments}")
+        print(f"📋 Name: {name}, Designation: {designation}, Organization: {organization_name}")
 
         # Get access token and SharePoint info
         access_token = get_access_token()
@@ -3738,6 +3742,442 @@ def submit_confirmation():
         # Clean up temp file
         if os.path.exists(pending_conf_temp_path):
             os.remove(pending_conf_temp_path)
+
+        # Update templateDetails in confirmation_{area_code}.json
+        try:
+            print(f"🔄 Starting templateDetails update for confirmation {confirmation_id}")
+            
+            # Get the confirmation entry to find area
+            confirmation_entry = None
+            for conf in pending_confirmations_data["confirmations"]:
+                if conf.get("id") == confirmation_id:
+                    confirmation_entry = conf
+                    break
+            
+            if not confirmation_entry:
+                print(f"  ⚠️ Confirmation entry not found for {confirmation_id}")
+            else:
+                # Get area from confirmation entry
+                confirmation_area = confirmation_entry.get("area", "")
+                
+                # Determine area code from confirmation_id (handle CNF- prefix)
+                area_code = None
+                clean_id = confirmation_id.replace("CNF-", "")
+                confirmation_id_parts = clean_id.split("_")
+                if len(confirmation_id_parts) > 0:
+                    potential_code = confirmation_id_parts[0]
+                    if potential_code in AREA_MAP.values():
+                        area_code = potential_code
+                        print(f"  📍 Extracted area code '{area_code}' from confirmation_id '{confirmation_id}'")
+                
+                if not area_code:
+                    print(f"  ❌ Could not determine area code from confirmation_id '{confirmation_id}'")
+                else:
+                    # Download confirmation file
+                    confirmation_filename = f"confirmation_{area_code}.json"
+                    confirmation_file_path = f"{fy_year}/{folder_name}/{sub_folder_name}/{confirmation_filename}"
+                    confirmation_download_url = f"https://graph.microsoft.com/v1.0/drives/{drive_id}/root:/{confirmation_file_path}:/content"
+                    
+                    confirmation_temp_path = os.path.join(script_dir, confirmation_filename)
+                    confirmation_file_data = {}
+                    
+                    try:
+                        print(f"  📥 Downloading {confirmation_filename}...")
+                        confirmation_resp = requests.get(confirmation_download_url, headers=headers)
+                        if confirmation_resp.status_code == 200:
+                            with open(confirmation_temp_path, "wb") as f:
+                                f.write(confirmation_resp.content)
+                            with open(confirmation_temp_path, "r", encoding="utf-8") as f:
+                                confirmation_file_data = json.load(f)
+                            
+                            # Convert to dict format if it's a list
+                            if isinstance(confirmation_file_data, list):
+                                confirmation_file_data = {entry.get("sample_id", f"temp_{i}"): {k: v for k, v in entry.items() if k != "sample_id"} for i, entry in enumerate(confirmation_file_data)}
+                            print(f"  ✅ Downloaded {confirmation_filename} with {len(confirmation_file_data)} entries")
+                        else:
+                            print(f"  ⚠️ Could not download {confirmation_filename}: HTTP {confirmation_resp.status_code}")
+                    except Exception as e:
+                        print(f"  ⚠️ Error downloading {confirmation_filename}: {str(e)}")
+                    
+                    # Use clean_id (without CNF- prefix) as the key in confirmation file
+                    # CNF-FA_IS_004 should map to FA_IS_004 in the confirmation file
+                    confirmation_file_key = clean_id
+                    
+                    # Get area from partydetails or selectedTemplate if not already set
+                    if not confirmation_area and confirmation_file_key in confirmation_file_data:
+                        if "partydetails" in confirmation_file_data[confirmation_file_key]:
+                            confirmation_area = confirmation_file_data[confirmation_file_key]["partydetails"].get("area", "")
+                            print(f"  📍 Got area '{confirmation_area}' from partydetails")
+                        
+                        if not confirmation_area:
+                            confirmation_area = confirmation_file_data[confirmation_file_key].get("selectedTemplate", "")
+                            if confirmation_area:
+                                print(f"  📍 Got area '{confirmation_area}' from selectedTemplate")
+                    
+                    if not confirmation_area:
+                        print(f"  ⚠️ No area found for confirmation {confirmation_id}, cannot load template")
+                    else:
+                        print(f"  🔍 Loading template for area: '{confirmation_area}'")
+                        
+                        # Load template from Confirmation_Template.json or create_template.json
+                        template_details = None
+                        
+                        # List of standard areas
+                        standard_areas = [
+                            "Trade Receivables", "Trade Payables", "Cash & Cash Equivalents",
+                            "Borrowings", "Inventory", "Litigations & Claims", "Related Party Disclosure",
+                            "Other Assets - Security Deposits", "Other Liabilities - Security Deposits",
+                            "Other Receivables - Advance to Supplier", "Other Receivables - Capital Advances",
+                            "Other Liabilities - Advance from Customer", "Other Liabilities - Capex Vendors",
+                            "Plan Assets", "Trustee"
+                        ]
+                        
+                        # First try Confirmation_Template.json for standard areas
+                        if confirmation_area in standard_areas:
+                            try:
+                                template_file_name = "Confirmation_Template.json"
+                                template_file_path = f"{fy_year}/{folder_name}/{sub_folder_name}/{template_file_name}"
+                                template_download_url = f"https://graph.microsoft.com/v1.0/drives/{drive_id}/root:/{template_file_path}:/content"
+                                
+                                print(f"  📥 Attempting to download {template_file_name}...")
+                                template_resp = requests.get(template_download_url, headers=headers)
+                                if template_resp.status_code == 200:
+                                    template_data = template_resp.json()
+                                    print(f"  ✅ Downloaded {template_file_name}, checking for area '{confirmation_area}'...")
+                                    if confirmation_area in template_data and "templateDetails" in template_data[confirmation_area]:
+                                        import copy
+                                        template_details = copy.deepcopy(template_data[confirmation_area]["templateDetails"])
+                                        print(f"  ✅ Loaded templateDetails for area '{confirmation_area}' from Confirmation_Template.json")
+                                    else:
+                                        print(f"  ⚠️ Area '{confirmation_area}' not found in {template_file_name} or missing templateDetails")
+                                else:
+                                    print(f"  ⚠️ Could not download {template_file_name}: HTTP {template_resp.status_code}")
+                            except Exception as e:
+                                print(f"  ⚠️ Error loading Confirmation_Template.json: {str(e)}")
+                        
+                        # If not found in standard templates, try create_template.json for custom templates
+                        if not template_details:
+                            try:
+                                template_file_name = "create_template.json"
+                                template_file_path = f"{fy_year}/{folder_name}/{sub_folder_name}/{template_file_name}"
+                                template_download_url = f"https://graph.microsoft.com/v1.0/drives/{drive_id}/root:/{template_file_path}:/content"
+                                
+                                print(f"  📥 Attempting to download {template_file_name}...")
+                                template_resp = requests.get(template_download_url, headers=headers)
+                                if template_resp.status_code == 200:
+                                    template_data = template_resp.json()
+                                    print(f"  ✅ Downloaded {template_file_name}, checking for area '{confirmation_area}'...")
+                                    if confirmation_area in template_data and "templateDetails" in template_data[confirmation_area]:
+                                        import copy
+                                        template_details = copy.deepcopy(template_data[confirmation_area]["templateDetails"])
+                                        print(f"  ✅ Loaded templateDetails for custom template '{confirmation_area}' from create_template.json")
+                                    else:
+                                        print(f"  ⚠️ Area '{confirmation_area}' not found in {template_file_name} or missing templateDetails")
+                                else:
+                                    print(f"  ⚠️ Could not download {template_file_name}: HTTP {template_resp.status_code}")
+                            except Exception as e:
+                                print(f"  ⚠️ Error loading create_template.json: {str(e)}")
+                        
+                        # If template not found, use existing templateDetails or create empty
+                        if not template_details:
+                            if confirmation_file_key in confirmation_file_data:
+                                existing_template_details = confirmation_file_data[confirmation_file_key].get("templateDetails", {})
+                                if existing_template_details and existing_template_details != {}:
+                                    import copy
+                                    template_details = copy.deepcopy(existing_template_details)
+                                    print(f"  ℹ️ Using existing templateDetails for {confirmation_file_key}")
+                                else:
+                                    template_details = {}
+                                    print(f"  ⚠️ Template '{confirmation_area}' not found, using empty templateDetails")
+                        
+                        # Ensure confirmation entry exists in confirmation file (using clean_id as key)
+                        if confirmation_file_key not in confirmation_file_data:
+                            confirmation_file_data[confirmation_file_key] = {}
+                        
+                        # Initialize templateDetails if it doesn't exist
+                        if "templateDetails" not in confirmation_file_data[confirmation_file_key]:
+                            confirmation_file_data[confirmation_file_key]["templateDetails"] = {}
+                        
+                        # Use existing templateDetails if template not loaded
+                        if not template_details:
+                            template_details = confirmation_file_data[confirmation_file_key].get("templateDetails", {})
+                            if not template_details:
+                                template_details = {}
+                        
+                        # Merge form data into templateDetails - UNIVERSAL APPROACH
+                        # Save ALL form data to templateDetails, regardless of structure
+                        if template_details is not None:
+                            print(f"  📝 Merging ALL form data into templateDetails...")
+                            print(f"  📋 Form data received: {list(form_data.keys())}")
+                            print(f"  📋 Full form data: {json.dumps(form_data, indent=2, default=str)}")
+                            
+                            # UNIVERSAL TABLE HANDLING - Handle any table data format
+                            # 1. Custom templates use "tables" dict
+                            if "tables" in form_data and isinstance(form_data["tables"], dict):
+                                for table_key, table_rows in form_data["tables"].items():
+                                    if table_key in template_details and isinstance(template_details[table_key], dict):
+                                        template_details[table_key]["rows"] = table_rows
+                                        print(f"  ✅ Updated {table_key} with {len(table_rows)} rows from tables dict")
+                            
+                            # 2. Direct tableRows format (already has column names as keys)
+                            if "tableRows" in form_data and isinstance(form_data["tableRows"], list):
+                                # Find the first table in template or use table_1
+                                table_key = None
+                                for key in template_details.keys():
+                                    if key.startswith("table_") and isinstance(template_details[key], dict):
+                                        table_key = key
+                                        break
+                                if not table_key:
+                                    table_key = "table_1"
+                                    if table_key not in template_details:
+                                        template_details[table_key] = {"columns": [], "rows": []}
+                                
+                                template_details[table_key]["rows"] = form_data["tableRows"]
+                                print(f"  ✅ Updated {table_key} with {len(form_data['tableRows'])} rows from tableRows")
+                            
+                            # 3. Convert amounts array to table rows (for simple 2-column forms)
+                            if "amounts" in form_data and isinstance(form_data["amounts"], list):
+                                table_key = "table_1"
+                                if table_key not in template_details:
+                                    template_details[table_key] = {"columns": ["Amount", "Currency"], "rows": []}
+                                
+                                rows = []
+                                for entry in form_data["amounts"]:
+                                    row = {}
+                                    columns = template_details[table_key].get("columns", ["Amount", "Currency"])
+                                    for col in columns:
+                                        if col == "Amount":
+                                            row["Amount"] = entry.get("amount", "")
+                                        elif col == "Currency":
+                                            row["Currency"] = entry.get("currency", "")
+                                        else:
+                                            # Try to match column name to entry key
+                                            col_lower = col.lower().replace(" ", "")
+                                            for k, v in entry.items():
+                                                if k.lower().replace("_", "") == col_lower:
+                                                    row[col] = v
+                                                    break
+                                    rows.append(row)
+                                template_details[table_key]["rows"] = rows
+                                print(f"  ✅ Updated {table_key} with {len(rows)} rows from amounts")
+                            
+                            # 4. Convert accounts array to table rows (for 3-column forms)
+                            if "accounts" in form_data and isinstance(form_data["accounts"], list):
+                                table_key = "table_1"
+                                if table_key not in template_details:
+                                    template_details[table_key] = {"columns": ["Account", "Amount", "Currency"], "rows": []}
+                                
+                                rows = []
+                                for entry in form_data["accounts"]:
+                                    row = {}
+                                    columns = template_details[table_key].get("columns", ["Account", "Amount", "Currency"])
+                                    for col in columns:
+                                        if col == "Account":
+                                            row["Account"] = entry.get("account", "")
+                                        elif col == "Amount":
+                                            row["Amount"] = entry.get("amount", "")
+                                        elif col == "Currency":
+                                            row["Currency"] = entry.get("currency", "")
+                                        else:
+                                            # Try to match column name to entry key
+                                            col_lower = col.lower().replace(" ", "")
+                                            for k, v in entry.items():
+                                                if k.lower().replace("_", "") == col_lower:
+                                                    row[col] = v
+                                                    break
+                                    rows.append(row)
+                                template_details[table_key]["rows"] = rows
+                                print(f"  ✅ Updated {table_key} with {len(rows)} rows from accounts")
+                            
+                            # 5. Handle any other array that might be table data
+                            for key, value in form_data.items():
+                                if key in ["tables", "amounts", "accounts", "tableRows", "remarks", "attachments", "isCertified", "status", "submittedAt"]:
+                                    continue
+                                if key.startswith("ConfirmingPartyTextBox_"):
+                                    continue
+                                
+                                # If it's an array of objects, it might be table data
+                                if isinstance(value, list) and len(value) > 0 and isinstance(value[0], dict):
+                                    # Check if this looks like table row data
+                                    table_key = f"table_{key}" if not key.startswith("table_") else key
+                                    if table_key not in template_details:
+                                        # Extract columns from first row
+                                        columns = list(value[0].keys())
+                                        template_details[table_key] = {"columns": columns, "rows": value}
+                                        print(f"  ✅ Created {table_key} with columns {columns} and {len(value)} rows")
+                                    else:
+                                        template_details[table_key]["rows"] = value
+                                        print(f"  ✅ Updated {table_key} with {len(value)} rows")
+                            
+                            # Handle confirming party textbox responses
+                            for key, value in form_data.items():
+                                if key.startswith("ConfirmingPartyTextBox_") and key in template_details:
+                                    if isinstance(template_details[key], list) and len(template_details[key]) > 0:
+                                        template_details[key][0]["user_response"] = value
+                                        print(f"  ✅ Updated {key} with user response: {value}")
+                            
+                            # UNIVERSAL FIELD MERGING - Save ALL other form fields to templateDetails
+                            # This includes yes/no responses, checkboxes, text inputs, numbers, etc.
+                            for key, value in form_data.items():
+                                # Skip already processed fields
+                                if key in ["tables", "amounts", "accounts", "tableRows", "remarks", "attachments", "isCertified", "status", "submittedAt"]:
+                                    continue
+                                if key.startswith("ConfirmingPartyTextBox_"):
+                                    continue
+                                
+                                # Skip if it's an array we already processed
+                                if isinstance(value, list) and len(value) > 0 and isinstance(value[0], dict):
+                                    continue
+                                
+                                # Save ALL form fields to templateDetails
+                                # If key exists in template, update it; otherwise add it
+                                if key in template_details:
+                                    # Update existing field
+                                    if isinstance(value, (str, int, float, bool)):
+                                        template_details[key] = value
+                                        print(f"  ✅ Updated existing {key} with value: {value}")
+                                    elif isinstance(value, dict):
+                                        if isinstance(template_details[key], dict):
+                                            template_details[key].update(value)
+                                            print(f"  ✅ Merged {key} with dict")
+                                        else:
+                                            template_details[key] = value
+                                            print(f"  ✅ Replaced {key} with dict")
+                                    elif isinstance(value, list):
+                                        template_details[key] = value
+                                        print(f"  ✅ Updated {key} with list: {len(value)} items")
+                                else:
+                                    # Add new field to templateDetails
+                                    template_details[key] = value
+                                    print(f"  ✅ Added new field {key} with value: {value}")
+                            
+                            # Update remarks and attachments
+                            if remarks:
+                                template_details["remarks"] = remarks
+                                print(f"  ✅ Updated remarks: {remarks}")
+                            if attachments:
+                                template_details["attachments"] = attachments
+                                print(f"  ✅ Updated attachments: {attachments}")
+                            
+                            # Update confirming party details
+                            if "confirmingpartydetails" in template_details:
+                                if name:
+                                    template_details["confirmingpartydetails"]["name"] = name
+                                if designation:
+                                    template_details["confirmingpartydetails"]["designation"] = designation
+                                if organization_name:
+                                    template_details["confirmingpartydetails"]["organizationName"] = organization_name
+                                print(f"  ✅ Updated confirming party details: {name}, {designation}, {organization_name}")
+                            
+                            # Update confirming party statement response
+                            if "confirmingpartystatement" in template_details and isinstance(template_details["confirmingpartystatement"], list):
+                                if len(template_details["confirmingpartystatement"]) > 0:
+                                    if status == "submitted":
+                                        template_details["confirmingpartystatement"][0]["response"] = "Yes"
+                                    else:
+                                        template_details["confirmingpartystatement"][0]["response"] = "No"
+                                    print(f"  ✅ Updated confirming party statement response: {template_details['confirmingpartystatement'][0]['response']}")
+                            
+                            # CRITICAL: Save ALL remaining form data that wasn't processed above
+                            # This ensures nothing is missed - save EVERYTHING from form_data
+                            for key, value in form_data.items():
+                                # Skip system fields
+                                if key in ["tables", "amounts", "accounts", "tableRows", "remarks", "attachments", "isCertified", "status", "submittedAt"]:
+                                    continue
+                                if key.startswith("ConfirmingPartyTextBox_"):
+                                    continue
+                                # Skip arrays of objects (already processed as tables)
+                                if isinstance(value, list) and len(value) > 0 and isinstance(value[0], dict):
+                                    continue
+                                
+                                # Save EVERYTHING else to templateDetails
+                                if key not in template_details or not isinstance(template_details[key], dict):
+                                    template_details[key] = value
+                                    print(f"  ✅ Saved {key} = {value}")
+                            
+                            # Save updated templateDetails to confirmation file (using clean_id as key)
+                            confirmation_file_data[confirmation_file_key]["templateDetails"] = template_details
+                            print(f"  💾 Saved complete templateDetails with ALL form data")
+                            print(f"  📊 Final templateDetails keys: {list(template_details.keys())}")
+                        else:
+                            # Even if template_details is empty, save ALL form data
+                            print(f"  ⚠️ No template found, but saving ALL form data to templateDetails...")
+                            all_form_data = {}
+                            
+                            # Save table data in various formats
+                            if "tableRows" in form_data and isinstance(form_data["tableRows"], list):
+                                all_form_data["table_1"] = {
+                                    "columns": list(form_data["tableRows"][0].keys()) if form_data["tableRows"] and len(form_data["tableRows"]) > 0 else [],
+                                    "rows": form_data["tableRows"]
+                                }
+                            elif "amounts" in form_data and isinstance(form_data["amounts"], list):
+                                all_form_data["table_1"] = {
+                                    "columns": ["Amount", "Currency"],
+                                    "rows": [{"Amount": entry.get("amount", ""), "Currency": entry.get("currency", "")} for entry in form_data["amounts"]]
+                                }
+                            elif "accounts" in form_data and isinstance(form_data["accounts"], list):
+                                all_form_data["table_1"] = {
+                                    "columns": ["Account", "Amount", "Currency"],
+                                    "rows": [{"Account": entry.get("account", ""), "Amount": entry.get("amount", ""), "Currency": entry.get("currency", "")} for entry in form_data["accounts"]]
+                                }
+                            
+                            # Save ALL other form data (yes/no, strings, numbers, etc.)
+                            for key, value in form_data.items():
+                                if key not in ["amounts", "accounts", "tables", "tableRows", "remarks", "attachments", "isCertified", "status", "submittedAt"]:
+                                    if not (isinstance(value, list) and len(value) > 0 and isinstance(value[0], dict)):
+                                        all_form_data[key] = value
+                            
+                            # Merge with existing templateDetails
+                            existing = confirmation_file_data[confirmation_file_key].get("templateDetails", {})
+                            existing.update(all_form_data)
+                            confirmation_file_data[confirmation_file_key]["templateDetails"] = existing
+                            print(f"  💾 Saved ALL form data to templateDetails: {list(all_form_data.keys())}")
+                        
+                        # Save confirmation metadata (confirmedBy, submittedAt, etc.) to the confirmation file
+                        if name:
+                            confirmation_file_data[confirmation_file_key]["confirmedBy"] = name
+                        if designation:
+                            confirmation_file_data[confirmation_file_key]["confirmedDesignation"] = designation
+                        if organization_name:
+                            confirmation_file_data[confirmation_file_key]["confirmedOrganization"] = organization_name
+                        confirmation_file_data[confirmation_file_key]["confirmedIP"] = ip_address
+                        
+                        if status == "submitted":
+                            confirmation_file_data[confirmation_file_key]["confirmedAt"] = now
+                            confirmation_file_data[confirmation_file_key]["submittedAt"] = now
+                        elif status == "draft":
+                            confirmation_file_data[confirmation_file_key]["draftSavedAt"] = now
+                        
+                        confirmation_file_data[confirmation_file_key]["status"] = status
+                        
+                        # Save updated confirmation file
+                        print(f"  💾 Saving templateDetails and confirmation metadata to {confirmation_filename}...")
+                        with open(confirmation_temp_path, "w", encoding="utf-8") as f:
+                            json.dump(confirmation_file_data, f, indent=4)
+                        
+                        # Upload to SharePoint
+                        section_list = [f"confirmation_{area_code}"]
+                        jugg(
+                            file_path=confirmation_temp_path,
+                            reference_value="",
+                            folder_name=folder_name,
+                            sub_folder_name=sub_folder_name,
+                            fy_year=fy_year,
+                            section_list=section_list,
+                            headers=headers,
+                            site_id=site_id,
+                            drive_id=drive_id
+                        )
+                        
+                        # Clean up temp file
+                        if os.path.exists(confirmation_temp_path):
+                            os.remove(confirmation_temp_path)
+                        
+                        print(f"✅ Updated templateDetails and confirmation metadata in {confirmation_filename} for confirmation {confirmation_id} (saved as {confirmation_file_key})")
+        except Exception as e:
+            print(f"⚠️ Error updating templateDetails in confirmation file: {str(e)}")
+            import traceback
+            traceback.print_exc()
 
         # Add Stage 6 activity log entry (only for submitted status)
         if status == "submitted":
@@ -4313,11 +4753,23 @@ def lock_recipient_template_selections():
         # Update each sample with locked recipient and template
         for selection in selections:
             sample_id = selection.get('sampleId')
+            template_name = selection.get('templateName', '')
             if sample_id and sample_id in confirmation_data:
                 confirmation_data[sample_id]["recipientName"] = selection.get('recipientName', '')
                 confirmation_data[sample_id]["recipientEmail"] = selection.get('recipientEmail', '')
-                confirmation_data[sample_id]["selectedTemplate"] = selection.get('templateName', '')
+                confirmation_data[sample_id]["selectedTemplate"] = template_name
                 confirmation_data[sample_id]["selectionsLocked"] = True
+                
+                # Update the area field in partydetails with the selected template name
+                if "partydetails" in confirmation_data[sample_id]:
+                    confirmation_data[sample_id]["partydetails"]["area"] = template_name
+                    print(f"  ✅ Updated area for {sample_id}: '{template_name}'")
+                else:
+                    # Create partydetails if it doesn't exist
+                    confirmation_data[sample_id]["partydetails"] = {
+                        "area": template_name
+                    }
+                    print(f"  ✅ Created partydetails with area '{template_name}' for {sample_id}")
 
         # Save updated data
         with open(temp_file_path, "w", encoding="utf-8") as f:
@@ -4354,6 +4806,439 @@ def lock_recipient_template_selections():
         traceback.print_exc()
         return jsonify({
             'error': 'Failed to lock recipient/template selections',
+            'message': str(e)
+        }), 500
+
+# ======================================
+# API ENDPOINT 28: UPDATE SAMPLE AREA WITH SELECTED TEMPLATE
+# ======================================
+@app.route('/api/update-sample-area', methods=['POST'])
+def update_sample_area():
+    try:
+        data = request.json
+        area = data.get('area')  # The audit area (e.g., "Trade Receivables")
+        sample_id = data.get('sampleId')
+        template_name = data.get('templateName')  # The selected template name
+
+        if not area or not sample_id or not template_name:
+            return jsonify({
+                'error': 'Missing required fields',
+                'message': 'area, sampleId, and templateName are required'
+            }), 400
+
+        area_code = AREA_MAP.get(area)
+        if not area_code:
+            return jsonify({
+                'error': 'Invalid area',
+                'message': f'Invalid area name: {area}'
+            }), 400
+
+        print(f"🚀 Updating area for sample {sample_id} to '{template_name}' in area '{area}' ({area_code})")
+
+        # Get access token and SharePoint info
+        access_token = get_access_token()
+        headers = {"Authorization": f"Bearer {access_token}"}
+
+        # Get site ID
+        site_resp = requests.get(
+            f"https://graph.microsoft.com/v1.0/sites/{site_hostname}:{site_path}",
+            headers=headers
+        )
+        site_resp.raise_for_status()
+        site_id = site_resp.json()["id"]
+
+        # Get drive ID
+        drives_resp = requests.get(f"https://graph.microsoft.com/v1.0/sites/{site_id}/drives", headers=headers)
+        drives_resp.raise_for_status()
+        drives = drives_resp.json()["value"]
+        drive_id = next((d["id"] for d in drives if d["name"] == doc_library), None)
+
+        if not drive_id:
+            raise Exception(f"Library '{doc_library}' not found on site '{site_name}'")
+
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        confirmation_filename = f"confirmation_{area_code}.json"
+        temp_file_path = os.path.join(script_dir, confirmation_filename)
+        
+        file_path_on_sharepoint = f"{fy_year}/{folder_name}/{sub_folder_name}/{confirmation_filename}"
+        download_url = f"https://graph.microsoft.com/v1.0/drives/{drive_id}/root:/{file_path_on_sharepoint}:/content"
+        
+        # Load existing confirmation data
+        confirmation_data = {}
+        try:
+            download_resp = requests.get(download_url, headers=headers)
+            if download_resp.status_code == 200:
+                # Handle binary download
+                with open(temp_file_path, "wb") as f:
+                    f.write(download_resp.content)
+                with open(temp_file_path, "r", encoding="utf-8") as f:
+                    confirmation_data = json.load(f)
+                
+                # Convert to dict format if it's a list
+                if isinstance(confirmation_data, list):
+                    confirmation_data = {entry.get("sample_id", f"temp_{i}"): {k: v for k, v in entry.items() if k != "sample_id"} for i, entry in enumerate(confirmation_data)}
+        except:
+            return jsonify({
+                'error': 'Confirmation file not found',
+                'message': f'Confirmation file for area {area} not found'
+            }), 404
+
+        # Update the area field for the sample
+        if sample_id in confirmation_data:
+            # Update selectedTemplate
+            confirmation_data[sample_id]["selectedTemplate"] = template_name
+            
+            # Update the area field in partydetails
+            if "partydetails" in confirmation_data[sample_id]:
+                old_area = confirmation_data[sample_id]["partydetails"].get("area", "")
+                confirmation_data[sample_id]["partydetails"]["area"] = template_name
+                print(f"  ✅ Updated area for {sample_id}: '{old_area}' -> '{template_name}'")
+            else:
+                # Create partydetails if it doesn't exist
+                confirmation_data[sample_id]["partydetails"] = {
+                    "area": template_name
+                }
+                print(f"  ✅ Created partydetails with area '{template_name}' for {sample_id}")
+
+            # Save updated data
+            with open(temp_file_path, "w", encoding="utf-8") as f:
+                json.dump(confirmation_data, f, indent=4)
+
+            # Upload to SharePoint
+            section_list = [f"confirmation_{area_code}"]
+            jugg(
+                file_path=temp_file_path,
+                reference_value="",
+                folder_name=folder_name,
+                sub_folder_name=sub_folder_name,
+                fy_year=fy_year,
+                section_list=section_list,
+                headers=headers,
+                site_id=site_id,
+                drive_id=drive_id
+            )
+
+            # Clean up temp file
+            if os.path.exists(temp_file_path):
+                os.remove(temp_file_path)
+
+            print(f"🎉 Successfully updated area for sample {sample_id}")
+            return jsonify({
+                'success': True,
+                'message': f'Successfully updated area for sample {sample_id}',
+                'sampleId': sample_id,
+                'area': template_name
+            })
+        else:
+            return jsonify({
+                'error': 'Sample not found',
+                'message': f'Sample with ID {sample_id} not found in confirmation file'
+            }), 404
+
+    except Exception as e:
+        print(f"❌ Error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'error': 'Failed to update sample area',
+            'message': str(e)
+        }), 500
+
+# ======================================
+# API ENDPOINT 31: CREATE CUSTOM TEMPLATE
+# ======================================
+@app.route('/api/create-custom-template', methods=['POST'])
+def create_custom_template():
+    try:
+        data = request.json
+        template_name = data.get('templateName')
+        elements = data.get('elements', [])
+
+        if not template_name:
+            return jsonify({
+                'error': 'Missing required fields',
+                'message': 'templateName is required'
+            }), 400
+
+        print(f"🚀 Creating custom template: {template_name}")
+        print(f"📋 Received {len(elements)} elements")
+
+        # Sort elements by order to preserve creation order
+        sorted_elements = sorted(elements, key=lambda x: x.get("order", 0))
+        print(f"📋 Processing elements in order: {[e.get('order', 0) for e in sorted_elements]}")
+
+        # Build template structure - use a single counter to preserve order across all types
+        template_json = {}
+        element_counter = 0
+        textbox_count = 1
+        table_count = 1
+        confirming_party_textbox_count = 1
+
+        for element in sorted_elements:
+            element_type = element.get("type")
+            element_counter += 1
+
+            # TEXTBOX
+            if element_type == "text":
+                key = f"textbox_{textbox_count}"
+                text_content = element.get("textContent", "")
+                template_json[key] = text_content
+                print(f"  ✅ Added {key} (order {element_counter}): {len(text_content)} chars")
+                if element.get("footnote"):
+                    print(f"     Footnote: {element.get('footnote')}")
+                textbox_count += 1
+
+            # CONFIRMING PARTY TEXTBOX
+            elif element_type == "confirmingPartyTextBox":
+                key = f"ConfirmingPartyTextBox_{confirming_party_textbox_count}"
+                template_json[key] = [{
+                    "heading": element.get("heading", ""),
+                    "subheading": element.get("subheading", ""),
+                    "user_response": ""
+                }]
+                print(f"  ✅ Added {key} (order {element_counter})")
+                confirming_party_textbox_count += 1
+
+            # TABLE
+            elif element_type == "table":
+                key = f"table_{table_count}"
+                table_count += 1
+
+                # Extract table data from element
+                # First try to get columns directly from element (frontend sends them)
+                columns = element.get("columns", [])
+                print(f"     Columns from element: {columns}")
+                
+                # If not found, try to extract from tableData structure
+                if not columns:
+                    table_data = element.get("tableData", {})
+                    header_row = table_data.get("headerRow", {})
+                    if header_row and header_row.get("cells"):
+                        # PRESERVE ALL column names exactly as entered, including empty ones
+                        # Try both 'content' and 'value' properties
+                        columns = []
+                        for cell in header_row["cells"]:
+                            col_name = cell.get("content") or cell.get("value") or ""
+                            columns.append(col_name)
+                        print(f"     Columns from tableData: {columns}")
+
+                # Build rows from element (frontend sends them)
+                rows = element.get("rows", [])
+                
+                # If not found, try to extract from tableData structure
+                if not rows:
+                    table_data = element.get("tableData", {})
+                    data_rows = table_data.get("dataRows", [])
+                    for data_row in data_rows:
+                        if data_row.get("cells"):
+                            row_obj = {}
+                            for i, cell in enumerate(data_row["cells"]):
+                                col_name = columns[i] if i < len(columns) else f"Column {i+1}"
+                                # Try both 'content' and 'value' properties
+                                cell_value = cell.get("content") or cell.get("value") or ""
+                                row_obj[col_name] = cell_value
+                            rows.append(row_obj)
+
+                # If still no rows, create one empty row with proper column structure
+                if not rows:
+                    if columns:
+                        # Create row with actual column names
+                        empty_row = {}
+                        for col in columns:
+                            empty_row[col if col else f"Column {columns.index(col) + 1}"] = ""
+                        rows = [empty_row]
+                    else:
+                        rows = [{}]
+
+                table_heading = element.get("heading", "")
+                table_subheading = element.get("subheading", "")
+                footnote_text = element.get("footnote", "")
+                
+                template_json[key] = {
+                    "heading": table_heading,
+                    "subheading": table_subheading,
+                    "columns": columns,
+                    "rows": rows,
+                    "footnote_1": footnote_text
+                }
+                
+                print(f"  ✅ Added {key} (order {element_counter}):")
+                print(f"     Heading: '{table_heading}'")
+                print(f"     Columns ({len(columns)}): {columns}")
+                print(f"     Rows: {len(rows)}")
+                if footnote_text:
+                    print(f"     Footnote: {footnote_text}")
+
+        # Add mandatory elements
+        template_json["remarks"] = ""
+        template_json["attachments"] = []
+        template_json["confirmingpartystatement"] = [{
+            "statement": "We certify that the above particulars (read alongwith the attachments if any) are full and correct and do not exclude any other amount receivable from us of this nature.",
+            "response": ""
+        }]
+        template_json["confirmingpartydetails"] = {
+            "organizationName": "",
+            "name": "",
+            "designation": ""
+        }
+
+        # Create final template structure
+        templates_data = {template_name: {"templateDetails": template_json}}
+
+        # Get access token and SharePoint info
+        access_token = get_access_token()
+        headers = {"Authorization": f"Bearer {access_token}"}
+
+        # Get site ID
+        site_resp = requests.get(
+            f"https://graph.microsoft.com/v1.0/sites/{site_hostname}:{site_path}",
+            headers=headers
+        )
+        site_resp.raise_for_status()
+        site_id = site_resp.json()["id"]
+
+        # Get drive ID
+        drives_resp = requests.get(f"https://graph.microsoft.com/v1.0/sites/{site_id}/drives", headers=headers)
+        drives_resp.raise_for_status()
+        drives = drives_resp.json()["value"]
+        drive_id = next((d["id"] for d in drives if d["name"] == doc_library), None)
+
+        if not drive_id:
+            raise Exception(f"Library '{doc_library}' not found on site '{site_name}'")
+
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        templates_file_name = "create_template.json"
+        temp_file_path = os.path.join(script_dir, templates_file_name)
+
+        # Download existing templates if they exist
+        existing_templates = {}
+        try:
+            download_url = f"https://graph.microsoft.com/v1.0/drives/{drive_id}/root:/{fy_year}/{folder_name}/{sub_folder_name}/{templates_file_name}:/content"
+            download_resp = requests.get(download_url, headers=headers)
+            if download_resp.status_code == 200:
+                existing_templates = download_resp.json()
+                print(f"✅ Loaded existing templates")
+        except:
+            print(f"ℹ️ No existing templates file, creating new one")
+
+        # Merge new template with existing templates
+        existing_templates.update(templates_data)
+
+        # Save to temp file
+        with open(temp_file_path, "w", encoding="utf-8") as f:
+            json.dump(existing_templates, f, indent=2)
+
+        # Upload to SharePoint
+        section_list = ["create_template"]
+        file_web_url = jugg(
+            file_path=temp_file_path,
+            reference_value="",
+            folder_name=folder_name,
+            sub_folder_name=sub_folder_name,
+            fy_year=fy_year,
+            section_list=section_list,
+            headers=headers,
+            site_id=site_id,
+            drive_id=drive_id
+        )
+
+        # Clean up temp file
+        if os.path.exists(temp_file_path):
+            os.remove(temp_file_path)
+
+        print(f"🎉 Successfully created and uploaded template: {template_name}")
+        return jsonify({
+            'success': True,
+            'message': f'Successfully created template: {template_name}',
+            'templateName': template_name,
+            'fileUrl': file_web_url
+        })
+
+    except Exception as e:
+        print(f"❌ Error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'error': 'Failed to create custom template',
+            'message': str(e)
+        }), 500
+
+# ======================================
+# API ENDPOINT 32: GET CUSTOM TEMPLATE
+# ======================================
+@app.route('/api/get-custom-template', methods=['POST'])
+def get_custom_template():
+    try:
+        data = request.json
+        template_name = data.get('templateName')
+
+        if not template_name:
+            return jsonify({
+                'error': 'Missing required fields',
+                'message': 'templateName is required'
+            }), 400
+
+        print(f"🚀 Getting custom template: {template_name}")
+
+        # Get access token and SharePoint info
+        access_token = get_access_token()
+        headers = {"Authorization": f"Bearer {access_token}"}
+
+        # Get site ID
+        site_resp = requests.get(
+            f"https://graph.microsoft.com/v1.0/sites/{site_hostname}:{site_path}",
+            headers=headers
+        )
+        site_resp.raise_for_status()
+        site_id = site_resp.json()["id"]
+
+        # Get drive ID
+        drives_resp = requests.get(f"https://graph.microsoft.com/v1.0/sites/{site_id}/drives", headers=headers)
+        drives_resp.raise_for_status()
+        drives = drives_resp.json()["value"]
+        drive_id = next((d["id"] for d in drives if d["name"] == doc_library), None)
+
+        if not drive_id:
+            raise Exception(f"Library '{doc_library}' not found on site '{site_name}'")
+
+        # Download templates file
+        templates_file_name = "create_template.json"
+        download_url = f"https://graph.microsoft.com/v1.0/drives/{drive_id}/root:/{fy_year}/{folder_name}/{sub_folder_name}/{templates_file_name}:/content"
+
+        try:
+            download_resp = requests.get(download_url, headers=headers)
+            download_resp.raise_for_status()
+            templates_data = download_resp.json()
+
+            if template_name in templates_data:
+                template_data = templates_data[template_name]
+                print(f"✅ Successfully retrieved template: {template_name}")
+                return jsonify({
+                    'success': True,
+                    'message': f'Successfully retrieved template: {template_name}',
+                    'templateName': template_name,
+                    'templateData': template_data
+                })
+            else:
+                return jsonify({
+                    'error': 'Template not found',
+                    'message': f'Template "{template_name}" not found in templates file'
+                }), 404
+
+        except requests.exceptions.HTTPError as e:
+            if e.response.status_code == 404:
+                return jsonify({
+                    'error': 'Templates file not found',
+                    'message': 'Templates file does not exist on SharePoint'
+                }), 404
+            raise
+
+    except Exception as e:
+        print(f"❌ Error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'error': 'Failed to get custom template',
             'message': str(e)
         }), 500
 

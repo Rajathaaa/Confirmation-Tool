@@ -1879,45 +1879,227 @@ export const SampleGeneration = () => {
   };
 
   // Update handleTemplateSelection to handle form name
-  const handleFormNameSelection = (sampleId: string, formName: string) => {
+  const handleFormNameSelection = async (sampleId: string, formName: string) => {
+    // Update local state
     setSampleTemplateSelections(prev => ({
       ...prev,
       [sampleId]: formName
     }));
+    
+    // Immediately update the area field in confirmation JSON
+    try {
+      // Find which sample set this sample belongs to and get the area
+      let sampleArea = activeArea;
+      
+      // Try to find the area by checking all sample sets
+      for (const [area, sets] of Object.entries(sampleSets)) {
+        for (const set of sets) {
+          const samples = getSamplesForSet(set.id);
+          if (samples.some(s => s.id === sampleId)) {
+            sampleArea = area;
+            break;
+          }
+        }
+        if (sampleArea !== activeArea) break;
+      }
+      
+      // If still not found, try to determine from sample ID prefix
+      if (sampleArea === activeArea) {
+        // Extract area code from sample ID (e.g., "TR_Q3_001" -> "TR")
+        const sampleIdParts = sampleId.split('_');
+        if (sampleIdParts.length > 0) {
+          const areaCode = sampleIdParts[0];
+          // Find area from AREA_MAP reverse lookup
+          const foundArea = Object.keys(AREA_MAP).find(area => AREA_MAP[area] === areaCode);
+          if (foundArea) {
+            sampleArea = foundArea;
+          }
+        }
+      }
+      
+      console.log(`🔄 Updating area for sample ${sampleId} to '${formName}' in area '${sampleArea}'`);
+      
+      const response = await fetch('http://localhost:3002/api/update-sample-area', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          area: sampleArea,
+          sampleId: sampleId,
+          templateName: formName
+        })
+      });
+      
+      if (response.ok) {
+        console.log(`✅ Updated area for sample ${sampleId} to '${formName}'`);
+      } else {
+        const errorData = await response.json();
+        console.error(`⚠️ Failed to update area: ${errorData.message}`);
+      }
+    } catch (error) {
+      console.error('Error updating sample area:', error);
+    }
   };
 
   // Create custom template
-  const handleCreateCustomTemplate = () => {
+  const handleCreateCustomTemplate = async () => {
     if (!newTemplateName) {
-      alert("Please enter a template name.");
+      toast({
+        title: "Error",
+        description: "Please enter a template name.",
+        variant: "destructive"
+      });
       return;
     }
 
-    // Build template structure
-    const templateStructure: CustomTemplateStructure = {
-      id: `TMPL-CUSTOM-${Date.now()}`,
-      name: newTemplateName,
-      elements: templateElements,
-      remarks: true,
-      attachments: true,
-      confirmationStatement: "We certify that the above particulars (read alongwith the attachments if any) are full and correct.",
-      confirmingPartyDetails: true,
-      type: "custom",
-      engagementId: "ENG-001"
-    };
+    if (templateElements.length === 0) {
+      toast({
+        title: "Error",
+        description: "Please add at least one element to the template.",
+        variant: "destructive"
+      });
+      return;
+    }
 
-    // Add to custom templates
-    setCustomTemplates(prev => [...prev, templateStructure as any]);
-    
-    // Add to custom form names dropdown
-    setCustomFormNames(prev => [...prev, newTemplateName]);
+    try {
+      // Sort elements by order to preserve creation order
+      const sortedElements = [...templateElements].sort((a, b) => a.order - b.order);
+      
+      // Prepare elements for API - map to backend format
+      const elementsForAPI = sortedElements.map(element => {
+        const baseElement: any = {
+          type: element.type, // Keep original type: "text", "table", "confirmingPartyTextBox"
+          order: element.order, // Include order for backend
+        };
 
-    // Reset form
-    setNewTemplateName("");
-    setTemplateElements([]);
-    setEditingElementId(null);
-    setTemplateBuilderStep("name");
-    setShowCustomTemplateForm(false);
+        if (element.type === "text") {
+          baseElement.textContent = element.textContent || "";
+          // Extract footnotes for text elements
+          if (element.footnotes && element.footnotes.length > 0) {
+            // Combine all footnote texts
+            baseElement.footnote = element.footnotes.map(fn => `${fn.symbol} ${fn.text}`).join("\n");
+          }
+        } else if (element.type === "confirmingPartyTextBox") {
+          baseElement.heading = element.heading || "";
+          baseElement.subheading = element.subheading || "";
+          // Extract footnotes for confirming party textbox
+          if (element.footnotes && element.footnotes.length > 0) {
+            baseElement.footnote = element.footnotes.map(fn => `${fn.symbol} ${fn.text}`).join("\n");
+          }
+        } else if (element.type === "table") {
+          // Get table heading - check multiple possible fields
+          baseElement.heading = element.tableName || element.heading || "";
+          baseElement.subheading = element.subheading || "";
+          baseElement.columns = [];
+          baseElement.rows = [];
+          baseElement.footnote = "";
+          
+          // Extract table data
+          if (element.tableData) {
+            const headerRow = element.tableData.headerRow;
+            if (headerRow && headerRow.cells) {
+              // Extract column names from header row cells - use 'content' property, not 'value'
+              // PRESERVE ALL columns exactly as entered, including empty ones
+              baseElement.columns = headerRow.cells.map((cell: any) => {
+                const colName = cell.content || "";
+                console.log(`  📋 Column cell:`, { id: cell.id, content: cell.content, value: cell.value, final: colName });
+                return colName;
+              });
+              console.log(`📋 Extracted ${baseElement.columns.length} columns for table "${baseElement.heading}":`, baseElement.columns);
+            } else {
+              console.warn(`⚠️ No headerRow or cells found for table "${baseElement.heading}"`);
+            }
+            
+            const dataRows = element.tableData.dataRows || [];
+            baseElement.rows = dataRows.map((row: any) => {
+              const rowObj: any = {};
+              if (row.cells) {
+                row.cells.forEach((cell: any, index: number) => {
+                  // Use the actual column name from columns array, or fallback to Column N
+                  const colName = baseElement.columns[index] || `Column ${index + 1}`;
+                  rowObj[colName] = cell.content || "";
+                });
+              }
+              return rowObj;
+            });
+            
+            // If no rows exist, create one empty row with proper column structure
+            if (baseElement.rows.length === 0 && baseElement.columns.length > 0) {
+              const emptyRow: any = {};
+              baseElement.columns.forEach((col: string, idx: number) => {
+                emptyRow[col || `Column ${idx + 1}`] = "";
+              });
+              baseElement.rows = [emptyRow];
+            }
+          }
+          
+          // Extract footnotes for table elements
+          if (element.footnotes && element.footnotes.length > 0) {
+            // Combine all footnote texts
+            baseElement.footnote = element.footnotes.map(fn => `${fn.symbol} ${fn.text}`).join("\n");
+          }
+        }
+
+        return baseElement;
+      });
+
+      // Call API to create template
+      const response = await fetch('http://localhost:3002/api/create-custom-template', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          templateName: newTemplateName,
+          elements: elementsForAPI
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to create template');
+      }
+
+      const result = await response.json();
+
+      // Build template structure for local state
+      const templateStructure: CustomTemplateStructure = {
+        id: `TMPL-CUSTOM-${Date.now()}`,
+        name: newTemplateName,
+        elements: templateElements,
+        remarks: true,
+        attachments: true,
+        confirmationStatement: "We certify that the above particulars (read alongwith the attachments if any) are full and correct.",
+        confirmingPartyDetails: true,
+        type: "custom",
+        engagementId: "ENG-001"
+      };
+
+      // Add to custom templates
+      setCustomTemplates(prev => [...prev, templateStructure as any]);
+      
+      // Add to custom form names dropdown
+      setCustomFormNames(prev => [...prev, newTemplateName]);
+
+      toast({
+        title: "Success",
+        description: `Template "${newTemplateName}" created successfully!`,
+      });
+
+      // Reset form
+      setNewTemplateName("");
+      setTemplateElements([]);
+      setEditingElementId(null);
+      setTemplateBuilderStep("name");
+      setShowCustomTemplateForm(false);
+      setShowTemplatePreview(false);
+    } catch (error: any) {
+      console.error('Error creating template:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create template. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   // Add function to add table

@@ -27,6 +27,17 @@ const OtherLiabilitiesSecurityDepositsForm = ({ confirmation }: { confirmation: 
       confirmation={confirmation}
       certificationText="We certify that the above particulars (read alongwith the attachments if any) are full and correct and do not exclude any other amount payable to us of this nature."
       onSubmit={handleSubmit}
+      getFormData={() => ({ 
+        tableRows: rows.map(row => ({
+          "Amount Due": row.amountDue,
+          "Amount Overdue if any": row.amountOverdue,
+          "Currency": row.currency,
+          "Rate of Interest": row.rateOfInterest,
+          "Interest Accrued": row.interestAccrued,
+          "Collateral if any": row.collateral,
+          "Terms of Repayment": row.terms
+        }))
+      })}
     >
       <p className="text-sm text-muted-foreground mb-4">
         Kindly confirm to us the following information in respect of amounts payable to you in respect of Inter Corporate Deposits / Loans / Advances as on {confirmation.periodEndDate ? formatIndianDate(confirmation.periodEndDate) : "[Period-end Date]"}.

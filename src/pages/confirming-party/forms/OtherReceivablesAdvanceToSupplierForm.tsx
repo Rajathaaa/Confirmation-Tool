@@ -27,6 +27,7 @@ const OtherReceivablesAdvanceToSupplierForm = ({ confirmation }: { confirmation:
       confirmation={confirmation}
       certificationText="We certify that the above particulars (read alongwith the attachments if any) are full and correct and do not exclude any other amount receivable from us of this nature."
       onSubmit={handleSubmit}
+      getFormData={() => ({ amounts: rows })}
     >
       <p className="text-sm text-muted-foreground mb-4">
         Kindly confirm to us the following information in respect of amounts receivable from you in respect of Advances as on {confirmation.periodEndDate ? formatIndianDate(confirmation.periodEndDate) : "[Period-end Date]"}.

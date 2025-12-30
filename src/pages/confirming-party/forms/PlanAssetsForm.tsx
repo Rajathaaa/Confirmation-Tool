@@ -36,6 +36,7 @@ const PlanAssetsForm = ({ confirmation }: { confirmation: any }) => {
   return (
     <BaseConfirmationForm
       confirmation={confirmation}
+      getFormData={() => ({ accounts: rows })}
       certificationText="We certify that the above particulars (read alongwith the attachments if any) are full and correct."
       onSubmit={handleSubmit}
     >

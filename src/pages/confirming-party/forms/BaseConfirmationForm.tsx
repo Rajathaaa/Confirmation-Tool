@@ -5,8 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Upload, Save, Send } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { formatIndianDate, formatIndianDateTime, formatIndianNumber, formatNumberInput, parseIndianNumber } from "@/lib/utils";
+import { FormDataProvider, useFormData } from "./FormDataContext";
 
 interface BaseConfirmationFormProps {
   confirmation: any;
@@ -14,14 +15,16 @@ interface BaseConfirmationFormProps {
   certificationText?: string;
   onSubmit: (data: any) => void;
   hideRemarks?: boolean; // Add this prop
+  getFormData?: () => any; // Callback to get form-specific data (amounts, accounts, etc.)
 }
 
-export const BaseConfirmationForm = ({
+const BaseConfirmationFormInner = ({
   confirmation,
   children,
   certificationText = "We certify that the above particulars (read alongwith the attachments if any) are full and correct.",
   onSubmit,
-  hideRemarks = false // Add default value
+  hideRemarks = false, // Add default value
+  getFormData // Callback to get form-specific data
 }: BaseConfirmationFormProps) => {
   const [formData, setFormData] = useState<any>({});
   const [remarks, setRemarks] = useState("");
@@ -30,6 +33,7 @@ export const BaseConfirmationForm = ({
   const [name, setName] = useState("");
   const [designation, setDesignation] = useState("");
   const [isCertified, setIsCertified] = useState(false);
+  const { getAllFormData } = useFormData();
 
   const handleSaveDraft = async () => {
     const draftData = {
@@ -52,7 +56,11 @@ export const BaseConfirmationForm = ({
         },
         body: JSON.stringify({
           confirmationId: confirmation.id,
-          formData: draftData,
+          formData: {
+            ...draftData,
+            ...getAllFormData(), // Get all registered form data from context
+            ...(getFormData ? getFormData() : {}) // Also merge explicit getFormData if provided
+          },
           remarks: remarks,
           attachments: attachments.map(f => f.name),
           name: name,
@@ -106,7 +114,11 @@ export const BaseConfirmationForm = ({
         },
         body: JSON.stringify({
           confirmationId: confirmation.id,
-          formData: formData, // Only send the actual form data, not the entire submitData
+          formData: {
+            ...formData,
+            ...getAllFormData(), // Get all registered form data from context
+            ...(getFormData ? getFormData() : {}) // Also merge explicit getFormData if provided
+          },
           remarks: remarks,
           attachments: attachments.map(f => f.name),
           name: name,
@@ -257,6 +269,15 @@ export const BaseConfirmationForm = ({
         </div>
       </CardContent>
     </Card>
+  );
+};
+
+// Wrap with FormDataProvider to enable automatic form data collection
+export const BaseConfirmationForm = (props: BaseConfirmationFormProps) => {
+  return (
+    <FormDataProvider>
+      <BaseConfirmationFormInner {...props} />
+    </FormDataProvider>
   );
 };
 

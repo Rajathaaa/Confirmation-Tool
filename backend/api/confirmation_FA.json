@@ -1,0 +1,539 @@
+{
+    "FA_JO_001": {
+        "partydetails": {
+            "ConfirmingParty": "Geoffrey Jones",
+            "Recipientname": "",
+            "RecipientEmail": "",
+            "area": "Cash & Cash Equivalents",
+            "amount": "1723.87",
+            "clientName": "",
+            "clientEmail": "",
+            "periodenddate": "",
+            "templatename": ""
+        },
+        "templateDetails": {},
+        "activityLog": [
+            {
+                "timestamp": "",
+                "stage": "",
+                "action": "",
+                "performedBy": "",
+                "details": "",
+                "status": ""
+            },
+            {
+                "timestamp": "",
+                "stage": "",
+                "action": "",
+                "performedBy": "",
+                "details": "",
+                "status": ""
+            }
+        ],
+        "domaintesting": {
+            "Domain": "",
+            "Status": "",
+            "Creation Date": "",
+            "Expiry Date": "",
+            "Registrar": "",
+            "result": ""
+        },
+        "selectedTemplate": "Cash & Cash Equivalents",
+        "recipientName": "Deepak",
+        "recipientEmail": "percyceptionyt@gmail.com",
+        "selectionsLocked": true
+    },
+    "FA_JO_002": {
+        "partydetails": {
+            "ConfirmingParty": "Meghan Moon",
+            "Recipientname": "",
+            "RecipientEmail": "",
+            "area": "Related Party Disclosure",
+            "amount": "3388.51",
+            "clientName": "",
+            "clientEmail": "",
+            "periodenddate": "",
+            "templatename": "Related Party Disclosure"
+        },
+        "templateDetails": {
+            "textbox_1": "Dear [Name of the Recipient],\n\nKindly confirm to us the details required as below in respect of all the transactions between [Client Organization name] and [Confirming Party].",
+            "table_1": {
+                "heading": "Nature of Relationship with [Client Organization name]",
+                "subheading": "",
+                "columns": [
+                    "Sl. No.",
+                    "Nature of Relationship as at [Period end date]",
+                    "Response"
+                ],
+                "rows": [
+                    {
+                        "Sl. No.": "1.",
+                        "Nature of Relationship as at [Period end date]": "Wholly Owned Subsidiary",
+                        "Response": ""
+                    },
+                    {
+                        "Sl. No.": "2.",
+                        "Nature of Relationship as at [Period end date]": "Subsidiary",
+                        "Response": ""
+                    },
+                    {
+                        "Sl. No.": "3.",
+                        "Nature of Relationship as at [Period end date]": "Fellow Subsidiary",
+                        "Response": ""
+                    },
+                    {
+                        "Sl. No.": "4.",
+                        "Nature of Relationship as at [Period end date]": "Joint Venture",
+                        "Response": ""
+                    },
+                    {
+                        "Sl. No.": "5.",
+                        "Nature of Relationship as at [Period end date]": "Associate",
+                        "Response": ""
+                    },
+                    {
+                        "Sl. No.": "6.",
+                        "Nature of Relationship as at [Period end date]": "Key Managerial Personnel [KMP]",
+                        "Response": ""
+                    },
+                    {
+                        "Sl. No.": "7.",
+                        "Nature of Relationship as at [Period end date]": "Relative of KMP",
+                        "Response": ""
+                    },
+                    {
+                        "Sl. No.": "8.",
+                        "Nature of Relationship as at [Period end date]": "Company in which KMP or his/her relative has significant influence",
+                        "Response": ""
+                    },
+                    {
+                        "Sl. No.": "9.",
+                        "Nature of Relationship as at [Period end date]": "Any other relationship (not mentioned above)",
+                        "Response": ""
+                    },
+                    {
+                        "Sl. No.": "10.",
+                        "Nature of Relationship as at [Period end date]": "Any change in relationship during the year or subsequent to year-end",
+                        "Response": ""
+                    }
+                ]
+            },
+            "table_2": {
+                "heading": "Details of transactions with [Client Organization name] during the year ended [Period end Date]",
+                "subheading": "",
+                "columns": [
+                    "Nature of Transaction",
+                    "Currency",
+                    "Amount Involved"
+                ],
+                "rows": [
+                    {
+                        "Nature of Transaction": "",
+                        "Currency": "",
+                        "Amount Involved": ""
+                    }
+                ]
+            },
+            "question_1": {
+                "statement": "Are there any loans borrowed by [Confirming Party]?",
+                "response": "",
+                "conditionalTable": {
+                    "showIf": "Yes",
+                    "table_3_loans_borrowed": {
+                        "columns": [
+                            "Particulars",
+                            "Details"
+                        ],
+                        "rows": [
+                            {
+                                "Particulars": "Principal Amount borrowed",
+                                "Details": ""
+                            },
+                            {
+                                "Particulars": "Currency (all amounts to be in currency mentioned)",
+                                "Details": ""
+                            },
+                            {
+                                "Particulars": "Purpose for which the loan proceeds were utilized:\na) In respect of loans borrowed during the year\nb) In respect of loans borrowed in prior year and outstanding as at the balance sheet date",
+                                "Details": ""
+                            },
+                            {
+                                "Particulars": "a) Unutilized loan amount as at the period end date\nb) In respect of amount per a) above, where have such amounts been deployed temporarily.",
+                                "Details": ""
+                            },
+                            {
+                                "Particulars": "Loan amount payable as on [Period end date] (also include balances outstanding in respect of transactions during prior years)",
+                                "Details": ""
+                            },
+                            {
+                                "Particulars": "Interest rate during the year and interest amount",
+                                "Details": ""
+                            },
+                            {
+                                "Particulars": "Interest amount payable as on [Period end date] (also include balances outstanding in respect of interest related to prior years)",
+                                "Details": ""
+                            },
+                            {
+                                "Particulars": "Overdue amount as on [Period-end date] (also include balances outstanding in respect of transactions related to prior years)",
+                                "Details": ""
+                            },
+                            {
+                                "Particulars": "Principal amounts due within one year",
+                                "Details": ""
+                            },
+                            {
+                                "Particulars": "Details of any loans extended, renewed or any other modifications (including loans borrowed in prior years)",
+                                "Details": ""
+                            }
+                        ]
+                    },
+                    "table_3_loans_borrowed_security": {
+                        "heading": "Details of Security",
+                        "subheading": "",
+                        "columns": [
+                            "Particulars",
+                            "Nature of Security",
+                            "Value & Currency"
+                        ],
+                        "rows": [
+                            {
+                                "Particulars": "Primary Securities",
+                                "Nature of Security": "",
+                                "Value & Currency": ""
+                            },
+                            {
+                                "Particulars": "Collateral Securities",
+                                "Nature of Security": "",
+                                "Value & Currency": ""
+                            }
+                        ]
+                    }
+                }
+            },
+            "question_2": {
+                "statement": "Are there any loans given by [Confirming Party]?",
+                "response": "",
+                "conditionalTable": {
+                    "showIf": "Yes",
+                    "table_4_loans_given": {
+                        "columns": [
+                            "Particulars",
+                            "Details"
+                        ],
+                        "rows": [
+                            {
+                                "Particulars": "Principal Amount given",
+                                "Details": ""
+                            },
+                            {
+                                "Particulars": "Currency (all amounts to be in currency mentioned)",
+                                "Details": ""
+                            },
+                            {
+                                "Particulars": "Loan amount receivable as on [Period end date] (also include balances outstanding in respect of transactions during prior years)",
+                                "Details": ""
+                            },
+                            {
+                                "Particulars": "Interest rate charged during the year and interest amount",
+                                "Details": ""
+                            },
+                            {
+                                "Particulars": "Interest amount receivable as on [Period end date] (also include balances outstanding in respect of interest related to prior years)",
+                                "Details": ""
+                            },
+                            {
+                                "Particulars": "Overdue amount as on [Period-end date] (also include balances outstanding in respect of transactions related to prior years)",
+                                "Details": ""
+                            },
+                            {
+                                "Particulars": "Principal amounts due within one year",
+                                "Details": ""
+                            },
+                            {
+                                "Particulars": "Details of any loans extended, renewed or any other modifications (including loans given in prior years)",
+                                "Details": ""
+                            }
+                        ]
+                    },
+                    "table_4_loans_given_security": {
+                        "heading": "Details of Security",
+                        "subheading": "",
+                        "columns": [
+                            "Particulars",
+                            "Nature of Security",
+                            "Value & Currency"
+                        ],
+                        "rows": [
+                            {
+                                "Particulars": "Primary Securities",
+                                "Nature of Security": "",
+                                "Value & Currency": ""
+                            },
+                            {
+                                "Particulars": "Collateral Securities",
+                                "Nature of Security": "",
+                                "Value & Currency": ""
+                            }
+                        ]
+                    }
+                }
+            },
+            "table_5": {
+                "heading": "Details of outstanding balances with [Confirming Party] as at [Period-end date]",
+                "subheading": "",
+                "columns": [
+                    "Nature of balance (e.g. accounts receivable, accounts payable)",
+                    "Currency",
+                    "Amount Outstanding",
+                    "Overdue Amount (if any)"
+                ],
+                "rows": [
+                    {
+                        "Nature of balance (e.g. accounts receivable, accounts payable)": "",
+                        "Currency": "",
+                        "Amount Outstanding": "",
+                        "Overdue Amount (if any)": ""
+                    }
+                ]
+            },
+            "table_6": {
+                "heading": "Details of other items not covered above (including those given/taken in previous years)",
+                "subheading": "",
+                "columns": [
+                    "Particulars (e.g. guarantees, credit lines, security offered)",
+                    "Currency",
+                    "Amount involved"
+                ],
+                "rows": [
+                    {
+                        "Particulars (e.g. guarantees, credit lines, security offered)": "",
+                        "Currency": "",
+                        "Amount involved": ""
+                    }
+                ]
+            },
+            "remarks": "zdxgdnj",
+            "attachments": [],
+            "confirmingpartystatement": [
+                {
+                    "statement": "We certify that the above particulars (read alongwith the attachments if any) are full and correct and have been executed at arm's length*.\n\n*The expression arm's length means a transaction between two related parties that is conducted as if they were unrelated, so that there is no conflict of interest.",
+                    "response": "Yes"
+                }
+            ],
+            "confirmingpartydetails": {
+                "organizationName": "UHV",
+                "name": "Raj",
+                "designation": "CTO"
+            }
+        },
+        "activityLog": [
+            {
+                "timestamp": "",
+                "stage": "",
+                "action": "",
+                "performedBy": "",
+                "details": "",
+                "status": ""
+            },
+            {
+                "timestamp": "",
+                "stage": "",
+                "action": "",
+                "performedBy": "",
+                "details": "",
+                "status": ""
+            }
+        ],
+        "domaintesting": {
+            "Domain": "",
+            "Status": "",
+            "Creation Date": "",
+            "Expiry Date": "",
+            "Registrar": "",
+            "result": ""
+        },
+        "selectedTemplate": "Related Party Disclosure",
+        "recipientName": "Alina",
+        "recipientEmail": "1bi23cs169@bit-bangalore.edu.in",
+        "selectionsLocked": true,
+        "confirmedBy": "Raj",
+        "confirmedDesignation": "CTO",
+        "confirmedOrganization": "UHV",
+        "confirmedIP": "122.172.83.161",
+        "confirmedAt": "2025-12-30 01:52:30",
+        "submittedAt": "2025-12-30 01:52:30",
+        "status": "submitted"
+    },
+    "FA_JO_003": {
+        "partydetails": {
+            "ConfirmingParty": "Hailey Carpenter",
+            "Recipientname": "",
+            "RecipientEmail": "",
+            "area": "Other Liabilities - Advance from Customer",
+            "amount": "595.37",
+            "clientName": "",
+            "clientEmail": "",
+            "periodenddate": "",
+            "templatename": ""
+        },
+        "templateDetails": {},
+        "activityLog": [
+            {
+                "timestamp": "",
+                "stage": "",
+                "action": "",
+                "performedBy": "",
+                "details": "",
+                "status": ""
+            },
+            {
+                "timestamp": "",
+                "stage": "",
+                "action": "",
+                "performedBy": "",
+                "details": "",
+                "status": ""
+            }
+        ],
+        "domaintesting": {
+            "Domain": "",
+            "Status": "",
+            "Creation Date": "",
+            "Expiry Date": "",
+            "Registrar": "",
+            "result": ""
+        },
+        "selectedTemplate": "Other Liabilities - Advance from Customer",
+        "recipientName": "Dav",
+        "recipientEmail": "davacih739@lawior.com",
+        "selectionsLocked": true
+    },
+    "FA_JO_004": {
+        "partydetails": {
+            "ConfirmingParty": "Karen Rivers",
+            "Recipientname": "",
+            "RecipientEmail": "",
+            "area": "Other Liabilities - Security Deposits",
+            "amount": "2086.65",
+            "clientName": "",
+            "clientEmail": "",
+            "periodenddate": "",
+            "templatename": ""
+        },
+        "templateDetails": {},
+        "activityLog": [
+            {
+                "timestamp": "",
+                "stage": "",
+                "action": "",
+                "performedBy": "",
+                "details": "",
+                "status": ""
+            },
+            {
+                "timestamp": "",
+                "stage": "",
+                "action": "",
+                "performedBy": "",
+                "details": "",
+                "status": ""
+            }
+        ],
+        "domaintesting": {
+            "Domain": "",
+            "Status": "",
+            "Creation Date": "",
+            "Expiry Date": "",
+            "Registrar": "",
+            "result": ""
+        },
+        "selectedTemplate": "Other Liabilities - Security Deposits",
+        "recipientName": "Deepak",
+        "recipientEmail": "percyceptionyt@gmail.com",
+        "selectionsLocked": true
+    },
+    "FA_JO_005": {
+        "partydetails": {
+            "ConfirmingParty": "Haley Watson",
+            "Recipientname": "",
+            "RecipientEmail": "",
+            "area": "Other Receivables - Capital Advances",
+            "amount": "2406.72",
+            "clientName": "",
+            "clientEmail": "",
+            "periodenddate": "",
+            "templatename": "Other Receivables - Capital Advances"
+        },
+        "templateDetails": {
+            "textbox_1": "Dear [Name of the Recipient],\n\nKindly confirm to us the following information in respect of amounts receivable from you in respect of Advances as on [Period-end Date].",
+            "table_1": {
+                "columns": [
+                    "Amount",
+                    "Currency"
+                ],
+                "rows": [
+                    {
+                        "Amount": "45687",
+                        "Currency": "usd"
+                    },
+                    {
+                        "Amount": "36569",
+                        "Currency": "eur"
+                    }
+                ]
+            },
+            "remarks": "fuhjfyr",
+            "attachments": [
+                "Confirmation Sampling.docx"
+            ],
+            "confirmingpartystatement": [
+                {
+                    "statement": "We certify that the above particulars (read alongwith the attachments if any) are full and correct and do not exclude any other amount receivable from us of this nature.",
+                    "response": "Yes"
+                }
+            ],
+            "confirmingpartydetails": {
+                "organizationName": "PQR",
+                "name": "John",
+                "designation": "hr"
+            }
+        },
+        "activityLog": [
+            {
+                "timestamp": "",
+                "stage": "",
+                "action": "",
+                "performedBy": "",
+                "details": "",
+                "status": ""
+            },
+            {
+                "timestamp": "",
+                "stage": "",
+                "action": "",
+                "performedBy": "",
+                "details": "",
+                "status": ""
+            }
+        ],
+        "domaintesting": {
+            "Domain": "",
+            "Status": "",
+            "Creation Date": "",
+            "Expiry Date": "",
+            "Registrar": "",
+            "result": ""
+        },
+        "selectedTemplate": "Other Receivables - Capital Advances",
+        "recipientName": "Polin",
+        "recipientEmail": "xy@gmail.com",
+        "selectionsLocked": true,
+        "confirmedBy": "John",
+        "confirmedDesignation": "hr",
+        "confirmedOrganization": "PQR",
+        "confirmedIP": "122.172.83.161",
+        "confirmedAt": "2025-12-30 01:48:38",
+        "submittedAt": "2025-12-30 01:48:38",
+        "status": "submitted"
+    }
+}

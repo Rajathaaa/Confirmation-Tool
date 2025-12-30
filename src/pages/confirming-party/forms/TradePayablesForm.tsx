@@ -37,6 +37,7 @@ const TradePayablesForm = ({ confirmation }: { confirmation: any }) => {
   return (
     <BaseConfirmationForm
       confirmation={confirmation}
+      getFormData={() => ({ amounts: rows })}
       certificationText="We certify that the above particulars (read alongwith the attachments if any) are full and correct and do not exclude any other amount payable to us of this nature."
       onSubmit={handleSubmit}
     >
