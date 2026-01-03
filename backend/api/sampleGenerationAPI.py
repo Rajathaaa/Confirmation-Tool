@@ -3820,40 +3820,30 @@ def submit_confirmation():
                         print(f"  🔍 Loading template for area: '{confirmation_area}'")
                         
                         # Load template from Confirmation_Template.json or create_template.json
+                        # First try Confirmation_Template.json for standard templates, then create_template.json for custom templates
                         template_details = None
                         
-                        # List of standard areas
-                        standard_areas = [
-                            "Trade Receivables", "Trade Payables", "Cash & Cash Equivalents",
-                            "Borrowings", "Inventory", "Litigations & Claims", "Related Party Disclosure",
-                            "Other Assets - Security Deposits", "Other Liabilities - Security Deposits",
-                            "Other Receivables - Advance to Supplier", "Other Receivables - Capital Advances",
-                            "Other Liabilities - Advance from Customer", "Other Liabilities - Capex Vendors",
-                            "Plan Assets", "Trustee"
-                        ]
-                        
-                        # First try Confirmation_Template.json for standard areas
-                        if confirmation_area in standard_areas:
-                            try:
-                                template_file_name = "Confirmation_Template.json"
-                                template_file_path = f"{fy_year}/{folder_name}/{sub_folder_name}/{template_file_name}"
-                                template_download_url = f"https://graph.microsoft.com/v1.0/drives/{drive_id}/root:/{template_file_path}:/content"
-                                
-                                print(f"  📥 Attempting to download {template_file_name}...")
-                                template_resp = requests.get(template_download_url, headers=headers)
-                                if template_resp.status_code == 200:
-                                    template_data = template_resp.json()
-                                    print(f"  ✅ Downloaded {template_file_name}, checking for area '{confirmation_area}'...")
-                                    if confirmation_area in template_data and "templateDetails" in template_data[confirmation_area]:
-                                        import copy
-                                        template_details = copy.deepcopy(template_data[confirmation_area]["templateDetails"])
-                                        print(f"  ✅ Loaded templateDetails for area '{confirmation_area}' from Confirmation_Template.json")
-                                    else:
-                                        print(f"  ⚠️ Area '{confirmation_area}' not found in {template_file_name} or missing templateDetails")
+                        # First try Confirmation_Template.json for standard templates
+                        try:
+                            template_file_name = "Confirmation_Template.json"
+                            template_file_path = f"{fy_year}/{folder_name}/{sub_folder_name}/{template_file_name}"
+                            template_download_url = f"https://graph.microsoft.com/v1.0/drives/{drive_id}/root:/{template_file_path}:/content"
+                            
+                            print(f"  📥 Attempting to download {template_file_name}...")
+                            template_resp = requests.get(template_download_url, headers=headers)
+                            if template_resp.status_code == 200:
+                                template_data = template_resp.json()
+                                print(f"  ✅ Downloaded {template_file_name}, checking for area '{confirmation_area}'...")
+                                if confirmation_area in template_data and "templateDetails" in template_data[confirmation_area]:
+                                    import copy
+                                    template_details = copy.deepcopy(template_data[confirmation_area]["templateDetails"])
+                                    print(f"  ✅ Loaded templateDetails for area '{confirmation_area}' from Confirmation_Template.json")
                                 else:
-                                    print(f"  ⚠️ Could not download {template_file_name}: HTTP {template_resp.status_code}")
-                            except Exception as e:
-                                print(f"  ⚠️ Error loading Confirmation_Template.json: {str(e)}")
+                                    print(f"  ⚠️ Area '{confirmation_area}' not found in {template_file_name} or missing templateDetails")
+                            else:
+                                print(f"  ⚠️ Could not download {template_file_name}: HTTP {template_resp.status_code}")
+                        except Exception as e:
+                            print(f"  ⚠️ Error loading Confirmation_Template.json: {str(e)}")
                         
                         # If not found in standard templates, try create_template.json for custom templates
                         if not template_details:
@@ -5164,7 +5154,7 @@ def create_custom_template():
         }), 500
 
 # ======================================
-# API ENDPOINT 32: GET CUSTOM TEMPLATE
+# API ENDPOINT 32: GET TEMPLATE (STANDARD OR CUSTOM)
 # ======================================
 @app.route('/api/get-custom-template', methods=['POST'])
 def get_custom_template():
@@ -5178,7 +5168,7 @@ def get_custom_template():
                 'message': 'templateName is required'
             }), 400
 
-        print(f"🚀 Getting custom template: {template_name}")
+        print(f"🚀 Getting template: {template_name}")
 
         # Get access token and SharePoint info
         access_token = get_access_token()
@@ -5201,44 +5191,64 @@ def get_custom_template():
         if not drive_id:
             raise Exception(f"Library '{doc_library}' not found on site '{site_name}'")
 
-        # Download templates file
-        templates_file_name = "create_template.json"
-        download_url = f"https://graph.microsoft.com/v1.0/drives/{drive_id}/root:/{fy_year}/{folder_name}/{sub_folder_name}/{templates_file_name}:/content"
+        # First try Confirmation_Template.json for standard templates
+        template_data = None
+        template_file_name = "Confirmation_Template.json"
+        download_url = f"https://graph.microsoft.com/v1.0/drives/{drive_id}/root:/{fy_year}/{folder_name}/{sub_folder_name}/{template_file_name}:/content"
 
         try:
             download_resp = requests.get(download_url, headers=headers)
-            download_resp.raise_for_status()
-            templates_data = download_resp.json()
-
-            if template_name in templates_data:
-                template_data = templates_data[template_name]
-                print(f"✅ Successfully retrieved template: {template_name}")
-                return jsonify({
-                    'success': True,
-                    'message': f'Successfully retrieved template: {template_name}',
-                    'templateName': template_name,
-                    'templateData': template_data
-                })
-            else:
-                return jsonify({
-                    'error': 'Template not found',
-                    'message': f'Template "{template_name}" not found in templates file'
-                }), 404
-
+            if download_resp.status_code == 200:
+                templates_data = download_resp.json()
+                if template_name in templates_data:
+                    template_data = templates_data[template_name]
+                    print(f"✅ Successfully retrieved standard template: {template_name} from {template_file_name}")
         except requests.exceptions.HTTPError as e:
-            if e.response.status_code == 404:
-                return jsonify({
-                    'error': 'Templates file not found',
-                    'message': 'Templates file does not exist on SharePoint'
-                }), 404
-            raise
+            if e.response.status_code != 404:
+                print(f"⚠️ Error loading {template_file_name}: {str(e)}")
+        except Exception as e:
+            print(f"⚠️ Error loading {template_file_name}: {str(e)}")
+
+        # If not found in standard templates, try create_template.json for custom templates
+        if not template_data:
+            template_file_name = "create_template.json"
+            download_url = f"https://graph.microsoft.com/v1.0/drives/{drive_id}/root:/{fy_year}/{folder_name}/{sub_folder_name}/{template_file_name}:/content"
+
+            try:
+                download_resp = requests.get(download_url, headers=headers)
+                if download_resp.status_code == 200:
+                    templates_data = download_resp.json()
+                    if template_name in templates_data:
+                        template_data = templates_data[template_name]
+                        print(f"✅ Successfully retrieved custom template: {template_name} from {template_file_name}")
+            except requests.exceptions.HTTPError as e:
+                if e.response.status_code == 404:
+                    print(f"⚠️ {template_file_name} not found on SharePoint")
+                else:
+                    print(f"⚠️ Error loading {template_file_name}: {str(e)}")
+            except Exception as e:
+                print(f"⚠️ Error loading {template_file_name}: {str(e)}")
+
+        # Return template data if found
+        if template_data:
+            return jsonify({
+                'success': True,
+                'message': f'Successfully retrieved template: {template_name}',
+                'templateName': template_name,
+                'templateData': template_data
+            })
+        else:
+            return jsonify({
+                'error': 'Template not found',
+                'message': f'Template "{template_name}" not found in Confirmation_Template.json or create_template.json'
+            }), 404
 
     except Exception as e:
         print(f"❌ Error: {str(e)}")
         import traceback
         traceback.print_exc()
         return jsonify({
-            'error': 'Failed to get custom template',
+            'error': 'Failed to get template',
             'message': str(e)
         }), 500
 

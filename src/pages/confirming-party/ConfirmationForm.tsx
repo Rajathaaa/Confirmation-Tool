@@ -250,30 +250,20 @@ const ConfirmationForm = () => {
     fetchConfirmation();
   }, [location.state, id]);
 
-  // Fetch custom template if selectedTemplate or area is a custom template
+  // Fetch template (standard or custom) from SharePoint
   useEffect(() => {
-    const fetchCustomTemplate = async () => {
+    const fetchTemplate = async () => {
       if (!confirmation) return;
       
-      // List of standard areas
-      const standardAreas = [
-        "Trade Receivables", "Trade Payables", "Cash & Cash Equivalents",
-        "Borrowings", "Inventory", "Litigations & Claims", "Related Party Disclosure",
-        "Other Assets - Security Deposits", "Other Liabilities - Security Deposits",
-        "Other Receivables - Advance to Supplier", "Other Receivables - Capital Advances",
-        "Other Liabilities - Advance from Customer", "Other Liabilities - Capex Vendors",
-        "Plan Assets", "Trustee"
-      ];
-
-      // Check both selectedTemplate and area for custom template name
+      // Check both selectedTemplate and area for template name
       const templateName = confirmation.selectedTemplate || confirmation.area;
       
-      if (!templateName || standardAreas.includes(templateName)) {
-        // It's a standard area or no template specified, use default form
+      if (!templateName) {
+        // No template specified, use default form
         return;
       }
 
-      // It's a custom template, fetch it
+      // Fetch template from SharePoint (checks both Confirmation_Template.json and create_template.json)
       setLoadingTemplate(true);
       try {
         const response = await fetch('http://localhost:3002/api/get-custom-template', {
@@ -288,20 +278,25 @@ const ConfirmationForm = () => {
 
         if (!response.ok) {
           const errorData = await response.json();
-          throw new Error(errorData.message || 'Failed to load custom template');
+          // If template not found, it might be using a hardcoded form component
+          // Don't throw error, just log it and let the default form render
+          console.warn(`Template "${templateName}" not found in SharePoint: ${errorData.message}`);
+          setLoadingTemplate(false);
+          return;
         }
 
         const result = await response.json();
         setCustomTemplate(result.templateData);
       } catch (error: any) {
-        console.error('Error loading custom template:', error);
-        setError(`Failed to load custom template: ${error.message}`);
+        console.error('Error loading template:', error);
+        // Don't set error state, just log it and let the default form render
+        console.warn(`Failed to load template "${templateName}": ${error.message}`);
       } finally {
         setLoadingTemplate(false);
       }
     };
 
-    fetchCustomTemplate();
+    fetchTemplate();
   }, [confirmation]);
 
   if (error) {
@@ -455,24 +450,38 @@ const ConfirmationForm = () => {
         certificationText={templateDetails.confirmingpartystatement?.[0]?.statement || "We certify that the above particulars (read alongwith the attachments if any) are full and correct."}
       >
         <div className="space-y-6">
-          {/* Render elements in the order they appear in templateDetails (preserves creation order) */}
+          {/* Render elements in the exact order they appear in the JSON */}
           {(() => {
-            // Get all keys in the order they appear in the object (preserves insertion order)
-            const allKeys = Object.keys(templateDetails);
+            // Use Object.entries() to preserve order - this is more reliable than Object.keys()
+            // Object.entries() maintains insertion order for string keys in modern JavaScript
+            const entries = Object.entries(templateDetails);
             
-            // Filter out non-element keys (remarks, attachments, etc.)
-            const elementKeys = allKeys.filter(key => 
-              key.startsWith('textbox_') || 
-              key.startsWith('table_') || 
-              key.startsWith('ConfirmingPartyTextBox_')
-            );
+            // Debug: Log the order of keys to verify JSON order is preserved
+            const allKeys = entries.map(([key]) => key);
+            const elementKeys = entries
+              .filter(([key]) => !['remarks', 'attachments', 'confirmingpartystatement', 'confirmingpartydetails'].includes(key))
+              .map(([key]) => key);
+            console.log('All template keys in order:', allKeys);
+            console.log('Template element keys in order:', elementKeys);
             
-            return elementKeys.map((key) => {
-              // Render textboxes
+            // Create an array to hold rendered elements in order
+            const renderedElements: JSX.Element[] = [];
+            
+            // Iterate through entries in order and render each element type as we encounter it
+            // This preserves the exact order from the JSON without any grouping or sorting
+            for (const [key, value] of entries) {
+              // Skip non-element keys (remarks, attachments, confirmingpartystatement, confirmingpartydetails)
+              if (key === 'remarks' || key === 'attachments' || 
+                  key === 'confirmingpartystatement' || key === 'confirmingpartydetails') {
+                continue;
+              }
+              
+              // Render textboxes in order
               if (key.startsWith('textbox_')) {
-                const text = templateDetails[key];
+                const text = value as string;
                 if (typeof text === 'string' && text) {
-                  return (
+                  console.log(`Rendering ${key} at position ${renderedElements.length}`);
+                  renderedElements.push(
                     <div key={key} className="space-y-2">
                       <p className="text-sm text-muted-foreground whitespace-pre-wrap">
                         {text.replace(/\[Recipientname\]/g, confirmation.recipientName || confirmation.recipientName || "[Recipient Name]")
@@ -482,11 +491,12 @@ const ConfirmationForm = () => {
                     </div>
                   );
                 }
+                continue;
               }
               
-              // Render tables
+              // Render tables in order
               if (key.startsWith('table_')) {
-                const table = templateDetails[key];
+                const table = value as any;
                 if (table && table.columns && Array.isArray(table.columns)) {
                   const currentRows = tableData[key] || table.rows || [];
                   
@@ -494,7 +504,8 @@ const ConfirmationForm = () => {
                   const rowsToDisplay = currentRows.length > 0 ? currentRows : 
                     [Object.fromEntries(table.columns.map((col: string) => [col || `Column ${table.columns.indexOf(col) + 1}`, ""]))];
                   
-                  return (
+                  console.log(`Rendering ${key} at position ${renderedElements.length}`);
+                  renderedElements.push(
                     <div key={key} className="space-y-2">
                       {table.heading && (
                         <h3 className="font-semibold">{table.heading}</h3>
@@ -543,14 +554,16 @@ const ConfirmationForm = () => {
                     </div>
                   );
                 }
+                continue;
               }
               
-              // Render confirming party textboxes
+              // Render confirming party textboxes in order
               if (key.startsWith('ConfirmingPartyTextBox_')) {
-                const textbox = templateDetails[key];
+                const textbox = value as any;
                 if (Array.isArray(textbox) && textbox[0]) {
                   const item = textbox[0];
-                  return (
+                  console.log(`Rendering ${key} at position ${renderedElements.length}`);
+                  renderedElements.push(
                     <div key={key} className="space-y-2">
                       {item.heading && (
                         <h3 className="font-semibold">{item.heading}</h3>
@@ -567,33 +580,26 @@ const ConfirmationForm = () => {
                     </div>
                   );
                 }
+                continue;
               }
-              
-              return null;
-            });
+            }
+            
+            console.log('Final rendered elements count:', renderedElements.length);
+            // Return all rendered elements in the exact order they appeared in the JSON
+            return renderedElements;
           })()}
         </div>
       </BaseConfirmationForm>
     );
   };
 
-  // Render custom template form
+  // Render template form (standard or custom) loaded from SharePoint
   const renderCustomTemplate = () => {
-    if (loadingTemplate) {
-      return (
-        <Card>
-          <CardContent className="p-8 text-center">
-            <p>Loading custom template...</p>
-          </CardContent>
-        </Card>
-      );
-    }
-
     if (!customTemplate || !customTemplate.templateDetails) {
       return (
         <Card>
           <CardContent className="p-8 text-center">
-            <p className="text-destructive">Custom template not found.</p>
+            <p className="text-destructive">Template not found.</p>
           </CardContent>
         </Card>
       );
@@ -603,22 +609,25 @@ const ConfirmationForm = () => {
   };
 
   const renderFormByArea = () => {
-    // Check if custom template should be used (check both selectedTemplate and area)
-    const templateName = confirmation.selectedTemplate || confirmation.area;
-    const standardAreas = [
-      "Trade Receivables", "Trade Payables", "Cash & Cash Equivalents",
-      "Borrowings", "Inventory", "Litigations & Claims", "Related Party Disclosure",
-      "Other Assets - Security Deposits", "Other Liabilities - Security Deposits",
-      "Other Receivables - Advance to Supplier", "Other Receivables - Capital Advances",
-      "Other Liabilities - Advance from Customer", "Other Liabilities - Capex Vendors",
-      "Plan Assets", "Trustee"
-    ];
-
-    if (templateName && !standardAreas.includes(templateName)) {
-      // It's a custom template
+    // Check if template was loaded from SharePoint (standard or custom)
+    if (customTemplate && customTemplate.templateDetails) {
+      // Template loaded from SharePoint, use unified template form
       return renderCustomTemplate();
     }
 
+    // If template is still loading, show loading state
+    if (loadingTemplate) {
+      return (
+        <Card>
+          <CardContent className="p-8 text-center">
+            <p>Loading template...</p>
+          </CardContent>
+        </Card>
+      );
+    }
+
+    // Fallback to hardcoded forms if template not found in SharePoint
+    // This maintains backward compatibility
     if (!confirmation.area) {
       return (
         <Card>
@@ -709,3 +718,4 @@ const ConfirmationForm = () => {
 };
 
 export default ConfirmationForm;
+
