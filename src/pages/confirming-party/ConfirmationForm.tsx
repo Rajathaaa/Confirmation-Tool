@@ -24,6 +24,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { formatNumberInput, parseIndianNumber } from "@/lib/utils";
 
 // Mock data fallback - in real app, this would come from an API
 const mockConfirmations: Record<string, any> = {
@@ -366,21 +368,78 @@ const ConfirmationForm = () => {
   const CustomTemplateForm = ({ templateDetails }: { templateDetails: any }) => {
     const [tableData, setTableData] = useState<Record<string, any[]>>({});
     const [textboxData, setTextboxData] = useState<Record<string, string>>({});
+    const [questionResponses, setQuestionResponses] = useState<Record<string, string>>({});
 
-    // Initialize table data from template
+    // Initialize table data from template (including conditional tables)
     useEffect(() => {
       const initialTableData: Record<string, any[]> = {};
+      
+      // Process all tables (both direct and conditional)
+      const processTable = (tableKey: string, table: any) => {
+        if (table && table.columns) {
+          if (table.rows && table.rows.length > 0) {
+            // Handle rows that might be:
+            // 1. Empty string array: ["", ""] or ["", ...]
+            // 2. Empty objects: [{}]
+            // 3. Actual data objects: [{ "col1": "value", "col2": "value" }]
+            // 4. Type specifications: [{ "col1": { "type": "number" } }]
+            initialTableData[tableKey] = table.rows.map((row: any) => {
+              // Check if row is a string (empty string from new template format)
+              if (typeof row === 'string') {
+                // Empty string, create structure from columns
+                return Object.fromEntries(table.columns.map((col: string) => [col, ""]));
+              }
+              
+              // Check if row is an empty object
+              if (typeof row === 'object' && row !== null && !Array.isArray(row) && Object.keys(row).length === 0) {
+                // Empty object, create structure from columns
+                return Object.fromEntries(table.columns.map((col: string) => [col, ""]));
+              }
+              
+              // Process row to extract type information if present
+              const processedRow: any = {};
+              table.columns.forEach((col: string) => {
+                if (row[col] !== undefined) {
+                  // Check if the value is a type specification object
+                  if (typeof row[col] === 'object' && row[col] !== null && !Array.isArray(row[col]) && row[col].type) {
+                    // Store the type info separately and initialize with empty value
+                    processedRow[col] = "";
+                    processedRow[`${col}_type`] = row[col];
+                  } else {
+                    processedRow[col] = row[col];
+                  }
+                } else {
+                  processedRow[col] = "";
+                }
+              });
+              return processedRow;
+            });
+          } else {
+            // Table has columns but no rows, create one empty row
+            initialTableData[tableKey] = [Object.fromEntries(table.columns.map((col: string) => [col, ""]))];
+          }
+        }
+      };
+      
+      // Process direct tables
       Object.keys(templateDetails).forEach((key) => {
         if (key.startsWith('table_')) {
-          const table = templateDetails[key];
-          if (table && table.columns && table.rows) {
-            // Initialize with existing rows or one empty row
-            initialTableData[key] = table.rows.length > 0 
-              ? [...table.rows] 
-              : [Object.fromEntries(table.columns.map((col: string) => [col, ""]))];
+          processTable(key, templateDetails[key]);
+        }
+        
+        // Process conditional tables in questions
+        if (key.startsWith('question_')) {
+          const question = templateDetails[key];
+          if (question && question.conditional && question.conditional.showIf) {
+            Object.keys(question.conditional).forEach((conditionalKey) => {
+              if (conditionalKey !== 'showIf' && conditionalKey.startsWith('table_')) {
+                processTable(conditionalKey, question.conditional[conditionalKey]);
+              }
+            });
           }
         }
       });
+      
       setTableData(initialTableData);
     }, [templateDetails]);
 
@@ -394,7 +453,7 @@ const ConfirmationForm = () => {
       }));
     };
 
-    const updateTableCell = (tableKey: string, rowIndex: number, column: string, value: string) => {
+    const updateTableCell = (tableKey: string, rowIndex: number, column: string, value: any, cellType?: any) => {
       setTableData(prev => {
         const newData = { ...prev };
         if (!newData[tableKey]) newData[tableKey] = [];
@@ -404,12 +463,323 @@ const ConfirmationForm = () => {
       });
     };
 
+    const renderTableCell = (tableKey: string, rowIndex: number, column: string, cellValue: any, cellType?: any) => {
+      // Check if cell has type specification
+      if (cellType && typeof cellType === 'object') {
+        if (cellType.type === 'dropdown' && cellType.options) {
+          return (
+            <Select
+              value={cellValue || ""}
+              onValueChange={(value) => updateTableCell(tableKey, rowIndex, column, value, cellType)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select..." />
+              </SelectTrigger>
+              <SelectContent>
+                {cellType.options.map((opt: string) => (
+                  <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          );
+        } else if (cellType.type === 'number') {
+          return (
+            <Input
+              type="text"
+              value={formatNumberInput(cellValue || "")}
+              onChange={(e) => {
+                const numericValue = parseIndianNumber(e.target.value);
+                updateTableCell(tableKey, rowIndex, column, numericValue.toString(), cellType);
+              }}
+              placeholder={column}
+            />
+          );
+        } else if (cellType.type === 'text') {
+          return (
+            <Input
+              value={cellValue || ""}
+              onChange={(e) => updateTableCell(tableKey, rowIndex, column, e.target.value, cellType)}
+              placeholder={column}
+            />
+          );
+        }
+      }
+      
+      // Default text input
+      return (
+        <Input
+          value={cellValue || ""}
+          onChange={(e) => updateTableCell(tableKey, rowIndex, column, e.target.value, cellType)}
+          placeholder={column}
+        />
+      );
+    };
+
     const handleSubmit = async (baseFormData: any) => {
-      // Combine table data and textbox data with base form data
+      // Debug: Log all state data before reconstruction
+      console.log('📊 State data before reconstruction:');
+      console.log('  textboxData:', textboxData);
+      console.log('  tableData:', tableData);
+      console.log('  questionResponses:', questionResponses);
+      console.log('  baseFormData:', baseFormData);
+      
+      // Reconstruct templateDetails structure exactly matching the template
+      // This ensures the JSON saved matches the template structure exactly
+      const reconstructedTemplateDetails: any = {};
+      
+      // Process each element in templateDetails to preserve structure
+      Object.keys(templateDetails).forEach((key) => {
+        // Skip system fields - these are handled separately
+        if (key === 'remarks' || key === 'attachments' || 
+            key === 'confirmingpartystatement' || key === 'confirmingpartydetails' ||
+            key === 'actions') {
+          return;
+        }
+        
+        const templateElement = templateDetails[key];
+        
+        // Handle textboxes - preserve as string, update with user input if exists
+        if (key.startsWith('textbox_')) {
+          if (typeof templateElement === 'string') {
+            // Simple textbox - use user input if provided, otherwise keep original
+            const userValue = textboxData[key];
+            if (userValue !== undefined && userValue !== "") {
+              reconstructedTemplateDetails[key] = userValue;
+            } else {
+              reconstructedTemplateDetails[key] = templateElement;
+            }
+          } else if (typeof templateElement === 'object' && templateElement !== null) {
+            // Textbox with heading/description - preserve structure, add value if user filled it
+            reconstructedTemplateDetails[key] = {
+              ...templateElement,
+              value: textboxData[key] || templateElement.value || ""
+            };
+          }
+        }
+        
+        // Handle tables - ONLY save user inputs, never save type specifications
+        else if (key.startsWith('table_')) {
+          const userTableRows = tableData[key] || [];
+          const originalRows = templateElement.rows || [];
+          
+          // Build table structure with ONLY user inputs
+          const cleanedRows: any[] = [];
+          
+          // If user has entered data, use that data
+          if (userTableRows.length > 0) {
+            userTableRows.forEach((userRow: any, rowIndex: number) => {
+              const cleanedRow: any = {};
+              templateElement.columns.forEach((col: string) => {
+                // Get user input value
+                const userValue = userRow[col];
+                // Get original row to check for pre-filled values (like "Sl. No.")
+                const originalRow = originalRows[rowIndex] || originalRows[0] || {};
+                const originalValue = originalRow && typeof originalRow === 'object' ? originalRow[col] : undefined;
+                
+                // If user filled a value, use it
+                if (userValue !== undefined && userValue !== "" && userValue !== null) {
+                  cleanedRow[col] = userValue;
+                } 
+                // If original had a pre-filled value (not a type spec), keep it
+                else if (originalValue !== undefined && 
+                         typeof originalValue === 'string' && 
+                         originalValue !== "") {
+                  cleanedRow[col] = originalValue; // Keep pre-filled values like "Sl. No.": "1."
+                }
+                // Otherwise, empty string (never save type specs)
+                else {
+                  cleanedRow[col] = "";
+                }
+              });
+              cleanedRows.push(cleanedRow);
+            });
+          } 
+          // If no user data, create rows from template but strip type specs
+          else if (originalRows.length > 0) {
+            originalRows.forEach((origRow: any) => {
+              const cleanedRow: any = {};
+              templateElement.columns.forEach((col: string) => {
+                const cellValue = origRow && typeof origRow === 'object' ? origRow[col] : undefined;
+                // If it's a type spec object, replace with empty string
+                if (cellValue && typeof cellValue === 'object' && !Array.isArray(cellValue) && cellValue.type) {
+                  cleanedRow[col] = "";
+                } 
+                // If it's a pre-filled string value, keep it
+                else if (typeof cellValue === 'string') {
+                  cleanedRow[col] = cellValue;
+                }
+                // Otherwise empty string
+                else {
+                  cleanedRow[col] = "";
+                }
+              });
+              cleanedRows.push(cleanedRow);
+            });
+          }
+          // If no original rows either, create one empty row
+          else {
+            const emptyRow: any = {};
+            templateElement.columns.forEach((col: string) => {
+              emptyRow[col] = "";
+            });
+            cleanedRows.push(emptyRow);
+          }
+          
+          // Build final table structure - preserve metadata but use cleaned rows
+          reconstructedTemplateDetails[key] = {
+            heading: templateElement.heading || "",
+            subheading: templateElement.subheading || "",
+            footnote: templateElement.footnote || "",
+            columns: templateElement.columns || [],
+            rows: cleanedRows,
+            addRow: templateElement.addRow || false
+          };
+        }
+        
+        // Handle questions - preserve structure, update response
+        else if (key.startsWith('question_')) {
+          const response = questionResponses[key] || "";
+          // Always save response as simple string value, never save type specifications
+          reconstructedTemplateDetails[key] = {
+            ...templateElement,
+            response: response // Always save as simple string, never as type object
+          };
+          
+          // If question has conditional tables, preserve them with their structure
+          if (templateElement.conditional) {
+            reconstructedTemplateDetails[key].conditional = {
+              ...templateElement.conditional
+            };
+            
+            // Update conditional table rows if they exist in tableData
+            Object.keys(templateElement.conditional).forEach((conditionalKey) => {
+              if (conditionalKey !== 'showIf' && conditionalKey.startsWith('table_')) {
+                const conditionalTable = templateElement.conditional[conditionalKey];
+                const userConditionalRows = tableData[conditionalKey] || [];
+                const originalConditionalRows = conditionalTable.rows || [];
+                
+                // Build cleaned rows - ONLY user inputs, no type specs
+                const cleanedConditionalRows: any[] = [];
+                
+                if (userConditionalRows.length > 0) {
+                  // Use user data
+                  userConditionalRows.forEach((userRow: any, rowIndex: number) => {
+                    const cleanedRow: any = {};
+                    conditionalTable.columns.forEach((col: string) => {
+                      const userValue = userRow[col];
+                      const originalRow = originalConditionalRows[rowIndex] || originalConditionalRows[0] || {};
+                      const originalValue = originalRow && typeof originalRow === 'object' ? originalRow[col] : undefined;
+                      
+                      // If user filled, use it
+                      if (userValue !== undefined && userValue !== "" && userValue !== null) {
+                        cleanedRow[col] = userValue;
+                      }
+                      // If original had pre-filled value (not type spec), keep it
+                      else if (originalValue !== undefined && 
+                               typeof originalValue === 'string' && 
+                               originalValue !== "") {
+                        cleanedRow[col] = originalValue;
+                      }
+                      // Otherwise empty string
+                      else {
+                        cleanedRow[col] = "";
+                      }
+                    });
+                    cleanedConditionalRows.push(cleanedRow);
+                  });
+                } else if (originalConditionalRows.length > 0) {
+                  // No user data, clean original rows
+                  originalConditionalRows.forEach((origRow: any) => {
+                    const cleanedRow: any = {};
+                    conditionalTable.columns.forEach((col: string) => {
+                      const cellValue = origRow && typeof origRow === 'object' ? origRow[col] : undefined;
+                      // If type spec, replace with empty string
+                      if (cellValue && typeof cellValue === 'object' && !Array.isArray(cellValue) && cellValue.type) {
+                        cleanedRow[col] = "";
+                      }
+                      // If pre-filled string, keep it
+                      else if (typeof cellValue === 'string') {
+                        cleanedRow[col] = cellValue;
+                      }
+                      // Otherwise empty
+                      else {
+                        cleanedRow[col] = "";
+                      }
+                    });
+                    cleanedConditionalRows.push(cleanedRow);
+                  });
+                } else {
+                  // Create empty row
+                  const emptyRow: any = {};
+                  conditionalTable.columns.forEach((col: string) => {
+                    emptyRow[col] = "";
+                  });
+                  cleanedConditionalRows.push(emptyRow);
+                }
+                
+                reconstructedTemplateDetails[key].conditional[conditionalKey] = {
+                  heading: conditionalTable.heading || "",
+                  columns: conditionalTable.columns || [],
+                  rows: cleanedConditionalRows
+                };
+              }
+            });
+          }
+        }
+        
+        // Handle any other fields - preserve as-is
+        else {
+          reconstructedTemplateDetails[key] = templateElement;
+        }
+      });
+      
+      // Add remarks and attachments
+      reconstructedTemplateDetails.remarks = baseFormData.remarks || "";
+      reconstructedTemplateDetails.attachments = baseFormData.attachments || [];
+      
+      // Handle confirmingpartystatement - preserve structure
+      if (templateDetails.confirmingpartystatement) {
+        if (Array.isArray(templateDetails.confirmingpartystatement)) {
+          reconstructedTemplateDetails.confirmingpartystatement = templateDetails.confirmingpartystatement.map((stmt: any) => ({
+            ...stmt,
+            response: baseFormData.isCertified ? "Yes" : "",
+            checkbox: baseFormData.isCertified ? "Yes" : "" // Also update checkbox field if it exists
+          }));
+        } else if (typeof templateDetails.confirmingpartystatement === 'object') {
+          reconstructedTemplateDetails.confirmingpartystatement = {
+            ...templateDetails.confirmingpartystatement,
+            response: baseFormData.isCertified ? "Yes" : "",
+            checkbox: baseFormData.isCertified ? "Yes" : "" // Also update checkbox field if it exists
+          };
+        }
+      }
+      
+      // Handle confirmingpartydetails - preserve structure, update values
+      if (templateDetails.confirmingpartydetails) {
+        reconstructedTemplateDetails.confirmingpartydetails = {
+          ...templateDetails.confirmingpartydetails,
+          organizationName: baseFormData.organizationName || "",
+          name: baseFormData.name || "",
+          designation: baseFormData.designation || ""
+        };
+      }
+      
+      // Preserve actions if they exist
+      if (templateDetails.actions) {
+        reconstructedTemplateDetails.actions = templateDetails.actions;
+      }
+      
+      // Debug: Log user input data
+      console.log('📤 Sending user inputs to backend:');
+      console.log('  textboxData:', textboxData);
+      console.log('  tableData:', tableData);
+      console.log('  questionResponses:', questionResponses);
+      
+      // Prepare form data for submission - send ONLY raw user inputs
       const formData = {
-        ...baseFormData,
-        ...textboxData,
-        tables: tableData
+        textboxData: textboxData,
+        tableData: tableData,
+        questionResponses: questionResponses
       };
 
       try {
@@ -420,7 +790,7 @@ const ConfirmationForm = () => {
           },
           body: JSON.stringify({
             confirmationId: confirmation.id,
-            formData: formData,
+            formData: formData, // Send raw user inputs (textboxData, tableData, questionResponses)
             remarks: baseFormData.remarks || "",
             attachments: baseFormData.attachments || [],
             name: baseFormData.name || "",
@@ -443,26 +813,48 @@ const ConfirmationForm = () => {
       }
     };
 
+    // Get certification text - handle both object and array formats
+    const getCertificationText = () => {
+      const statement = templateDetails.confirmingpartystatement;
+      if (Array.isArray(statement) && statement[0]?.statement) {
+        return statement[0].statement;
+      } else if (statement && typeof statement === 'object' && statement.statement) {
+        return statement.statement;
+      }
+      return "We certify that the above particulars (read alongwith the attachments if any) are full and correct.";
+    };
+
+    const isCheckboxRequired = () => {
+      const statement = templateDetails.confirmingpartystatement;
+      if (Array.isArray(statement) && statement[0]?.checkboxRequired !== undefined) {
+        return statement[0].checkboxRequired;
+      } else if (statement && typeof statement === 'object' && statement.checkboxRequired !== undefined) {
+        return statement.checkboxRequired;
+      }
+      return true; // Default to required
+    };
+
     return (
       <BaseConfirmationForm
         confirmation={confirmation}
         onSubmit={handleSubmit}
-        certificationText={templateDetails.confirmingpartystatement?.[0]?.statement || "We certify that the above particulars (read alongwith the attachments if any) are full and correct."}
+        certificationText={getCertificationText()}
       >
         <div className="space-y-6">
-          {/* Render elements in the exact order they appear in the JSON */}
+          {/* Render elements in the exact order they appear in the JSON template */}
           {(() => {
-            // Use Object.entries() to preserve order - this is more reliable than Object.keys()
-            // Object.entries() maintains insertion order for string keys in modern JavaScript
+            // Use Object.entries() to preserve order - this maintains insertion order for string keys
+            // in modern JavaScript (ES2015+), which matches the order in the JSON template
+            // The order will be: textbox_1, table_1, table_2, ..., textbox_interest, table_12, question_1, etc.
             const entries = Object.entries(templateDetails);
             
             // Debug: Log the order of keys to verify JSON order is preserved
             const allKeys = entries.map(([key]) => key);
             const elementKeys = entries
-              .filter(([key]) => !['remarks', 'attachments', 'confirmingpartystatement', 'confirmingpartydetails'].includes(key))
+              .filter(([key]) => !['remarks', 'attachments', 'confirmingpartystatement', 'confirmingpartydetails', 'actions'].includes(key))
               .map(([key]) => key);
             console.log('All template keys in order:', allKeys);
-            console.log('Template element keys in order:', elementKeys);
+            console.log('Template element keys in order (will be rendered):', elementKeys);
             
             // Create an array to hold rendered elements in order
             const renderedElements: JSX.Element[] = [];
@@ -470,24 +862,74 @@ const ConfirmationForm = () => {
             // Iterate through entries in order and render each element type as we encounter it
             // This preserves the exact order from the JSON without any grouping or sorting
             for (const [key, value] of entries) {
-              // Skip non-element keys (remarks, attachments, confirmingpartystatement, confirmingpartydetails)
+              // Skip non-element keys (remarks, attachments, confirmingpartystatement, confirmingpartydetails, actions)
+              // These are handled separately by BaseConfirmationForm
               if (key === 'remarks' || key === 'attachments' || 
-                  key === 'confirmingpartystatement' || key === 'confirmingpartydetails') {
+                  key === 'confirmingpartystatement' || key === 'confirmingpartydetails' ||
+                  key === 'actions') {
                 continue;
               }
               
               // Render textboxes in order
               if (key.startsWith('textbox_')) {
-                const text = value as string;
-                if (typeof text === 'string' && text) {
+                // Handle both string and object formats
+                if (typeof value === 'string') {
+                  // If string is empty, make it editable; otherwise display as read-only text
+                  if (value === "" || !value.trim()) {
+                    // Empty textbox - make it editable
+                    console.log(`Rendering editable ${key} at position ${renderedElements.length}`);
+                    renderedElements.push(
+                      <div key={key} className="space-y-2">
+                        <Textarea
+                          value={textboxData[key] || ""}
+                          onChange={(e) => setTextboxData(prev => ({ ...prev, [key]: e.target.value }))}
+                          placeholder="Enter your response..."
+                          rows={4}
+                        />
+                      </div>
+                    );
+                  } else {
+                    // Non-empty string - display as read-only text with placeholders replaced
+                    console.log(`Rendering read-only ${key} at position ${renderedElements.length}`);
+                    renderedElements.push(
+                      <div key={key} className="space-y-2">
+                        <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                          {value.replace(/\[Name of the Recipient\]/g, confirmation.recipientName || "[Name of the Recipient]")
+                                .replace(/\[Recipientname\]/g, confirmation.recipientName || "[Recipient Name]")
+                                .replace(/\[Period-end Date\]/g, confirmation.periodEndDate ? new Date(confirmation.periodEndDate).toLocaleDateString('en-IN') : "[Period-end Date]")
+                                .replace(/\[Period end date\]/g, confirmation.periodEndDate ? new Date(confirmation.periodEndDate).toLocaleDateString('en-IN') : "[Period end date]")
+                                .replace(/\[Period End Date\]/g, confirmation.periodEndDate ? new Date(confirmation.periodEndDate).toLocaleDateString('en-IN') : "[Period End Date]")
+                                .replace(/\[Name of the Client\]/g, confirmation.confirmationFor || "[Name of the Client]")
+                                .replace(/\[Name of Client Company\]/g, confirmation.confirmationFor || "[Name of Client Company]")
+                                .replace(/\[Client Organization\]/g, confirmation.confirmationFor || "[Client Organization]")
+                                .replace(/\[Client Organization name\]/g, confirmation.confirmationFor || "[Client Organization name]")
+                                .replace(/\[Client Organization Name\]/g, confirmation.confirmationFor || "[Client Organization Name]")
+                                .replace(/\[Confirming Party\]/g, confirmation.confirmingParty || confirmation.partydetails?.ConfirmingParty || "[Confirming Party]")}
+                        </p>
+                      </div>
+                    );
+                  }
+                } else if (typeof value === 'object' && value !== null) {
+                  // Handle textbox with heading/description (like textbox_interest)
+                  const textboxObj = value as any;
                   console.log(`Rendering ${key} at position ${renderedElements.length}`);
                   renderedElements.push(
                     <div key={key} className="space-y-2">
-                      <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                        {text.replace(/\[Recipientname\]/g, confirmation.recipientName || confirmation.recipientName || "[Recipient Name]")
-                              .replace(/\[Period-end Date\]/g, confirmation.periodEndDate || "[Period-end Date]")
-                              .replace(/\[Client Organization\]/g, confirmation.confirmationFor || "[Client Organization]")}
-                      </p>
+                      {textboxObj.heading && (
+                        <h3 className="font-semibold">{textboxObj.heading}</h3>
+                      )}
+                      {textboxObj.description && (
+                        <p className="text-sm text-muted-foreground">{textboxObj.description}</p>
+                      )}
+                      {/* Always render textarea if it has heading or description (editable textbox) */}
+                      {(textboxObj.heading || textboxObj.description) && (
+                        <Textarea
+                          value={textboxData[key] || textboxObj.value || ""}
+                          onChange={(e) => setTextboxData(prev => ({ ...prev, [key]: e.target.value }))}
+                          placeholder={textboxObj.description || textboxObj.heading || "Enter your response..."}
+                          rows={4}
+                        />
+                      )}
                     </div>
                   );
                 }
@@ -525,34 +967,214 @@ const ConfirmationForm = () => {
                           <TableBody>
                             {rowsToDisplay.map((row: any, rowIdx: number) => (
                               <TableRow key={rowIdx}>
-                                {table.columns.map((col: string, colIdx: number) => (
-                                  <TableCell key={colIdx}>
-                                    <Input
-                                      value={row[col] || ""}
-                                      onChange={(e) => updateTableCell(key, rowIdx, col, e.target.value)}
-                                      placeholder={col || `Column ${colIdx + 1}`}
-                                    />
-                                  </TableCell>
-                                ))}
+                                {table.columns.map((col: string, colIdx: number) => {
+                                  // Check if this cell has a type specification stored separately
+                                  const cellValue = row[col];
+                                  const cellType = row[`${col}_type`] || null;
+                                  const actualValue = cellValue !== undefined ? cellValue : "";
+                                  
+                                  return (
+                                    <TableCell key={colIdx}>
+                                      {renderTableCell(key, rowIdx, col, actualValue, cellType)}
+                                    </TableCell>
+                                  );
+                                })}
                               </TableRow>
                             ))}
                           </TableBody>
                         </Table>
                       </div>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => addTableRow(key, table.columns)}
-                      >
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add Row
-                      </Button>
+                      {table.addRow !== false && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => addTableRow(key, table.columns)}
+                        >
+                          <Plus className="h-4 w-4 mr-2" />
+                          Add Row
+                        </Button>
+                      )}
+                      {table.footnote && (
+                        <p className="text-xs text-muted-foreground mt-2">{table.footnote}</p>
+                      )}
                       {table.footnote_1 && (
-                        <p className="text-xs text-muted-foreground">{table.footnote_1}</p>
+                        <p className="text-xs text-muted-foreground mt-2">{table.footnote_1}</p>
                       )}
                     </div>
                   );
+                }
+                continue;
+              }
+              
+              // Render questions in order
+              if (key.startsWith('question_')) {
+                const question = value as any;
+                // Render question even if statement is empty (user might need to fill it)
+                if (question) {
+                  const questionKey = key;
+                  // Get response value - check if question has response field with type, or use stored response
+                  const storedResponse = questionResponses[questionKey] || question.response || "";
+                  // If question.response is an object with type, extract the actual value
+                  const response = typeof storedResponse === 'object' && storedResponse !== null && storedResponse.type 
+                    ? questionResponses[questionKey] || "" 
+                    : storedResponse;
+                  
+                  console.log(`Rendering ${key} at position ${renderedElements.length}`);
+                  
+                  // Determine question type - check response.type first, then question.type
+                  const responseType = question.response && typeof question.response === 'object' && question.response.type 
+                    ? question.response.type 
+                    : null;
+                  const questionType = question.type || (responseType ? null : "YesNo");
+                  
+                  // Render the question
+                  renderedElements.push(
+                    <div key={key} className="space-y-2">
+                      {question.statement && (
+                        <Label className="text-base font-medium">{question.statement}</Label>
+                      )}
+                      {/* Check if question has response with dropdown type */}
+                      {responseType === "dropdown" && question.response.options && (
+                        <Select
+                          value={response}
+                          onValueChange={(value) => {
+                            setQuestionResponses(prev => ({ ...prev, [questionKey]: value }));
+                          }}
+                        >
+                          <SelectTrigger className="w-48">
+                            <SelectValue placeholder="Select..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {question.response.options.map((opt: string) => (
+                              <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                      {/* Default to YesNo if no response type specified */}
+                      {(questionType === "YesNo" || (!responseType && !questionType)) && (
+                        <Select
+                          value={response}
+                          onValueChange={(value) => {
+                            setQuestionResponses(prev => ({ ...prev, [questionKey]: value }));
+                          }}
+                        >
+                          <SelectTrigger className="w-48">
+                            <SelectValue placeholder="Select Yes or No" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Yes">Yes</SelectItem>
+                            <SelectItem value="No">No</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      )}
+                    </div>
+                  );
+                  
+                  // Render conditional tables if question response matches showIf
+                  if (question.conditional && question.conditional.showIf) {
+                    const shouldShow = response === question.conditional.showIf;
+                    
+                    if (shouldShow) {
+                      // Render all conditional tables
+                      Object.keys(question.conditional).forEach((conditionalKey) => {
+                        if (conditionalKey !== 'showIf' && conditionalKey.startsWith('table_')) {
+                          const conditionalTable = question.conditional[conditionalKey];
+                          if (conditionalTable && conditionalTable.columns) {
+                            const conditionalTableKey = conditionalKey;
+                            // Initialize table data if it doesn't exist
+                            if (!tableData[conditionalTableKey]) {
+                              const initialRows = conditionalTable.rows && conditionalTable.rows.length > 0 
+                                ? conditionalTable.rows.map((row: any) => {
+                                    // Check if row is a string (empty string from new template format)
+                                    if (typeof row === 'string') {
+                                      // Empty string, create structure from columns
+                                      return Object.fromEntries(conditionalTable.columns.map((col: string) => [col, ""]));
+                                    }
+                                    
+                                    // Check if row is an empty object
+                                    if (typeof row === 'object' && row !== null && !Array.isArray(row) && Object.keys(row).length === 0) {
+                                      // Empty object, create structure from columns
+                                      return Object.fromEntries(conditionalTable.columns.map((col: string) => [col, ""]));
+                                    }
+                                    
+                                    const processedRow: any = {};
+                                    conditionalTable.columns.forEach((col: string) => {
+                                      if (row[col] !== undefined) {
+                                        if (typeof row[col] === 'object' && row[col] !== null && !Array.isArray(row[col]) && row[col].type) {
+                                          processedRow[col] = "";
+                                          processedRow[`${col}_type`] = row[col];
+                                        } else {
+                                          processedRow[col] = row[col];
+                                        }
+                                      } else {
+                                        processedRow[col] = "";
+                                      }
+                                    });
+                                    return processedRow;
+                                  })
+                                : [Object.fromEntries(conditionalTable.columns.map((col: string) => [col, ""]))];
+                              setTableData(prev => ({ ...prev, [conditionalTableKey]: initialRows }));
+                            }
+                            const conditionalRows = tableData[conditionalTableKey] || conditionalTable.rows || [];
+                            const rowsToDisplay = conditionalRows.length > 0 ? conditionalRows :
+                              [Object.fromEntries(conditionalTable.columns.map((col: string) => [col, ""]))];
+                            
+                            renderedElements.push(
+                              <div key={conditionalTableKey} className="space-y-2 mt-4">
+                                {conditionalTable.heading && (
+                                  <h4 className="font-semibold">{conditionalTable.heading}</h4>
+                                )}
+                                {conditionalTable.subheading && (
+                                  <p className="text-sm text-muted-foreground">{conditionalTable.subheading}</p>
+                                )}
+                                <div className="rounded-md border">
+                                  <Table>
+                                    <TableHeader>
+                                      <TableRow>
+                                        {conditionalTable.columns.map((col: string, idx: number) => (
+                                          <TableHead key={idx}>{col}</TableHead>
+                                        ))}
+                                      </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                      {rowsToDisplay.map((row: any, rowIdx: number) => (
+                                        <TableRow key={rowIdx}>
+                                          {conditionalTable.columns.map((col: string, colIdx: number) => {
+                                            const cellValue = row[col];
+                                            const cellType = row[`${col}_type`] || null;
+                                            const actualValue = cellValue !== undefined ? cellValue : "";
+                                            
+                                            return (
+                                              <TableCell key={colIdx}>
+                                                {renderTableCell(conditionalTableKey, rowIdx, col, actualValue, cellType)}
+                                              </TableCell>
+                                            );
+                                          })}
+                                        </TableRow>
+                                      ))}
+                                    </TableBody>
+                                  </Table>
+                                </div>
+                                {conditionalTable.addRow !== false && (
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => addTableRow(conditionalTableKey, conditionalTable.columns)}
+                                  >
+                                    <Plus className="h-4 w-4 mr-2" />
+                                    Add Row
+                                  </Button>
+                                )}
+                              </div>
+                            );
+                          }
+                        }
+                      });
+                    }
+                  }
                 }
                 continue;
               }
@@ -582,6 +1204,10 @@ const ConfirmationForm = () => {
                 }
                 continue;
               }
+              
+              // Handle any other keys that might be in the template
+              // This ensures we don't miss any elements
+              console.log(`Unhandled template key: ${key}`, value);
             }
             
             console.log('Final rendered elements count:', renderedElements.length);

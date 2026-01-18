@@ -1,0 +1,647 @@
+{
+    "TP_BI_001": {
+        "partydetails": {
+            "ConfirmingParty": "Mrs. Morgan Morgan",
+            "Recipientname": "",
+            "RecipientEmail": "",
+            "area": "Cash & Cash Equivalents",
+            "amount": "3365.03",
+            "clientName": "",
+            "clientEmail": "",
+            "periodenddate": "",
+            "templatename": ""
+        },
+        "templateDetails": {
+            "textbox_1": "Dear [Name of the Recipient],\n\nKindly confirm the below balances to us pertaining to the account balances of [Name of the Client] as are held with you as on [Period-end Date]:",
+            "table_1": {
+                "heading": "Current Accounts",
+                "columns": [
+                    "Designation of Account",
+                    "Currency",
+                    "Balance [Credit/(Debit)]"
+                ],
+                "rows": [
+                    {}
+                ],
+                "addRow": true
+            },
+            "table_2": {
+                "heading": "Overdrawn Current Accounts",
+                "subheading": "Overdraft Accounts and Cash Credit Accounts",
+                "columns": [
+                    "Designation of Account",
+                    "Currency",
+                    "Balance (Debit)",
+                    "Security Held*"
+                ],
+                "rows": [
+                    {}
+                ],
+                "addRow": true,
+                "footnote": "*Give brief description of the documents executed with you for the above facilities and in case of securities e.g. shares, bonds or Title Deeds, please list them in full."
+            },
+            "table_3": {
+                "heading": "Loan Accounts",
+                "columns": [
+                    "Designation of Account",
+                    "Currency",
+                    "Balance (Debit)",
+                    "Overdue amount, if any",
+                    "Security Held*"
+                ],
+                "rows": [
+                    {}
+                ],
+                "addRow": true,
+                "footnote": "*Give brief description of the documents executed with you for the above facilities and in case of securities e.g. shares, bonds or Title Deeds, please list them in full."
+            },
+            "table_4": {
+                "heading": "Fixed, Call and Short Deposit Accounts",
+                "columns": [
+                    "Designation of Account",
+                    "Currency",
+                    "Balance (Credit)",
+                    "Interest Accrued till closing date",
+                    "Due Date",
+                    "Particulars for any charges for liens"
+                ],
+                "rows": [
+                    {}
+                ],
+                "addRow": true
+            },
+            "table_5": {
+                "heading": "Investments and other Documents of title held in Safe Custody",
+                "columns": [
+                    "Designation of Account",
+                    "Investment in*",
+                    "Value or number of shares held"
+                ],
+                "rows": [
+                    {}
+                ],
+                "addRow": true,
+                "footnote": "*In case of investments held in D-Mat form, please enclose a statement of holding along with this annexure."
+            },
+            "table_6": {
+                "heading": "Margin against Letters of Credit, Guarantees issued, etc.",
+                "columns": [
+                    "Beneficiary",
+                    "Nature of instrument",
+                    "Term",
+                    "Currency",
+                    "Margin Amount"
+                ],
+                "rows": [
+                    {}
+                ],
+                "addRow": true
+            },
+            "table_7": {
+                "heading": "Bills for Collection",
+                "columns": [
+                    "Designation",
+                    "Currency",
+                    "Amount",
+                    "Due Date"
+                ],
+                "rows": [
+                    {}
+                ],
+                "addRow": true
+            },
+            "table_8": {
+                "heading": "Bills for Collection",
+                "columns": [
+                    "Name of Drawee",
+                    "Currency",
+                    "Amount",
+                    "Due Date"
+                ],
+                "rows": [
+                    {}
+                ],
+                "addRow": true,
+                "footnote": "(Including Trust Receipt facilities, import loans or export bills negotiated etc. with the list of documents obtained for the same)"
+            },
+            "table_9": {
+                "heading": "Letters of Credit",
+                "columns": [
+                    "Letters of credit open and outstanding list of documents for the same in favour of",
+                    "Currency",
+                    "Amount not utilised",
+                    "Term and valid upto"
+                ],
+                "rows": [
+                    {}
+                ],
+                "addRow": true
+            },
+            "table_10a": {
+                "heading": "Guarantees (a)",
+                "columns": [
+                    "Guarantees given on behalf of clients",
+                    "Currency",
+                    "Amount",
+                    "Term and Date of Expiry"
+                ],
+                "rows": [
+                    {}
+                ],
+                "addRow": true
+            },
+            "table_10b": {
+                "heading": "Guarantees (b)",
+                "columns": [
+                    "Letter of support / comfort / awareness details",
+                    "Currency",
+                    "Amount",
+                    "Period",
+                    "Whether in the nature of guarantee by the Company"
+                ],
+                "rows": [
+                    {}
+                ],
+                "addRow": true
+            },
+            "textbox_interest": {
+                "heading": "Interest Accrued",
+                "description": "Please state the amount of interest accrued but not due and not debited by you and interest overdue, if any, stating separately for each account."
+            },
+            "table_12": {
+                "heading": "Derivative Contracts",
+                "subheading": "List of all outstanding derivative contracts such as forward exchange contracts, currency and interest rate options, swaps, etc. as on closing date.",
+                "columns": [
+                    "Nature of Contract",
+                    "Contract Number",
+                    "Deal Date",
+                    "Currency",
+                    "Notional Amount",
+                    "Mark to Market Valuation"
+                ],
+                "rows": [
+                    {}
+                ],
+                "addRow": true
+            },
+            "question_1": {
+                "statement": "Whether the Entity has been declared a \u201cwilful defaulter\u201d or any show cause notice issued to the company under the \u2018Master Circular on Wilful Defaulters\u2019 dated July 1, 2014, as amended, issued by the Reserve Bank of India?",
+                "type": "YesNo"
+            },
+            "remarks": "",
+            "attachments": [],
+            "confirmingpartystatement": {
+                "statement": "We certify that the above particulars (read alongwith the attachments if any) are full and correct and do not exclude any other financial relationship of the entity with us.",
+                "checkboxRequired": true
+            },
+            "confirmingpartydetails": {
+                "organizationName": "tty",
+                "name": "jill",
+                "designation": "hr"
+            },
+            "actions": [
+                "SaveAsDraft",
+                "SendToAuditor"
+            ]
+        },
+        "activityLog": [
+            {
+                "timestamp": "",
+                "stage": "",
+                "action": "",
+                "performedBy": "",
+                "details": "",
+                "status": ""
+            },
+            {
+                "timestamp": "",
+                "stage": "",
+                "action": "",
+                "performedBy": "",
+                "details": "",
+                "status": ""
+            }
+        ],
+        "domaintesting": {
+            "Domain": "",
+            "Status": "",
+            "Creation Date": "",
+            "Expiry Date": "",
+            "Registrar": "",
+            "result": ""
+        },
+        "selectedTemplate": "Cash & Cash Equivalents",
+        "recipientName": "Deepak",
+        "recipientEmail": "percyceptionyt@gmail.com",
+        "selectionsLocked": true,
+        "confirmedBy": "jill",
+        "confirmedDesignation": "hr",
+        "confirmedOrganization": "tty",
+        "confirmedIP": "122.172.83.32",
+        "confirmedAt": "2026-01-08 18:36:38",
+        "submittedAt": "2026-01-08 18:36:38",
+        "status": "submitted"
+    },
+    "TP_BI_002": {
+        "partydetails": {
+            "ConfirmingParty": "Beverly Terrell",
+            "Recipientname": "",
+            "RecipientEmail": "",
+            "area": "Related Party Disclosure",
+            "amount": "2489.19",
+            "clientName": "",
+            "clientEmail": "",
+            "periodenddate": "",
+            "templatename": ""
+        },
+        "templateDetails": {
+            "table_loans_borrowed": {
+                "rows": [
+                    {
+                        "Particulars": "Principal Amount borrowed"
+                    },
+                    {
+                        "Particulars": "Currency"
+                    },
+                    {
+                        "Particulars": "Purpose of loan proceeds utilization"
+                    },
+                    {
+                        "Particulars": "Unutilized loan amount and temporary deployment"
+                    },
+                    {
+                        "Particulars": "Loan amount payable as on [Period end date]"
+                    },
+                    {
+                        "Particulars": "Interest rate and interest amount"
+                    },
+                    {
+                        "Particulars": "Interest payable as on [Period end date]"
+                    },
+                    {
+                        "Particulars": "Overdue amount as on [Period end date]"
+                    },
+                    {
+                        "Particulars": "Principal amounts due within one year"
+                    },
+                    {
+                        "Particulars": "Details of renewals / modifications"
+                    }
+                ]
+            },
+            "table_loans_borrowed_security": {
+                "rows": [
+                    {
+                        "Particulars": "Primary Securities"
+                    },
+                    {
+                        "Particulars": "Collateral Securities"
+                    }
+                ]
+            },
+            "table_loans_given": {
+                "rows": [
+                    {
+                        "Particulars": "Principal Amount given"
+                    },
+                    {
+                        "Particulars": "Currency"
+                    },
+                    {
+                        "Particulars": "Loan amount receivable as on [Period end date]"
+                    },
+                    {
+                        "Particulars": "Interest rate and interest amount"
+                    },
+                    {
+                        "Particulars": "Interest receivable as on [Period end date]"
+                    },
+                    {
+                        "Particulars": "Overdue amount as on [Period end date]"
+                    },
+                    {
+                        "Particulars": "Principal amounts due within one year"
+                    },
+                    {
+                        "Particulars": "Details of renewals / modifications"
+                    }
+                ]
+            },
+            "table_loans_given_security": {
+                "rows": [
+                    {
+                        "Particulars": "Primary Securities"
+                    },
+                    {
+                        "Particulars": "Collateral Securities"
+                    }
+                ]
+            },
+            "table_1": {
+                "rows": [
+                    {
+                        "Sl. No.": "1.",
+                        "Nature of Relationship as at [Period end date]": "Wholly Owned Subsidiary",
+                        "Response": "Yes"
+                    },
+                    {
+                        "Sl. No.": "2.",
+                        "Nature of Relationship as at [Period end date]": "Subsidiary",
+                        "Response": "Yes"
+                    },
+                    {
+                        "Sl. No.": "3.",
+                        "Nature of Relationship as at [Period end date]": "Fellow Subsidiary",
+                        "Response": "Yes"
+                    },
+                    {
+                        "Sl. No.": "4.",
+                        "Nature of Relationship as at [Period end date]": "Joint Venture",
+                        "Response": "Yes"
+                    },
+                    {
+                        "Sl. No.": "5.",
+                        "Nature of Relationship as at [Period end date]": "Associate",
+                        "Response": "Yes"
+                    },
+                    {
+                        "Sl. No.": "6.",
+                        "Nature of Relationship as at [Period end date]": "Key Managerial Personnel [KMP]",
+                        "Response": "Yes"
+                    },
+                    {
+                        "Sl. No.": "7.",
+                        "Nature of Relationship as at [Period end date]": "Relative of KMP",
+                        "Response": "No"
+                    },
+                    {
+                        "Sl. No.": "8.",
+                        "Nature of Relationship as at [Period end date]": "Company in which KMP or his/her relative has significant influence",
+                        "Response": "No"
+                    },
+                    {
+                        "Sl. No.": "9.",
+                        "Nature of Relationship as at [Period end date]": "Any other relationship (not mentioned above)"
+                    },
+                    {
+                        "Sl. No.": "10.",
+                        "Nature of Relationship as at [Period end date]": "Any change in relationship during the year or subsequent to year-end"
+                    }
+                ]
+            },
+            "table_2": {
+                "rows": [
+                    {
+                        "Nature of Transaction": "aa",
+                        "Currency": "aa",
+                        "Amount Involved": "0"
+                    }
+                ]
+            },
+            "table_3": {
+                "rows": [
+                    {
+                        "Nature of balance": "a",
+                        "Currency": "q",
+                        "Amount Outstanding": "0"
+                    }
+                ]
+            },
+            "table_4": {
+                "rows": [
+                    {
+                        "Particulars": "w",
+                        "Currency": "er",
+                        "Amount involved": "0"
+                    }
+                ]
+            },
+            "question_1": {
+                "response": "No"
+            },
+            "question_2": {
+                "response": "No"
+            },
+            "remarks": "rrr",
+            "confirmingpartydetails": {
+                "name": "g",
+                "designation": "g",
+                "organizationName": "g"
+            },
+            "confirmingpartystatement": [
+                {
+                    "response": "Yes"
+                }
+            ]
+        },
+        "activityLog": [
+            {
+                "timestamp": "",
+                "stage": "",
+                "action": "",
+                "performedBy": "",
+                "details": "",
+                "status": ""
+            },
+            {
+                "timestamp": "",
+                "stage": "",
+                "action": "",
+                "performedBy": "",
+                "details": "",
+                "status": ""
+            }
+        ],
+        "domaintesting": {
+            "Domain": "",
+            "Status": "",
+            "Creation Date": "",
+            "Expiry Date": "",
+            "Registrar": "",
+            "result": ""
+        },
+        "selectedTemplate": "Related Party Disclosure",
+        "recipientName": "Alina",
+        "recipientEmail": "1bi23cs169@bit-bangalore.edu.in",
+        "selectionsLocked": true,
+        "confirmedBy": "g",
+        "confirmedDesignation": "g",
+        "confirmedOrganization": "g",
+        "confirmedIP": "49.205.148.121",
+        "confirmedAt": "2026-01-18 01:50:47",
+        "submittedAt": "2026-01-18 01:50:47",
+        "status": "submitted"
+    },
+    "TP_BI_003": {
+        "partydetails": {
+            "ConfirmingParty": "Karen Carroll",
+            "Recipientname": "",
+            "RecipientEmail": "",
+            "area": "Other Receivables - Advance to Supplier",
+            "amount": "244.21",
+            "clientName": "",
+            "clientEmail": "",
+            "periodenddate": "",
+            "templatename": ""
+        },
+        "templateDetails": {
+            "remarks": "tyju",
+            "attachments": [
+                "Confirmation Sampling.docx"
+            ],
+            "confirmingpartydetails": {
+                "name": "gbg",
+                "designation": "gt",
+                "organizationName": "thbvbhb"
+            },
+            "confirmingpartystatement": {
+                "response": "Yes"
+            }
+        },
+        "activityLog": [
+            {
+                "timestamp": "",
+                "stage": "",
+                "action": "",
+                "performedBy": "",
+                "details": "",
+                "status": ""
+            },
+            {
+                "timestamp": "",
+                "stage": "",
+                "action": "",
+                "performedBy": "",
+                "details": "",
+                "status": ""
+            }
+        ],
+        "domaintesting": {
+            "Domain": "",
+            "Status": "",
+            "Creation Date": "",
+            "Expiry Date": "",
+            "Registrar": "",
+            "result": ""
+        },
+        "selectedTemplate": "Other Receivables - Advance to Supplier",
+        "recipientName": "Dav",
+        "recipientEmail": "davacih739@lawior.com",
+        "selectionsLocked": true,
+        "confirmedBy": "gbg",
+        "confirmedDesignation": "gt",
+        "confirmedOrganization": "thbvbhb",
+        "confirmedIP": "122.172.83.32",
+        "confirmedAt": "2026-01-09 01:06:53",
+        "submittedAt": "2026-01-09 01:06:53",
+        "status": "submitted"
+    },
+    "TP_BI_004": {
+        "partydetails": {
+            "ConfirmingParty": "Jacqueline Brown",
+            "Recipientname": "",
+            "RecipientEmail": "",
+            "area": "Other Liabilities - Capex Vendors",
+            "amount": "2861.64",
+            "clientName": "",
+            "clientEmail": "",
+            "periodenddate": "",
+            "templatename": ""
+        },
+        "templateDetails": {
+            "remarks": "fbf",
+            "attachments": [
+                "Confirmation Sampling.docx"
+            ],
+            "confirmingpartydetails": {
+                "name": "dxg",
+                "designation": "nh",
+                "organizationName": "fgh"
+            },
+            "confirmingpartystatement": {
+                "response": "Yes"
+            }
+        },
+        "activityLog": [
+            {
+                "timestamp": "",
+                "stage": "",
+                "action": "",
+                "performedBy": "",
+                "details": "",
+                "status": ""
+            },
+            {
+                "timestamp": "",
+                "stage": "",
+                "action": "",
+                "performedBy": "",
+                "details": "",
+                "status": ""
+            }
+        ],
+        "domaintesting": {
+            "Domain": "",
+            "Status": "",
+            "Creation Date": "",
+            "Expiry Date": "",
+            "Registrar": "",
+            "result": ""
+        },
+        "selectedTemplate": "Other Liabilities - Capex Vendors",
+        "recipientName": "Polin",
+        "recipientEmail": "xy@gmail.com",
+        "selectionsLocked": true,
+        "confirmedBy": "dxg",
+        "confirmedDesignation": "nh",
+        "confirmedOrganization": "fgh",
+        "confirmedIP": "122.172.83.32",
+        "confirmedAt": "2026-01-09 01:13:24",
+        "submittedAt": "2026-01-09 01:13:24",
+        "status": "submitted"
+    },
+    "TP_BI_005": {
+        "partydetails": {
+            "ConfirmingParty": "Erik Wall",
+            "Recipientname": "",
+            "RecipientEmail": "",
+            "area": "Fixed Assets",
+            "amount": "1056.1",
+            "clientName": "",
+            "clientEmail": "",
+            "periodenddate": "",
+            "templatename": ""
+        },
+        "templateDetails": {},
+        "activityLog": [
+            {
+                "timestamp": "",
+                "stage": "",
+                "action": "",
+                "performedBy": "",
+                "details": "",
+                "status": ""
+            },
+            {
+                "timestamp": "",
+                "stage": "",
+                "action": "",
+                "performedBy": "",
+                "details": "",
+                "status": ""
+            }
+        ],
+        "domaintesting": {
+            "Domain": "",
+            "Status": "",
+            "Creation Date": "",
+            "Expiry Date": "",
+            "Registrar": "",
+            "result": ""
+        },
+        "selectedTemplate": "Fixed Assets",
+        "recipientName": "Dav",
+        "recipientEmail": "davacih739@lawior.com",
+        "selectionsLocked": true
+    }
+}
