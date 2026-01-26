@@ -464,6 +464,30 @@ const ConfirmationForm = () => {
     };
 
     const renderTableCell = (tableKey: string, rowIndex: number, column: string, cellValue: any, cellType?: any) => {
+      // For table_1 in Related Party Disclosure, make "Sl. No." and "Nature of Relationship as at [Period end date]" read-only
+      const isReadOnlyColumn = tableKey === 'table_1' && 
+        (column === 'Sl. No.' || column === 'Nature of Relationship as at [Period end date]');
+      
+      // For conditional tables in question_1 and question_2, make "Particulars" column read-only
+      const isReadOnlyParticulars = (tableKey === 'table_loans_borrowed' || 
+                                      tableKey === 'table_loans_given' || 
+                                      tableKey === 'table_loans_borrowed_security' || 
+                                      tableKey === 'table_loans_given_security') && 
+                                     column === 'Particulars';
+      
+      if (isReadOnlyColumn || isReadOnlyParticulars) {
+        // Render as read-only text with placeholder replacement
+        const displayValue = (cellValue || "")
+          .replace(/\[Period end date\]/g, confirmation.periodEndDate ? new Date(confirmation.periodEndDate).toLocaleDateString('en-IN') : "[Period end date]")
+          .replace(/\[Period End Date\]/g, confirmation.periodEndDate ? new Date(confirmation.periodEndDate).toLocaleDateString('en-IN') : "[Period End Date]")
+          .replace(/\[Period-end Date\]/g, confirmation.periodEndDate ? new Date(confirmation.periodEndDate).toLocaleDateString('en-IN') : "[Period-end Date]")
+          .replace(/\[Client Organization Name\]/g, confirmation.confirmationFor || "[Client Organization Name]")
+          .replace(/\[Client Organization name\]/g, confirmation.confirmationFor || "[Client Organization name]");
+        return (
+          <span className="text-sm">{displayValue}</span>
+        );
+      }
+      
       // Check if cell has type specification
       if (cellType && typeof cellType === 'object') {
         if (cellType.type === 'dropdown' && cellType.options) {
@@ -531,6 +555,29 @@ const ConfirmationForm = () => {
       
       console.log('🔄 Starting reconstruction loop...');
       
+      // Check if this template has the Cash & Cash Equivalents / Borrowings structure
+      // (textbox_1, table_1-9, table_10a, table_10b, textbox_interest, table_12, question_1)
+      const hasStandardBankStructure = 
+        templateDetails.textbox_1 && 
+        templateDetails.table_1 && 
+        templateDetails.table_9 && 
+        templateDetails.table_10a && 
+        templateDetails.table_10b && 
+        templateDetails.textbox_interest && 
+        templateDetails.table_12 && 
+        templateDetails.question_1;
+      
+      // Check if this template has the Related Party Disclosure structure
+      // (textbox_1, table_1, table_2, question_1, question_2, table_3, table_4)
+      const hasRelatedPartyStructure = 
+        templateDetails.textbox_1 && 
+        templateDetails.table_1 && 
+        templateDetails.table_2 && 
+        templateDetails.question_1 && 
+        templateDetails.question_2 && 
+        templateDetails.table_3 && 
+        templateDetails.table_4;
+      
       // Use the same sorting logic as rendering to ensure correct order
       const getSortOrder = (key: string): number => {
         const systemFields = ['remarks', 'attachments', 'confirmingpartystatement', 'confirmingpartydetails', 'actions'];
@@ -538,27 +585,48 @@ const ConfirmationForm = () => {
           return 10000 + systemFields.indexOf(key);
         }
         
-        // Explicit order mapping for Cash & Cash Equivalents template
-        const orderMap: Record<string, number> = {
-          'textbox_1': 1,
-          'table_1': 2,
-          'table_2': 3,
-          'table_3': 4,
-          'table_4': 5,
-          'table_5': 6,
-          'table_6': 7,
-          'table_7': 8,
-          'table_8': 9,
-          'table_9': 10,
-          'table_10a': 11,
-          'table_10b': 12,
-          'textbox_interest': 13,
-          'table_12': 14,
-          'question_1': 15
-        };
+        // If template has Related Party Disclosure structure
+        // apply the specific ordering: textbox_1, table_1, table_2, question_1, question_2, table_3, table_4
+        if (hasRelatedPartyStructure) {
+          const orderMap: Record<string, number> = {
+            'textbox_1': 1,
+            'table_1': 2,
+            'table_2': 3,
+            'question_1': 4,
+            'question_2': 5,
+            'table_3': 6,
+            'table_4': 7
+          };
+          
+          if (orderMap[key] !== undefined) {
+            return orderMap[key];
+          }
+        }
         
-        if (orderMap[key] !== undefined) {
-          return orderMap[key];
+        // If template has standard bank structure (Cash & Cash Equivalents, Borrowings, etc.)
+        // apply the specific ordering
+        if (hasStandardBankStructure) {
+          const orderMap: Record<string, number> = {
+            'textbox_1': 1,
+            'table_1': 2,
+            'table_2': 3,
+            'table_3': 4,
+            'table_4': 5,
+            'table_5': 6,
+            'table_6': 7,
+            'table_7': 8,
+            'table_8': 9,
+            'table_9': 10,
+            'table_10a': 11,
+            'table_10b': 12,
+            'textbox_interest': 13,
+            'table_12': 14,
+            'question_1': 15
+          };
+          
+          if (orderMap[key] !== undefined) {
+            return orderMap[key];
+          }
         }
         
         // Fallback for other keys
@@ -951,6 +1019,29 @@ const ConfirmationForm = () => {
             // However, to ensure correct ordering especially for table_10a, table_10b, etc., we'll use a custom sort
             const entries = Object.entries(templateDetails);
             
+            // Check if this template has the Cash & Cash Equivalents / Borrowings structure
+            // (textbox_1, table_1-9, table_10a, table_10b, textbox_interest, table_12, question_1)
+            const hasStandardBankStructure = 
+              templateDetails.textbox_1 && 
+              templateDetails.table_1 && 
+              templateDetails.table_9 && 
+              templateDetails.table_10a && 
+              templateDetails.table_10b && 
+              templateDetails.textbox_interest && 
+              templateDetails.table_12 && 
+              templateDetails.question_1;
+            
+            // Check if this template has the Related Party Disclosure structure
+            // (textbox_1, table_1, table_2, question_1, question_2, table_3, table_4)
+            const hasRelatedPartyStructure = 
+              templateDetails.textbox_1 && 
+              templateDetails.table_1 && 
+              templateDetails.table_2 && 
+              templateDetails.question_1 && 
+              templateDetails.question_2 && 
+              templateDetails.table_3 && 
+              templateDetails.table_4;
+            
             // Define the expected order based on the template structure
             // This ensures tables are in correct numeric order (1, 2, 3, ..., 9, 10a, 10b, 12)
             const getSortOrder = (key: string): number => {
@@ -960,28 +1051,50 @@ const ConfirmationForm = () => {
                 return 10000 + systemFields.indexOf(key);
               }
               
-              // Explicit order mapping for Cash & Cash Equivalents template
-              const orderMap: Record<string, number> = {
-                'textbox_1': 1,
-                'table_1': 2,
-                'table_2': 3,
-                'table_3': 4,
-                'table_4': 5,
-                'table_5': 6,
-                'table_6': 7,
-                'table_7': 8,
-                'table_8': 9,
-                'table_9': 10,
-                'table_10a': 11,
-                'table_10b': 12,
-                'textbox_interest': 13,
-                'table_12': 14,
-                'question_1': 15
-              };
+              // If template has Related Party Disclosure structure
+              // apply the specific ordering: textbox_1, table_1, table_2, question_1, question_2, table_3, table_4
+              if (hasRelatedPartyStructure) {
+                const orderMap: Record<string, number> = {
+                  'textbox_1': 1,
+                  'table_1': 2,
+                  'table_2': 3,
+                  'question_1': 4,
+                  'question_2': 5,
+                  'table_3': 6,
+                  'table_4': 7
+                };
+                
+                // If key is in the order map, use that order
+                if (orderMap[key] !== undefined) {
+                  return orderMap[key];
+                }
+              }
               
-              // If key is in the order map, use that order
-              if (orderMap[key] !== undefined) {
-                return orderMap[key];
+              // If template has standard bank structure (Cash & Cash Equivalents, Borrowings, etc.)
+              // apply the specific ordering
+              if (hasStandardBankStructure) {
+                const orderMap: Record<string, number> = {
+                  'textbox_1': 1,
+                  'table_1': 2,
+                  'table_2': 3,
+                  'table_3': 4,
+                  'table_4': 5,
+                  'table_5': 6,
+                  'table_6': 7,
+                  'table_7': 8,
+                  'table_8': 9,
+                  'table_9': 10,
+                  'table_10a': 11,
+                  'table_10b': 12,
+                  'textbox_interest': 13,
+                  'table_12': 14,
+                  'question_1': 15
+                };
+                
+                // If key is in the order map, use that order
+                if (orderMap[key] !== undefined) {
+                  return orderMap[key];
+                }
               }
               
               // Fallback for other keys - try to extract numeric order
@@ -1366,7 +1479,12 @@ const ConfirmationForm = () => {
                                     </TableBody>
                                   </Table>
                                 </div>
-                                {conditionalTable.addRow !== false && (
+                                {/* Hide Add Row button for specific conditional tables in question_1 and question_2 */}
+                                {conditionalTable.addRow !== false && 
+                                 conditionalTableKey !== 'table_loans_borrowed' &&
+                                 conditionalTableKey !== 'table_loans_given' &&
+                                 conditionalTableKey !== 'table_loans_borrowed_security' &&
+                                 conditionalTableKey !== 'table_loans_given_security' && (
                                   <Button
                                     type="button"
                                     variant="outline"

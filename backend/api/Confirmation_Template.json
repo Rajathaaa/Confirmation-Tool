@@ -351,7 +351,7 @@
       },
 
       "question_1": {
-        "statement": "Whether the Entity has been declared a \"wilful defaulter\" or any show cause notice issued to the company under the 'Master Circular on Wilful Defaulters' dated July 1, 2014, as amended, issued by the Reserve Bank of India?",
+        "statement": "Whether the Entity has been declared a “wilful defaulter” or any show cause notice issued to the company under the ‘Master Circular on Wilful Defaulters’ dated July 1, 2014, as amended, issued by the Reserve Bank of India?",
         "type": "YesNo"
       },
 
@@ -474,7 +474,8 @@
             "Nature of Relationship as at [Period end date]": "Any change in relationship during the year or subsequent to year-end",
             "Response": { "type": "text" }
           }
-        ]
+        ],
+        "addRow": false
       },
 
       "table_2": {
@@ -595,7 +596,7 @@
 
       "confirmingpartystatement": [
         {
-          "statement": "We certify that the above particulars (read alongwith the attachments if any) are full and correct and have been executed at arm's length*.\n\n*The expression arm's length means a transaction between two related parties that is conducted as if they were unrelated, so that there is no conflict of interest.",
+          "statement": "We certify that the above particulars (read alongwith the attachments if any) are full and correct and have been executed at arm’s length*.\n\n*The expression arm’s length means a transaction between two related parties that is conducted as if they were unrelated, so that there is no conflict of interest.",
           "response": ""
         }
       ],

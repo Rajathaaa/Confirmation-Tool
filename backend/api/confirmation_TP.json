@@ -12,279 +12,283 @@
             "templatename": ""
         },
         "templateDetails": {
-            "textbox_1": "Dear [Name of the Recipient],\n\nKindly confirm the below balances to us pertaining to the account balances of [Name of the Client] as are held with you as on [Period-end Date]:",
+            "textbox_1": "Dear [Name of the Recipient],\n\nKindly confirm to us the details required as below in respect of all the transactions between [Client Organization name] and [Confirming Party].",
             "table_1": {
-                "heading": "Current Accounts",
+                "heading": "Nature of relationship with [Client Organization Name]",
                 "subheading": "",
                 "footnote": "",
                 "columns": [
-                    "Designation of Account",
-                    "Currency",
-                    "Balance [Credit/(Debit)]"
+                    "Sl. No.",
+                    "Nature of Relationship as at [Period end date]",
+                    "Response"
                 ],
                 "rows": [
                     {
-                        "Designation of Account": "a3",
-                        "Currency": "a2",
-                        "Balance [Credit/(Debit)]": "a1"
+                        "Sl. No.": "1.",
+                        "Nature of Relationship as at [Period end date]": "Wholly Owned Subsidiary",
+                        "Response": ""
+                    },
+                    {
+                        "Sl. No.": "2.",
+                        "Nature of Relationship as at [Period end date]": "Subsidiary",
+                        "Response": ""
+                    },
+                    {
+                        "Sl. No.": "3.",
+                        "Nature of Relationship as at [Period end date]": "Fellow Subsidiary",
+                        "Response": ""
+                    },
+                    {
+                        "Sl. No.": "4.",
+                        "Nature of Relationship as at [Period end date]": "Joint Venture",
+                        "Response": ""
+                    },
+                    {
+                        "Sl. No.": "5.",
+                        "Nature of Relationship as at [Period end date]": "Associate",
+                        "Response": ""
+                    },
+                    {
+                        "Sl. No.": "6.",
+                        "Nature of Relationship as at [Period end date]": "Key Managerial Personnel [KMP]",
+                        "Response": ""
+                    },
+                    {
+                        "Sl. No.": "7.",
+                        "Nature of Relationship as at [Period end date]": "Relative of KMP",
+                        "Response": ""
+                    },
+                    {
+                        "Sl. No.": "8.",
+                        "Nature of Relationship as at [Period end date]": "Company in which KMP or his/her relative has significant influence",
+                        "Response": ""
+                    },
+                    {
+                        "Sl. No.": "9.",
+                        "Nature of Relationship as at [Period end date]": "Any other relationship (not mentioned above)",
+                        "Response": ""
+                    },
+                    {
+                        "Sl. No.": "10.",
+                        "Nature of Relationship as at [Period end date]": "Any change in relationship during the year or subsequent to year-end",
+                        "Response": ""
                     }
                 ],
-                "addRow": true
+                "addRow": false
             },
             "table_2": {
-                "heading": "Overdrawn Current Accounts",
-                "subheading": "Overdraft Accounts and Cash Credit Accounts",
-                "footnote": "*Give brief description of the documents executed with you for the above facilities and in case of securities e.g. shares, bonds or Title Deeds, please list them in full.",
-                "columns": [
-                    "Designation of Account",
-                    "Currency",
-                    "Balance (Debit)",
-                    "Security Held*"
-                ],
-                "rows": [
-                    {
-                        "Designation of Account": "b4",
-                        "Currency": "b3",
-                        "Balance (Debit)": "b2",
-                        "Security Held*": "b1"
-                    }
-                ],
-                "addRow": true
-            },
-            "table_3": {
-                "heading": "Loan Accounts",
-                "subheading": "",
-                "footnote": "*Give brief description of the documents executed with you for the above facilities and in case of securities e.g. shares, bonds or Title Deeds, please list them in full.",
-                "columns": [
-                    "Designation of Account",
-                    "Currency",
-                    "Balance (Debit)",
-                    "Overdue amount, if any",
-                    "Security Held*"
-                ],
-                "rows": [
-                    {
-                        "Designation of Account": "c4",
-                        "Currency": "c3",
-                        "Balance (Debit)": "c2",
-                        "Overdue amount, if any": "c1",
-                        "Security Held*": "c0"
-                    }
-                ],
-                "addRow": true
-            },
-            "table_4": {
-                "heading": "Fixed, Call and Short Deposit Accounts",
+                "heading": "Details of transactions with [Client Organization Name] during the year ended [Period End Date]",
                 "subheading": "",
                 "footnote": "",
                 "columns": [
-                    "Designation of Account",
+                    "Nature of Transaction",
                     "Currency",
-                    "Balance (Credit)",
-                    "Interest Accrued till closing date",
-                    "Due Date",
-                    "Particulars for any charges for liens"
+                    "Amount Involved"
                 ],
                 "rows": [
                     {
-                        "Designation of Account": "d5",
-                        "Currency": "d4",
-                        "Balance (Credit)": "d3",
-                        "Interest Accrued till closing date": "d2",
-                        "Due Date": "d1",
-                        "Particulars for any charges for liens": "d0"
-                    }
-                ],
-                "addRow": true
-            },
-            "table_5": {
-                "heading": "Investments and other Documents of title held in Safe Custody",
-                "subheading": "",
-                "footnote": "*In case of investments held in D-Mat form, please enclose a statement of holding along with this annexure.",
-                "columns": [
-                    "Designation of Account",
-                    "Investment in*",
-                    "Value or number of shares held"
-                ],
-                "rows": [
-                    {
-                        "Designation of Account": "e3",
-                        "Investment in*": "e2",
-                        "Value or number of shares held": "e1"
-                    }
-                ],
-                "addRow": true
-            },
-            "table_6": {
-                "heading": "Margin against Letters of Credit, Guarantees issued, etc.",
-                "subheading": "",
-                "footnote": "",
-                "columns": [
-                    "Beneficiary",
-                    "Nature of instrument",
-                    "Term",
-                    "Currency",
-                    "Margin Amount"
-                ],
-                "rows": [
-                    {
-                        "Beneficiary": "f5",
-                        "Nature of instrument": "f4",
-                        "Term": "f3",
-                        "Currency": "f2",
-                        "Margin Amount": "f1"
-                    }
-                ],
-                "addRow": true
-            },
-            "table_7": {
-                "heading": "Bills for Collection",
-                "subheading": "",
-                "footnote": "",
-                "columns": [
-                    "Designation",
-                    "Currency",
-                    "Amount",
-                    "Due Date"
-                ],
-                "rows": [
-                    {
-                        "Designation": "g4",
-                        "Currency": "g3",
-                        "Amount": "g2",
-                        "Due Date": "g1"
-                    }
-                ],
-                "addRow": true
-            },
-            "table_8": {
-                "heading": "Bills for Collection",
-                "subheading": "",
-                "footnote": "(Including Trust Receipt facilities, import loans or export bills negotiated etc. with the list of documents obtained for the same)",
-                "columns": [
-                    "Name of Drawee",
-                    "Currency",
-                    "Amount",
-                    "Due Date"
-                ],
-                "rows": [
-                    {
-                        "Name of Drawee": "h4",
-                        "Currency": "h3",
-                        "Amount": "h2",
-                        "Due Date": "h1"
-                    }
-                ],
-                "addRow": true
-            },
-            "table_9": {
-                "heading": "Letters of Credit",
-                "subheading": "",
-                "footnote": "",
-                "columns": [
-                    "Letters of credit open and outstanding list of documents for the same in favour of",
-                    "Currency",
-                    "Amount not utilised",
-                    "Term and valid upto"
-                ],
-                "rows": [
-                    {
-                        "Letters of credit open and outstanding list of documents for the same in favour of": "i3",
-                        "Currency": "i2",
-                        "Amount not utilised": "i1",
-                        "Term and valid upto": "i0"
-                    }
-                ],
-                "addRow": true
-            },
-            "table_10a": {
-                "heading": "Guarantees (a)",
-                "subheading": "",
-                "footnote": "",
-                "columns": [
-                    "Guarantees given on behalf of clients",
-                    "Currency",
-                    "Amount",
-                    "Term and Date of Expiry"
-                ],
-                "rows": [
-                    {
-                        "Guarantees given on behalf of clients": "j4",
-                        "Currency": "j3",
-                        "Amount": "j2",
-                        "Term and Date of Expiry": "j1"
-                    }
-                ],
-                "addRow": true
-            },
-            "table_10b": {
-                "heading": "Guarantees (b)",
-                "subheading": "",
-                "footnote": "",
-                "columns": [
-                    "Letter of support / comfort / awareness details",
-                    "Currency",
-                    "Amount",
-                    "Period",
-                    "Whether in the nature of guarantee by the Company"
-                ],
-                "rows": [
-                    {
-                        "Letter of support / comfort / awareness details": "k4",
-                        "Currency": "k3",
-                        "Amount": "k2",
-                        "Period": "k1",
-                        "Whether in the nature of guarantee by the Company": "k0"
-                    }
-                ],
-                "addRow": true
-            },
-            "textbox_interest": {
-                "description": "Please state the amount of interest accrued but not due and not debited by you and interest overdue, if any, stating separately for each account.",
-                "heading": "Interest Accrued",
-                "value": "LL"
-            },
-            "table_12": {
-                "heading": "Derivative Contracts",
-                "subheading": "List of all outstanding derivative contracts such as forward exchange contracts, currency and interest rate options, swaps, etc. as on closing date.",
-                "footnote": "",
-                "columns": [
-                    "Nature of Contract",
-                    "Contract Number",
-                    "Deal Date",
-                    "Currency",
-                    "Notional Amount",
-                    "Mark to Market Valuation"
-                ],
-                "rows": [
-                    {
-                        "Nature of Contract": "m6",
-                        "Contract Number": "m5",
-                        "Deal Date": "m4",
-                        "Currency": "m3",
-                        "Notional Amount": "m2",
-                        "Mark to Market Valuation": "m1"
+                        "Nature of Transaction": "",
+                        "Currency": "",
+                        "Amount Involved": ""
                     }
                 ],
                 "addRow": true
             },
             "question_1": {
-                "statement": "Whether the Entity has been declared a \u201cwilful defaulter\u201d or any show cause notice issued to the company under the \u2018Master Circular on Wilful Defaulters\u2019 dated July 1, 2014, as amended, issued by the Reserve Bank of India?",
-                "type": "YesNo",
-                "response": "Yes"
+                "conditional": {
+                    "showIf": "Yes",
+                    "table_loans_borrowed": {
+                        "heading": "",
+                        "columns": [
+                            "Particulars",
+                            "Details"
+                        ],
+                        "rows": [
+                            {
+                                "Particulars": "Principal Amount borrowed",
+                                "Details": ""
+                            },
+                            {
+                                "Particulars": "Currency",
+                                "Details": ""
+                            },
+                            {
+                                "Particulars": "Purpose of loan proceeds utilization",
+                                "Details": ""
+                            },
+                            {
+                                "Particulars": "Unutilized loan amount and temporary deployment",
+                                "Details": ""
+                            },
+                            {
+                                "Particulars": "Loan amount payable as on [Period end date]",
+                                "Details": ""
+                            },
+                            {
+                                "Particulars": "Interest rate and interest amount",
+                                "Details": ""
+                            },
+                            {
+                                "Particulars": "Interest payable as on [Period end date]",
+                                "Details": ""
+                            },
+                            {
+                                "Particulars": "Overdue amount as on [Period end date]",
+                                "Details": ""
+                            },
+                            {
+                                "Particulars": "Principal amounts due within one year",
+                                "Details": ""
+                            },
+                            {
+                                "Particulars": "Details of renewals / modifications",
+                                "Details": ""
+                            }
+                        ]
+                    },
+                    "table_loans_borrowed_security": {
+                        "heading": "Details of Security",
+                        "columns": [
+                            "Particulars",
+                            "Nature of Security",
+                            "Value & Currency"
+                        ],
+                        "rows": [
+                            {
+                                "Particulars": "Primary Securities",
+                                "Nature of Security": "",
+                                "Value & Currency": ""
+                            },
+                            {
+                                "Particulars": "Collateral Securities",
+                                "Nature of Security": "",
+                                "Value & Currency": ""
+                            }
+                        ]
+                    }
+                },
+                "response": "No",
+                "statement": "Are there any loans borrowed by [Confirming Party]?"
             },
-            "remarks": "NN",
+            "question_2": {
+                "conditional": {
+                    "showIf": "Yes",
+                    "table_loans_given": {
+                        "heading": "",
+                        "columns": [
+                            "Particulars",
+                            "Details"
+                        ],
+                        "rows": [
+                            {
+                                "Particulars": "Principal Amount given",
+                                "Details": ""
+                            },
+                            {
+                                "Particulars": "Currency",
+                                "Details": ""
+                            },
+                            {
+                                "Particulars": "Loan amount receivable as on [Period end date]",
+                                "Details": ""
+                            },
+                            {
+                                "Particulars": "Interest rate and interest amount",
+                                "Details": ""
+                            },
+                            {
+                                "Particulars": "Interest receivable as on [Period end date]",
+                                "Details": ""
+                            },
+                            {
+                                "Particulars": "Overdue amount as on [Period end date]",
+                                "Details": ""
+                            },
+                            {
+                                "Particulars": "Principal amounts due within one year",
+                                "Details": ""
+                            },
+                            {
+                                "Particulars": "Details of renewals / modifications",
+                                "Details": ""
+                            }
+                        ]
+                    },
+                    "table_loans_given_security": {
+                        "heading": "Details of Security",
+                        "columns": [
+                            "Particulars",
+                            "Nature of Security",
+                            "Value & Currency"
+                        ],
+                        "rows": [
+                            {
+                                "Particulars": "Primary Securities",
+                                "Nature of Security": "",
+                                "Value & Currency": ""
+                            },
+                            {
+                                "Particulars": "Collateral Securities",
+                                "Nature of Security": "",
+                                "Value & Currency": ""
+                            }
+                        ]
+                    }
+                },
+                "response": "No",
+                "statement": "Are there any loans given by [Confirming Party]?"
+            },
+            "table_3": {
+                "heading": "Details of outstanding balances with [Confirming Party] as at [Period-end date]",
+                "subheading": "",
+                "footnote": "",
+                "columns": [
+                    "Nature of balance",
+                    "Currency",
+                    "Amount Outstanding",
+                    "Overdue Amount (if any)"
+                ],
+                "rows": [
+                    {
+                        "Nature of balance": "",
+                        "Currency": "",
+                        "Amount Outstanding": "",
+                        "Overdue Amount (if any)": ""
+                    }
+                ],
+                "addRow": true
+            },
+            "table_4": {
+                "heading": "Details of other items not covered above",
+                "subheading": "",
+                "footnote": "",
+                "columns": [
+                    "Particulars",
+                    "Currency",
+                    "Amount involved"
+                ],
+                "rows": [
+                    {
+                        "Particulars": "",
+                        "Currency": "",
+                        "Amount involved": ""
+                    }
+                ],
+                "addRow": true
+            },
+            "remarks": "",
             "attachments": [],
-            "confirmingpartystatement": {
-                "checkboxRequired": true,
-                "statement": "We certify that the above particulars (read alongwith the attachments if any) are full and correct and do not exclude any other financial relationship of the entity with us.",
-                "response": "Yes",
-                "checkbox": "Yes"
-            },
+            "confirmingpartystatement": [
+                {
+                    "response": "Yes",
+                    "statement": "We certify that the above particulars (read alongwith the attachments if any) are full and correct and have been executed at arm\u2019s length*.\n\n*The expression arm\u2019s length means a transaction between two related parties that is conducted as if they were unrelated, so that there is no conflict of interest.",
+                    "checkbox": "Yes"
+                }
+            ],
             "confirmingpartydetails": {
-                "designation": "o",
-                "name": "o",
-                "organizationName": "o"
+                "designation": "CTO",
+                "name": "Rahil",
+                "organizationName": "Verity"
             },
             "actions": [
                 "SaveAsDraft",
@@ -321,12 +325,12 @@
         "recipientName": "Deepak",
         "recipientEmail": "percyceptionyt@gmail.com",
         "selectionsLocked": true,
-        "confirmedBy": "o",
-        "confirmedDesignation": "o",
-        "confirmedOrganization": "o",
+        "confirmedBy": "Rahil",
+        "confirmedDesignation": "CTO",
+        "confirmedOrganization": "Verity",
         "confirmedIP": "49.205.148.121",
-        "confirmedAt": "2026-01-26 13:20:03",
-        "submittedAt": "2026-01-26 13:20:03",
+        "confirmedAt": "2026-01-26 15:27:27",
+        "submittedAt": "2026-01-26 15:27:27",
         "status": "submitted"
     },
     "TP_BI_002": {
