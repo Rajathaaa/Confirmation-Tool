@@ -105,7 +105,36 @@ const BaseConfirmationFormInner = ({
       submittedAt: new Date().toISOString()
     };
     
-    // Call backend API to submit confirmation (Stage 6)
+    // Call onSubmit with baseFormData first
+    // If it's CustomTemplateForm's handleSubmit, it will handle the submission itself
+    // and return a promise. If it's a regular form, it might not return anything.
+    try {
+      const onSubmitResult = onSubmit({
+        remarks,
+        attachments: attachments.map(f => f.name),
+        name,
+        designation,
+        organizationName,
+        isCertified
+      });
+      
+      // If onSubmit returns a promise (async function), it's handling the submission
+      if (onSubmitResult && typeof onSubmitResult.then === 'function') {
+        // Wait for it to complete - CustomTemplateForm handles everything
+        await onSubmitResult;
+        return; // Don't do default submission
+      }
+    } catch (error: any) {
+      // If onSubmit throws, it might have handled the submission
+      // Check if it's a navigation error (which means submission succeeded)
+      if (error.message && error.message.includes('navigate')) {
+        return; // Submission handled
+      }
+      // Otherwise, continue with default submission below
+      console.error('onSubmit error (continuing with default):', error);
+    }
+    
+    // Default submission (for non-template forms that don't override onSubmit)
     try {
       const response = await fetch('http://localhost:3002/api/submit-confirmation', {
         method: 'POST',
@@ -134,8 +163,6 @@ const BaseConfirmationFormInner = ({
       }
 
       alert("Confirmation submitted successfully!");
-      // Call the onSubmit callback for any additional handling
-      onSubmit(submitData);
       
       // Navigate back to confirmations list
       window.location.href = "/confirming-party/confirmations";

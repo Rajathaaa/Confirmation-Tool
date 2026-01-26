@@ -516,19 +516,89 @@ const ConfirmationForm = () => {
     };
 
     const handleSubmit = async (baseFormData: any) => {
+      console.log('🚀 handleSubmit called - Starting reconstruction');
       // Debug: Log all state data before reconstruction
       console.log('📊 State data before reconstruction:');
       console.log('  textboxData:', textboxData);
       console.log('  tableData:', tableData);
       console.log('  questionResponses:', questionResponses);
       console.log('  baseFormData:', baseFormData);
+      console.log('  templateDetails keys:', Object.keys(templateDetails));
       
       // Reconstruct templateDetails structure exactly matching the template
       // This ensures the JSON saved matches the template structure exactly
       const reconstructedTemplateDetails: any = {};
       
-      // Process each element in templateDetails to preserve structure
-      Object.keys(templateDetails).forEach((key) => {
+      console.log('🔄 Starting reconstruction loop...');
+      
+      // Use the same sorting logic as rendering to ensure correct order
+      const getSortOrder = (key: string): number => {
+        const systemFields = ['remarks', 'attachments', 'confirmingpartystatement', 'confirmingpartydetails', 'actions'];
+        if (systemFields.includes(key)) {
+          return 10000 + systemFields.indexOf(key);
+        }
+        
+        // Explicit order mapping for Cash & Cash Equivalents template
+        const orderMap: Record<string, number> = {
+          'textbox_1': 1,
+          'table_1': 2,
+          'table_2': 3,
+          'table_3': 4,
+          'table_4': 5,
+          'table_5': 6,
+          'table_6': 7,
+          'table_7': 8,
+          'table_8': 9,
+          'table_9': 10,
+          'table_10a': 11,
+          'table_10b': 12,
+          'textbox_interest': 13,
+          'table_12': 14,
+          'question_1': 15
+        };
+        
+        if (orderMap[key] !== undefined) {
+          return orderMap[key];
+        }
+        
+        // Fallback for other keys
+        if (key.startsWith('textbox_')) {
+          if (key === 'textbox_1') return 1;
+          if (key === 'textbox_interest') return 200;
+          const match = key.match(/textbox_(\d+)/);
+          return match ? 100 + parseInt(match[1], 10) : 300;
+        }
+        
+        if (key.startsWith('table_')) {
+          if (key === 'table_10a') return 11;
+          if (key === 'table_10b') return 12;
+          if (key === 'table_12') return 14;
+          const numMatch = key.match(/table_(\d+)/);
+          if (numMatch) {
+            const num = parseInt(numMatch[1], 10);
+            if (num >= 1 && num <= 9) return 1 + num;
+          }
+          return 400;
+        }
+        
+        if (key.startsWith('question_')) {
+          const match = key.match(/question_(\d+)/);
+          return match ? 300 + parseInt(match[1], 10) : 350;
+        }
+        
+        return 500;
+      };
+      
+      // Get all keys and sort them in the correct order
+      const allKeys = Object.keys(templateDetails);
+      const sortedKeys = allKeys.sort((keyA, keyB) => {
+        return getSortOrder(keyA) - getSortOrder(keyB);
+      });
+      
+      console.log('📋 Sorted keys for reconstruction:', sortedKeys);
+      
+      // Process each element in the sorted order to preserve structure
+      sortedKeys.forEach((key) => {
         // Skip system fields - these are handled separately
         if (key === 'remarks' || key === 'attachments' || 
             key === 'confirmingpartystatement' || key === 'confirmingpartydetails' ||
@@ -538,16 +608,12 @@ const ConfirmationForm = () => {
         
         const templateElement = templateDetails[key];
         
-        // Handle textboxes - preserve as string, update with user input if exists
+        // Handle textboxes - ALWAYS include, even if read-only
         if (key.startsWith('textbox_')) {
           if (typeof templateElement === 'string') {
-            // Simple textbox - use user input if provided, otherwise keep original
-            const userValue = textboxData[key];
-            if (userValue !== undefined && userValue !== "") {
-              reconstructedTemplateDetails[key] = userValue;
-            } else {
-              reconstructedTemplateDetails[key] = templateElement;
-            }
+            // Simple textbox - ALWAYS include the original text (even if read-only)
+            // User can only edit if it was empty in the template
+            reconstructedTemplateDetails[key] = templateElement;
           } else if (typeof templateElement === 'object' && templateElement !== null) {
             // Textbox with heading/description - preserve structure, add value if user filled it
             reconstructedTemplateDetails[key] = {
@@ -557,16 +623,22 @@ const ConfirmationForm = () => {
           }
         }
         
-        // Handle tables - ONLY save user inputs, never save type specifications
+        // Handle tables - ALWAYS include, even if empty
         else if (key.startsWith('table_')) {
+          console.log(`  🔧 Processing table: ${key}`);
           const userTableRows = tableData[key] || [];
           const originalRows = templateElement.rows || [];
           
-          // Build table structure with ONLY user inputs
+          console.log(`    User table rows: ${userTableRows.length}, Original rows: ${originalRows.length}`);
+          console.log(`    User table data:`, userTableRows);
+          console.log(`    Original rows:`, originalRows);
+          
+          // Build table structure - ALWAYS include at least one row
           const cleanedRows: any[] = [];
           
           // If user has entered data, use that data
           if (userTableRows.length > 0) {
+            console.log(`    Using user table data (${userTableRows.length} rows)`);
             userTableRows.forEach((userRow: any, rowIndex: number) => {
               const cleanedRow: any = {};
               templateElement.columns.forEach((col: string) => {
@@ -596,6 +668,7 @@ const ConfirmationForm = () => {
           } 
           // If no user data, create rows from template but strip type specs
           else if (originalRows.length > 0) {
+            console.log(`    Using original template rows (${originalRows.length} rows)`);
             originalRows.forEach((origRow: any) => {
               const cleanedRow: any = {};
               templateElement.columns.forEach((col: string) => {
@@ -616,8 +689,10 @@ const ConfirmationForm = () => {
               cleanedRows.push(cleanedRow);
             });
           }
-          // If no original rows either, create one empty row
-          else {
+          
+          // ALWAYS ensure at least one empty row exists (even if all above conditions failed)
+          if (cleanedRows.length === 0) {
+            console.log(`    Creating empty row (no data found)`);
             const emptyRow: any = {};
             templateElement.columns.forEach((col: string) => {
               emptyRow[col] = "";
@@ -625,15 +700,19 @@ const ConfirmationForm = () => {
             cleanedRows.push(emptyRow);
           }
           
-          // Build final table structure - preserve metadata but use cleaned rows
+          console.log(`    Final cleaned rows:`, cleanedRows);
+          
+          // Build final table structure - ALWAYS include with all metadata
           reconstructedTemplateDetails[key] = {
             heading: templateElement.heading || "",
             subheading: templateElement.subheading || "",
             footnote: templateElement.footnote || "",
             columns: templateElement.columns || [],
-            rows: cleanedRows,
-            addRow: templateElement.addRow || false
+            rows: cleanedRows, // Always has at least one row
+            addRow: templateElement.addRow !== undefined ? templateElement.addRow : true
           };
+          
+          console.log(`    ✅ Table ${key} added to reconstructedTemplateDetails with ${cleanedRows.length} rows`);
         }
         
         // Handle questions - preserve structure, update response
@@ -769,35 +848,58 @@ const ConfirmationForm = () => {
         reconstructedTemplateDetails.actions = templateDetails.actions;
       }
       
-      // Debug: Log user input data
-      console.log('📤 Sending user inputs to backend:');
-      console.log('  textboxData:', textboxData);
-      console.log('  tableData:', tableData);
-      console.log('  questionResponses:', questionResponses);
+      // Debug: Log reconstructed template details
+      console.log('📤 Sending reconstructed templateDetails to backend:');
+      console.log('  reconstructedTemplateDetails:', reconstructedTemplateDetails);
+      console.log('  Keys in reconstructedTemplateDetails:', Object.keys(reconstructedTemplateDetails));
       
-      // Prepare form data for submission - send ONLY raw user inputs
-      const formData = {
-        textboxData: textboxData,
-        tableData: tableData,
-        questionResponses: questionResponses
+      // Verify tables are included
+      const tableKeys = Object.keys(reconstructedTemplateDetails).filter(k => k.startsWith('table_'));
+      const textboxKeys = Object.keys(reconstructedTemplateDetails).filter(k => k.startsWith('textbox_'));
+      console.log('  📊 Table keys found:', tableKeys);
+      console.log('  📝 Textbox keys found:', textboxKeys);
+      
+      // Log each table structure
+      tableKeys.forEach(tableKey => {
+        console.log(`  📋 ${tableKey}:`, {
+          columns: reconstructedTemplateDetails[tableKey]?.columns,
+          rowsCount: reconstructedTemplateDetails[tableKey]?.rows?.length,
+          rows: reconstructedTemplateDetails[tableKey]?.rows,
+          addRow: reconstructedTemplateDetails[tableKey]?.addRow
+        });
+      });
+      
+      // Send the full reconstructed templateDetails structure to backend
+      // This ensures all tables, textboxes, and questions are preserved
+      const requestBody = {
+        confirmationId: confirmation.id,
+        templateDetails: reconstructedTemplateDetails, // Send full reconstructed templateDetails structure
+        formData: {
+          textboxData: textboxData,
+          tableData: tableData,
+          questionResponses: questionResponses
+        }, // Also send raw inputs for backward compatibility
+        remarks: baseFormData.remarks || "",
+        attachments: baseFormData.attachments || [],
+        name: baseFormData.name || "",
+        designation: baseFormData.designation || "",
+        organizationName: baseFormData.organizationName || "",
+        status: "submitted"
       };
-
+      
+      // Final verification before sending
+      console.log('🚀 Final request body being sent:');
+      console.log('  Has templateDetails:', !!requestBody.templateDetails);
+      console.log('  templateDetails keys:', requestBody.templateDetails ? Object.keys(requestBody.templateDetails) : 'NONE');
+      console.log('  templateDetails:', JSON.stringify(requestBody.templateDetails, null, 2));
+      
       try {
         const response = await fetch('http://localhost:3002/api/submit-confirmation', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            confirmationId: confirmation.id,
-            formData: formData, // Send raw user inputs (textboxData, tableData, questionResponses)
-            remarks: baseFormData.remarks || "",
-            attachments: baseFormData.attachments || [],
-            name: baseFormData.name || "",
-            designation: baseFormData.designation || "",
-            organizationName: baseFormData.organizationName || "",
-            status: "submitted"
-          }),
+          body: JSON.stringify(requestBody),
         });
 
         if (!response.ok) {
@@ -810,6 +912,7 @@ const ConfirmationForm = () => {
       } catch (error: any) {
         console.error('Error submitting confirmation:', error);
         alert(`Failed to submit confirmation: ${error.message}`);
+        throw error; // Re-throw so BaseConfirmationForm knows submission failed
       }
     };
 
@@ -845,23 +948,122 @@ const ConfirmationForm = () => {
           {(() => {
             // Use Object.entries() to preserve order - this maintains insertion order for string keys
             // in modern JavaScript (ES2015+), which matches the order in the JSON template
-            // The order will be: textbox_1, table_1, table_2, ..., textbox_interest, table_12, question_1, etc.
+            // However, to ensure correct ordering especially for table_10a, table_10b, etc., we'll use a custom sort
             const entries = Object.entries(templateDetails);
             
-            // Debug: Log the order of keys to verify JSON order is preserved
-            const allKeys = entries.map(([key]) => key);
-            const elementKeys = entries
+            // Define the expected order based on the template structure
+            // This ensures tables are in correct numeric order (1, 2, 3, ..., 9, 10a, 10b, 12)
+            const getSortOrder = (key: string): number => {
+              // System fields go to the end
+              const systemFields = ['remarks', 'attachments', 'confirmingpartystatement', 'confirmingpartydetails', 'actions'];
+              if (systemFields.includes(key)) {
+                return 10000 + systemFields.indexOf(key);
+              }
+              
+              // Explicit order mapping for Cash & Cash Equivalents template
+              const orderMap: Record<string, number> = {
+                'textbox_1': 1,
+                'table_1': 2,
+                'table_2': 3,
+                'table_3': 4,
+                'table_4': 5,
+                'table_5': 6,
+                'table_6': 7,
+                'table_7': 8,
+                'table_8': 9,
+                'table_9': 10,
+                'table_10a': 11,
+                'table_10b': 12,
+                'textbox_interest': 13,
+                'table_12': 14,
+                'question_1': 15
+              };
+              
+              // If key is in the order map, use that order
+              if (orderMap[key] !== undefined) {
+                return orderMap[key];
+              }
+              
+              // Fallback for other keys - try to extract numeric order
+              if (key.startsWith('textbox_')) {
+                if (key === 'textbox_1') return 1;
+                if (key === 'textbox_interest') return 200;
+                const match = key.match(/textbox_(\d+)/);
+                return match ? 100 + parseInt(match[1], 10) : 300;
+              }
+              
+              if (key.startsWith('table_')) {
+                // Handle table_10a and table_10b first
+                if (key === 'table_10a') return 11;
+                if (key === 'table_10b') return 12;
+                // Handle table_12
+                if (key === 'table_12') return 14;
+                // Handle table_1 through table_9
+                const numMatch = key.match(/table_(\d+)/);
+                if (numMatch) {
+                  const num = parseInt(numMatch[1], 10);
+                  if (num >= 1 && num <= 9) return 1 + num; // table_1 = 2, table_2 = 3, ..., table_9 = 10
+                }
+                return 400;
+              }
+              
+              if (key.startsWith('question_')) {
+                const match = key.match(/question_(\d+)/);
+                return match ? 300 + parseInt(match[1], 10) : 350;
+              }
+              
+              return 500; // Unknown keys
+            };
+            
+            // Separate system fields from content fields
+            const systemFields = ['remarks', 'attachments', 'confirmingpartystatement', 'confirmingpartydetails', 'actions'];
+            const contentEntries: [string, any][] = [];
+            const systemEntries: [string, any][] = [];
+            
+            entries.forEach(([key, value]) => {
+              if (systemFields.includes(key)) {
+                systemEntries.push([key, value]);
+              } else {
+                contentEntries.push([key, value]);
+              }
+            });
+            
+            // Sort content entries by the defined order
+            contentEntries.sort(([keyA], [keyB]) => {
+              return getSortOrder(keyA) - getSortOrder(keyB);
+            });
+            
+            // Combine: sorted content fields first, then system fields
+            const sortedEntries = [...contentEntries, ...systemEntries];
+            
+            // Debug: Log the order of keys to verify order is correct
+            const allKeys = sortedEntries.map(([key]) => key);
+            const elementKeys = sortedEntries
               .filter(([key]) => !['remarks', 'attachments', 'confirmingpartystatement', 'confirmingpartydetails', 'actions'].includes(key))
               .map(([key]) => key);
             console.log('All template keys in order:', allKeys);
             console.log('Template element keys in order (will be rendered):', elementKeys);
             
+            // Verify table order specifically
+            const tableKeys = elementKeys.filter(k => k.startsWith('table_'));
+            console.log('Table keys in order:', tableKeys);
+            
+            // Check for duplicates
+            const keyCounts: Record<string, number> = {};
+            elementKeys.forEach(key => {
+              keyCounts[key] = (keyCounts[key] || 0) + 1;
+            });
+            const duplicates = Object.entries(keyCounts).filter(([_, count]) => count > 1);
+            if (duplicates.length > 0) {
+              console.warn('⚠️ Duplicate keys found:', duplicates);
+            }
+            
             // Create an array to hold rendered elements in order
             const renderedElements: JSX.Element[] = [];
+            const processedKeys = new Set<string>(); // Track processed keys to prevent duplicates
             
-            // Iterate through entries in order and render each element type as we encounter it
-            // This preserves the exact order from the JSON without any grouping or sorting
-            for (const [key, value] of entries) {
+            // Iterate through sorted entries in order and render each element type as we encounter it
+            for (const [key, value] of sortedEntries) {
               // Skip non-element keys (remarks, attachments, confirmingpartystatement, confirmingpartydetails, actions)
               // These are handled separately by BaseConfirmationForm
               if (key === 'remarks' || key === 'attachments' || 
@@ -869,6 +1071,13 @@ const ConfirmationForm = () => {
                   key === 'actions') {
                 continue;
               }
+              
+              // Prevent duplicate rendering
+              if (processedKeys.has(key)) {
+                console.warn(`⚠️ Skipping duplicate key: ${key}`);
+                continue;
+              }
+              processedKeys.add(key);
               
               // Render textboxes in order
               if (key.startsWith('textbox_')) {

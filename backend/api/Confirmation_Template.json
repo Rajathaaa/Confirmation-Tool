@@ -2,209 +2,377 @@
   "Cash & Cash Equivalents": {
     "templateDetails": {
       "textbox_1": "Dear [Name of the Recipient],\n\nKindly confirm the below balances to us pertaining to the account balances of [Name of the Client] as are held with you as on [Period-end Date]:",
+
       "table_1": {
         "heading": "Current Accounts",
-        "columns": ["Designation of Account", "Currency", "Balance [Credit/(Debit)]"],
+        "columns": [
+          "Designation of Account",
+          "Currency",
+          "Balance [Credit/(Debit)]"
+        ],
         "rows": [{}],
         "addRow": true
       },
+
       "table_2": {
         "heading": "Overdrawn Current Accounts",
         "subheading": "Overdraft Accounts and Cash Credit Accounts",
-        "columns": ["Designation of Account", "Currency", "Balance (Debit)", "Security Held*"],
+        "columns": [
+          "Designation of Account",
+          "Currency",
+          "Balance (Debit)",
+          "Security Held*"
+        ],
         "rows": [{}],
         "addRow": true,
         "footnote": "*Give brief description of the documents executed with you for the above facilities and in case of securities e.g. shares, bonds or Title Deeds, please list them in full."
       },
+
       "table_3": {
         "heading": "Loan Accounts",
-        "columns": ["Designation of Account", "Currency", "Balance (Debit)", "Overdue amount, if any", "Security Held*"],
+        "columns": [
+          "Designation of Account",
+          "Currency",
+          "Balance (Debit)",
+          "Overdue amount, if any",
+          "Security Held*"
+        ],
         "rows": [{}],
         "addRow": true,
         "footnote": "*Give brief description of the documents executed with you for the above facilities and in case of securities e.g. shares, bonds or Title Deeds, please list them in full."
       },
+
       "table_4": {
         "heading": "Fixed, Call and Short Deposit Accounts",
-        "columns": ["Designation of Account", "Currency", "Balance (Credit)", "Interest Accrued till closing date", "Due Date", "Particulars for any charges for liens"],
+        "columns": [
+          "Designation of Account",
+          "Currency",
+          "Balance (Credit)",
+          "Interest Accrued till closing date",
+          "Due Date",
+          "Particulars for any charges for liens"
+        ],
         "rows": [{}],
         "addRow": true
       },
+
       "table_5": {
         "heading": "Investments and other Documents of title held in Safe Custody",
-        "columns": ["Designation of Account", "Investment in*", "Value or number of shares held"],
+        "columns": [
+          "Designation of Account",
+          "Investment in*",
+          "Value or number of shares held"
+        ],
         "rows": [{}],
         "addRow": true,
         "footnote": "*In case of investments held in D-Mat form, please enclose a statement of holding along with this annexure."
       },
+
       "table_6": {
         "heading": "Margin against Letters of Credit, Guarantees issued, etc.",
-        "columns": ["Beneficiary", "Nature of instrument", "Term", "Currency", "Margin Amount"],
+        "columns": [
+          "Beneficiary",
+          "Nature of instrument",
+          "Term",
+          "Currency",
+          "Margin Amount"
+        ],
         "rows": [{}],
         "addRow": true
       },
+
       "table_7": {
         "heading": "Bills for Collection",
-        "columns": ["Designation", "Currency", "Amount", "Due Date"],
+        "columns": [
+          "Designation",
+          "Currency",
+          "Amount",
+          "Due Date"
+        ],
         "rows": [{}],
         "addRow": true
       },
+
       "table_8": {
         "heading": "Bills for Collection",
-        "columns": ["Name of Drawee", "Currency", "Amount", "Due Date"],
+        "columns": [
+          "Name of Drawee",
+          "Currency",
+          "Amount",
+          "Due Date"
+        ],
         "rows": [{}],
         "addRow": true,
         "footnote": "(Including Trust Receipt facilities, import loans or export bills negotiated etc. with the list of documents obtained for the same)"
       },
+
       "table_9": {
         "heading": "Letters of Credit",
-        "columns": ["Letters of credit open and outstanding list of documents for the same in favour of", "Currency", "Amount not utilised", "Term and valid upto"],
+        "columns": [
+          "Letters of credit open and outstanding list of documents for the same in favour of",
+          "Currency",
+          "Amount not utilised",
+          "Term and valid upto"
+        ],
         "rows": [{}],
         "addRow": true
       },
+
       "table_10a": {
         "heading": "Guarantees (a)",
-        "columns": ["Guarantees given on behalf of clients", "Currency", "Amount", "Term and Date of Expiry"],
+        "columns": [
+          "Guarantees given on behalf of clients",
+          "Currency",
+          "Amount",
+          "Term and Date of Expiry"
+        ],
         "rows": [{}],
         "addRow": true
       },
+
       "table_10b": {
         "heading": "Guarantees (b)",
-        "columns": ["Letter of support / comfort / awareness details", "Currency", "Amount", "Period", "Whether in the nature of guarantee by the Company"],
+        "columns": [
+          "Letter of support / comfort / awareness details",
+          "Currency",
+          "Amount",
+          "Period",
+          "Whether in the nature of guarantee by the Company"
+        ],
         "rows": [{}],
         "addRow": true
       },
+
       "textbox_interest": {
         "heading": "Interest Accrued",
         "description": "Please state the amount of interest accrued but not due and not debited by you and interest overdue, if any, stating separately for each account."
       },
+
       "table_12": {
         "heading": "Derivative Contracts",
         "subheading": "List of all outstanding derivative contracts such as forward exchange contracts, currency and interest rate options, swaps, etc. as on closing date.",
-        "columns": ["Nature of Contract", "Contract Number", "Deal Date", "Currency", "Notional Amount", "Mark to Market Valuation"],
+        "columns": [
+          "Nature of Contract",
+          "Contract Number",
+          "Deal Date",
+          "Currency",
+          "Notional Amount",
+          "Mark to Market Valuation"
+        ],
         "rows": [{}],
         "addRow": true
       },
+
       "question_1": {
-        "statement": "Whether the Entity has been declared a \"wilful defaulter\" or any show cause notice issued to the company under the 'Master Circular on Wilful Defaulters' dated July 1, 2014, as amended, issued by the Reserve Bank of India?",
+        "statement": "Whether the Entity has been declared a “wilful defaulter” or any show cause notice issued to the company under the ‘Master Circular on Wilful Defaulters’ dated July 1, 2014, as amended, issued by the Reserve Bank of India?",
         "type": "YesNo"
       },
+
       "remarks": "",
       "attachments": [],
+
       "confirmingpartystatement": {
         "statement": "We certify that the above particulars (read alongwith the attachments if any) are full and correct and do not exclude any other financial relationship of the entity with us.",
         "checkboxRequired": true
       },
+
       "confirmingpartydetails": {
         "organizationName": "",
         "name": "",
         "designation": ""
       },
+
       "actions": ["SaveAsDraft", "SendToAuditor"]
     }
   },
+
   "Borrowings": {
     "templateDetails": {
       "textbox_1": "Dear [Name of the Recipient],\n\nKindly confirm the below balances to us pertaining to the account balances of [Name of the Client] as are held with you as on [Period-end Date]:",
+
       "table_1": {
         "heading": "Current Accounts",
-        "columns": ["Designation of Account", "Currency", "Balance [Credit/(Debit)]"],
+        "columns": [
+          "Designation of Account",
+          "Currency",
+          "Balance [Credit/(Debit)]"
+        ],
         "rows": [{}],
         "addRow": true
       },
+
       "table_2": {
         "heading": "Overdrawn Current Accounts",
         "subheading": "Overdraft Accounts and Cash Credit Accounts",
-        "columns": ["Designation of Account", "Currency", "Balance (Debit)", "Security Held*"],
+        "columns": [
+          "Designation of Account",
+          "Currency",
+          "Balance (Debit)",
+          "Security Held*"
+        ],
         "rows": [{}],
         "addRow": true,
         "footnote": "*Give brief description of the documents executed with you for the above facilities and in case of securities e.g. shares, bonds or Title Deeds, please list them in full."
       },
+
       "table_3": {
         "heading": "Loan Accounts",
-        "columns": ["Designation of Account", "Currency", "Balance (Debit)", "Overdue amount, if any", "Security Held*"],
+        "columns": [
+          "Designation of Account",
+          "Currency",
+          "Balance (Debit)",
+          "Overdue amount, if any",
+          "Security Held*"
+        ],
         "rows": [{}],
         "addRow": true,
         "footnote": "*Give brief description of the documents executed with you for the above facilities and in case of securities e.g. shares, bonds or Title Deeds, please list them in full."
       },
+
       "table_4": {
         "heading": "Fixed, Call and Short Deposit Accounts",
-        "columns": ["Designation of Account", "Currency", "Balance (Credit)", "Interest Accrued till closing date", "Due Date", "Particulars for any charges for liens"],
+        "columns": [
+          "Designation of Account",
+          "Currency",
+          "Balance (Credit)",
+          "Interest Accrued till closing date",
+          "Due Date",
+          "Particulars for any charges for liens"
+        ],
         "rows": [{}],
         "addRow": true
       },
+
       "table_5": {
         "heading": "Investments and other Documents of title held in Safe Custody",
-        "columns": ["Designation of Account", "Investment in*", "Value or number of shares held"],
+        "columns": [
+          "Designation of Account",
+          "Investment in*",
+          "Value or number of shares held"
+        ],
         "rows": [{}],
         "addRow": true,
         "footnote": "*In case of investments held in D-Mat form, please enclose a statement of holding along with this annexure."
       },
+
       "table_6": {
         "heading": "Margin against Letters of Credit, Guarantees issued, etc.",
-        "columns": ["Beneficiary", "Nature of instrument", "Term", "Currency", "Margin Amount"],
+        "columns": [
+          "Beneficiary",
+          "Nature of instrument",
+          "Term",
+          "Currency",
+          "Margin Amount"
+        ],
         "rows": [{}],
         "addRow": true
       },
+
       "table_7": {
         "heading": "Bills for Collection",
-        "columns": ["Designation", "Currency", "Amount", "Due Date"],
+        "columns": [
+          "Designation",
+          "Currency",
+          "Amount",
+          "Due Date"
+        ],
         "rows": [{}],
         "addRow": true
       },
+
       "table_8": {
         "heading": "Bills for Collection",
-        "columns": ["Name of Drawee", "Currency", "Amount", "Due Date"],
+        "columns": [
+          "Name of Drawee",
+          "Currency",
+          "Amount",
+          "Due Date"
+        ],
         "rows": [{}],
         "addRow": true,
         "footnote": "(Including Trust Receipt facilities, import loans or export bills negotiated etc. with the list of documents obtained for the same)"
       },
+
       "table_9": {
         "heading": "Letters of Credit",
-        "columns": ["Letters of credit open and outstanding list of documents for the same in favour of", "Currency", "Amount not utilised", "Term and valid upto"],
+        "columns": [
+          "Letters of credit open and outstanding list of documents for the same in favour of",
+          "Currency",
+          "Amount not utilised",
+          "Term and valid upto"
+        ],
         "rows": [{}],
         "addRow": true
       },
+
       "table_10a": {
         "heading": "Guarantees (a)",
-        "columns": ["Guarantees given on behalf of clients", "Currency", "Amount", "Term and Date of Expiry"],
+        "columns": [
+          "Guarantees given on behalf of clients",
+          "Currency",
+          "Amount",
+          "Term and Date of Expiry"
+        ],
         "rows": [{}],
         "addRow": true
       },
+
       "table_10b": {
         "heading": "Guarantees (b)",
-        "columns": ["Letter of support / comfort / awareness details", "Currency", "Amount", "Period", "Whether in the nature of guarantee by the Company"],
+        "columns": [
+          "Letter of support / comfort / awareness details",
+          "Currency",
+          "Amount",
+          "Period",
+          "Whether in the nature of guarantee by the Company"
+        ],
         "rows": [{}],
         "addRow": true
       },
+
       "textbox_interest": {
         "heading": "Interest Accrued",
         "description": "Please state the amount of interest accrued but not due and not debited by you and interest overdue, if any, stating separately for each account."
       },
+
       "table_12": {
         "heading": "Derivative Contracts",
         "subheading": "List of all outstanding derivative contracts such as forward exchange contracts, currency and interest rate options, swaps, etc. as on closing date.",
-        "columns": ["Nature of Contract", "Contract Number", "Deal Date", "Currency", "Notional Amount", "Mark to Market Valuation"],
+        "columns": [
+          "Nature of Contract",
+          "Contract Number",
+          "Deal Date",
+          "Currency",
+          "Notional Amount",
+          "Mark to Market Valuation"
+        ],
         "rows": [{}],
         "addRow": true
       },
+
       "question_1": {
         "statement": "Whether the Entity has been declared a \"wilful defaulter\" or any show cause notice issued to the company under the 'Master Circular on Wilful Defaulters' dated July 1, 2014, as amended, issued by the Reserve Bank of India?",
         "type": "YesNo"
       },
+
       "remarks": "",
       "attachments": [],
+
       "confirmingpartystatement": {
         "statement": "We certify that the above particulars (read alongwith the attachments if any) are full and correct and do not exclude any other financial relationship of the entity with us.",
         "checkboxRequired": true
       },
+
       "confirmingpartydetails": {
         "organizationName": "",
         "name": "",
         "designation": ""
       },
+
       "actions": ["SaveAsDraft", "SendToAuditor"]
     }
   },
+
   "Litigations & Claims": {
     "templateDetails": {
       "textbox_1": "Dear [Name of the Recipient],\n\nKindly furnish a list that describes and evaluates pending or threatened litigations, claims, and assessments with respect to which you have been engaged and to which you have devoted substantive attention on behalf of [Name of Client Company] in the form of legal consultation or representation.",
@@ -225,6 +393,7 @@
       "actions": ["SaveAsDraft", "SendToAuditor"]
     }
   },
+
   "Inventory": {
     "templateDetails": {
       "textbox_1": "Dear [Name of the Recipient],\n\nKindly confirm to us the list of inventory located at your warehouse as on [Period-end Date] on behalf of [Client Organization].",
@@ -242,12 +411,18 @@
       "actions": ["SaveAsDraft", "SendToAuditor"]
     }
   },
+
   "Related Party Disclosure": {
     "templateDetails": {
       "textbox_1": "Dear [Name of the Recipient],\n\nKindly confirm to us the details required as below in respect of all the transactions between [Client Organization name] and [Confirming Party].",
+
       "table_1": {
         "heading": "Nature of relationship with [Client Organization Name]",
-        "columns": ["Sl. No.", "Nature of Relationship as at [Period end date]", "Response"],
+        "columns": [
+          "Sl. No.",
+          "Nature of Relationship as at [Period end date]",
+          "Response"
+        ],
         "rows": [
           {
             "Sl. No.": "1.",
@@ -301,9 +476,14 @@
           }
         ]
       },
+
       "table_2": {
         "heading": "Details of transactions with [Client Organization Name] during the year ended [Period End Date]",
-        "columns": ["Nature of Transaction", "Currency", "Amount Involved"],
+        "columns": [
+          "Nature of Transaction",
+          "Currency",
+          "Amount Involved"
+        ],
         "rows": [
           {
             "Nature of Transaction": "",
@@ -313,6 +493,7 @@
         ],
         "addRow": true
       },
+
       "question_1": {
         "statement": "Are there any loans borrowed by [Confirming Party]?",
         "response": { "type": "dropdown", "options": ["Yes", "No"] },
@@ -343,6 +524,7 @@
           }
         }
       },
+
       "question_2": {
         "statement": "Are there any loans given by [Confirming Party]?",
         "response": { "type": "dropdown", "options": ["Yes", "No"] },
@@ -371,9 +553,15 @@
           }
         }
       },
+
       "table_3": {
         "heading": "Details of outstanding balances with [Confirming Party] as at [Period-end date]",
-        "columns": ["Nature of balance", "Currency", "Amount Outstanding", "Overdue Amount (if any)"],
+        "columns": [
+          "Nature of balance",
+          "Currency",
+          "Amount Outstanding",
+          "Overdue Amount (if any)"
+        ],
         "rows": [
           {
             "Nature of balance": "",
@@ -384,9 +572,14 @@
         ],
         "addRow": true
       },
+
       "table_4": {
         "heading": "Details of other items not covered above",
-        "columns": ["Particulars", "Currency", "Amount involved"],
+        "columns": [
+          "Particulars",
+          "Currency",
+          "Amount involved"
+        ],
         "rows": [
           {
             "Particulars": "",
@@ -396,244 +589,330 @@
         ],
         "addRow": true
       },
+
       "remarks": "",
       "attachments": [],
+
       "confirmingpartystatement": [
         {
           "statement": "We certify that the above particulars (read alongwith the attachments if any) are full and correct and have been executed at arm's length*.\n\n*The expression arm's length means a transaction between two related parties that is conducted as if they were unrelated, so that there is no conflict of interest.",
           "response": ""
         }
       ],
+
       "confirmingpartydetails": {
         "organizationName": "",
         "name": "",
         "designation": ""
       },
+
       "actions": ["SaveAsDraft", "SendToAuditor"]
     }
   },
+
   "Other Assets - Security Deposits": {
     "templateDetails": {
       "textbox_1": "Dear [Name of the Recipient],\n\nKindly confirm to us the following information in respect of amounts receivable from you in respect of Inter Corporate Deposits / Loans / Advances as on [Period-end Date].",
+
       "table_1": {
-        "columns": ["Amount Due", "Currency", "Rate of Interest", "Interest Accrued", "Collateral if any", "Terms of Repayment"],
+        "columns": [
+          "Amount Due",
+          "Currency",
+          "Rate of Interest",
+          "Interest Accrued",
+          "Collateral if any",
+          "Terms of Repayment"
+        ],
         "rows": [{}],
         "addRow": true
       },
+
       "remarks": "",
       "attachments": [],
+
       "confirmingpartystatement": {
         "statement": "We certify that the above particulars are full and correct and do not exclude any other amount received by us of this nature.",
         "checkboxRequired": true
       },
+
       "confirmingpartydetails": {
         "organizationName": "",
         "name": "",
         "designation": ""
       },
+
       "actions": ["SaveAsDraft", "SendToAuditor"]
     }
   },
+
   "Other Liabilities - Security Deposits": {
     "templateDetails": {
       "textbox_1": "Dear [Name of the Recipient],\n\nKindly confirm to us the following information in respect of amounts payable to you as on [Period-end Date].",
+
       "table_1": {
-        "columns": ["Amount Due", "Amount Overdue if any", "Currency", "Rate of Interest", "Interest Accrued", "Collateral if any", "Terms of Repayment"],
+        "columns": [
+          "Amount Due",
+          "Amount Overdue if any",
+          "Currency",
+          "Rate of Interest",
+          "Interest Accrued",
+          "Collateral if any",
+          "Terms of Repayment"
+        ],
         "rows": [{}],
         "addRow": true
       },
+
       "remarks": "",
       "attachments": [],
+
       "confirmingpartystatement": {
         "statement": "We certify that the above particulars are full and correct and do not exclude any other amount payable to us.",
         "checkboxRequired": true
       },
+
       "confirmingpartydetails": {
         "organizationName": "",
         "name": "",
         "designation": ""
       },
+
       "actions": ["SaveAsDraft", "SendToAuditor"]
     }
   },
+
   "Trade Receivables": {
     "templateDetails": {
       "textbox_1": "Dear [Name of the Recipient],\n\nKindly confirm to us the following information in respect of amounts receivable from you as on [Period-end Date].",
+
       "table_1": {
         "columns": ["Amount", "Currency"],
         "rows": [{}],
         "addRow": true
       },
+
       "remarks": "",
       "attachments": [],
+
       "confirmingpartystatement": {
         "statement": "We certify that the above particulars are full and correct and do not exclude any other amount receivable from us.",
         "checkboxRequired": true
       },
+
       "confirmingpartydetails": {
         "organizationName": "",
         "name": "",
         "designation": ""
       },
+
       "actions": ["SaveAsDraft", "SendToAuditor"]
     }
   },
+
   "Trade Payables": {
     "templateDetails": {
       "textbox_1": "Dear [Name of the Recipient],\n\nKindly confirm to us the following information in respect of amounts payable to you as on [Period-end Date].",
+
       "table_1": {
         "columns": ["Amount", "Currency"],
         "rows": [{}],
         "addRow": true
       },
+
       "remarks": "",
       "attachments": [],
+
       "confirmingpartystatement": {
         "statement": "We certify that the above particulars are full and correct and do not exclude any other amount payable to us.",
         "checkboxRequired": true
       },
+
       "confirmingpartydetails": {
         "organizationName": "",
         "name": "",
         "designation": ""
       },
+
       "actions": ["SaveAsDraft", "SendToAuditor"]
     }
   },
+
   "Plan Assets": {
     "templateDetails": {
       "textbox_1": "Dear [Name of the Recipient],\n\nKindly confirm to us the following information in respect of Plan Assets as on [Period-end Date].\n\nKindly include a statement of account having the contributions made, benefits paid and interest accrued during the year.",
+
       "table_1": {
         "columns": ["Account", "Amount", "Currency"],
         "rows": [{}],
         "addRow": true
       },
+
       "remarks": "",
       "attachments": [],
+
       "confirmingpartystatement": {
         "statement": "We certify that the above particulars are full and correct.",
         "checkboxRequired": true
       },
+
       "confirmingpartydetails": {
         "organizationName": "",
         "name": "",
         "designation": ""
       },
+
       "actions": ["SaveAsDraft", "SendToAuditor"]
     }
   },
+
   "Trustee": {
     "templateDetails": {
       "textbox_1": "Dear [Name of the Recipient],\n\nKindly confirm to us the following information in respect of trust assets held by you as on [Period-end Date].",
+
       "remarks": "",
       "attachments": [],
+
       "confirmingpartystatement": [
         {
           "statement": "We certify that the above particulars (read alongwith the attachments if any) are full and correct.",
           "response": ""
         }
       ],
+
       "confirmingpartydetails": {
         "organizationName": "",
         "name": "",
         "designation": ""
       },
+
       "actions": ["SaveAsDraft", "SendToAuditor"]
     }
   },
+
   "Other Receivables - Advance to Supplier": {
     "templateDetails": {
       "textbox_1": "Dear [Name of the Recipient],\n\nKindly confirm to us the following information in respect of amounts receivable from you in respect of Advances as on [Period-end Date].",
+
       "table_1": {
         "columns": ["Amount", "Currency"],
-        "rows": [{"Amount": "", "Currency": ""}],
+        "rows": [
+          { "Amount": "", "Currency": "" }
+        ],
         "addRow": true
       },
+
       "remarks": "",
       "attachments": [],
+
       "confirmingpartystatement": [
         {
           "statement": "We certify that the above particulars (read alongwith the attachments if any) are full and correct and do not exclude any other amount receivable from us of this nature.",
           "response": ""
         }
       ],
+
       "confirmingpartydetails": {
         "organizationName": "",
         "name": "",
         "designation": ""
       },
+
       "actions": ["SaveAsDraft", "SendToAuditor"]
     }
   },
+
   "Other Receivables - Capital Advances": {
     "templateDetails": {
       "textbox_1": "Dear [Name of the Recipient],\n\nKindly confirm to us the following information in respect of amounts receivable from you in respect of Advances as on [Period-end Date].",
+
       "table_1": {
         "columns": ["Amount", "Currency"],
-        "rows": [{"Amount": "", "Currency": ""}],
+        "rows": [
+          { "Amount": "", "Currency": "" }
+        ],
         "addRow": true
       },
+
       "remarks": "",
       "attachments": [],
+
       "confirmingpartystatement": [
         {
           "statement": "We certify that the above particulars (read alongwith the attachments if any) are full and correct and do not exclude any other amount receivable from us of this nature.",
           "response": ""
         }
       ],
+
       "confirmingpartydetails": {
         "organizationName": "",
         "name": "",
         "designation": ""
       },
+
       "actions": ["SaveAsDraft", "SendToAuditor"]
     }
   },
+
   "Other Liabilities - Advance from Customer": {
     "templateDetails": {
       "textbox_1": "Dear [Name of the Recipient],\n\nKindly confirm to us the following information in respect of amounts payable to you in respect of Advances as on [Period-end Date].",
+
       "table_1": {
         "columns": ["Amount", "Currency"],
-        "rows": [{"Amount": "", "Currency": ""}],
+        "rows": [
+          { "Amount": "", "Currency": "" }
+        ],
         "addRow": true
       },
+
       "remarks": "",
       "attachments": [],
+
       "confirmingpartystatement": [
         {
           "statement": "We certify that the above particulars (read alongwith the attachments if any) are full and correct and do not exclude any other amount payable to us of this nature.",
           "response": ""
         }
       ],
+
       "confirmingpartydetails": {
         "organizationName": "",
         "name": "",
         "designation": ""
       },
+
       "actions": ["SaveAsDraft", "SendToAuditor"]
     }
   },
+
   "Other Liabilities - Capex Vendors": {
     "templateDetails": {
       "textbox_1": "Dear [Name of the Recipient],\n\nKindly confirm to us the following information in respect of amounts payable to you as on [Period-end Date].",
+
       "table_1": {
         "columns": ["Amount", "Currency"],
-        "rows": [{"Amount": "", "Currency": ""}],
+        "rows": [
+          { "Amount": "", "Currency": "" }
+        ],
         "addRow": true
       },
+
       "remarks": "",
       "attachments": [],
+
       "confirmingpartystatement": [
         {
           "statement": "We certify that the above particulars (read alongwith the attachments if any) are full and correct and do not exclude any other amount payable to us of this nature.",
           "response": ""
         }
       ],
+
       "confirmingpartydetails": {
         "organizationName": "",
         "name": "",
         "designation": ""
       },
+
       "actions": ["SaveAsDraft", "SendToAuditor"]
     }
   }

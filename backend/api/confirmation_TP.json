@@ -15,19 +15,26 @@
             "textbox_1": "Dear [Name of the Recipient],\n\nKindly confirm the below balances to us pertaining to the account balances of [Name of the Client] as are held with you as on [Period-end Date]:",
             "table_1": {
                 "heading": "Current Accounts",
+                "subheading": "",
+                "footnote": "",
                 "columns": [
                     "Designation of Account",
                     "Currency",
                     "Balance [Credit/(Debit)]"
                 ],
                 "rows": [
-                    {}
+                    {
+                        "Designation of Account": "a3",
+                        "Currency": "a2",
+                        "Balance [Credit/(Debit)]": "a1"
+                    }
                 ],
                 "addRow": true
             },
             "table_2": {
                 "heading": "Overdrawn Current Accounts",
                 "subheading": "Overdraft Accounts and Cash Credit Accounts",
+                "footnote": "*Give brief description of the documents executed with you for the above facilities and in case of securities e.g. shares, bonds or Title Deeds, please list them in full.",
                 "columns": [
                     "Designation of Account",
                     "Currency",
@@ -35,13 +42,19 @@
                     "Security Held*"
                 ],
                 "rows": [
-                    {}
+                    {
+                        "Designation of Account": "b4",
+                        "Currency": "b3",
+                        "Balance (Debit)": "b2",
+                        "Security Held*": "b1"
+                    }
                 ],
-                "addRow": true,
-                "footnote": "*Give brief description of the documents executed with you for the above facilities and in case of securities e.g. shares, bonds or Title Deeds, please list them in full."
+                "addRow": true
             },
             "table_3": {
                 "heading": "Loan Accounts",
+                "subheading": "",
+                "footnote": "*Give brief description of the documents executed with you for the above facilities and in case of securities e.g. shares, bonds or Title Deeds, please list them in full.",
                 "columns": [
                     "Designation of Account",
                     "Currency",
@@ -50,13 +63,20 @@
                     "Security Held*"
                 ],
                 "rows": [
-                    {}
+                    {
+                        "Designation of Account": "c4",
+                        "Currency": "c3",
+                        "Balance (Debit)": "c2",
+                        "Overdue amount, if any": "c1",
+                        "Security Held*": "c0"
+                    }
                 ],
-                "addRow": true,
-                "footnote": "*Give brief description of the documents executed with you for the above facilities and in case of securities e.g. shares, bonds or Title Deeds, please list them in full."
+                "addRow": true
             },
             "table_4": {
                 "heading": "Fixed, Call and Short Deposit Accounts",
+                "subheading": "",
+                "footnote": "",
                 "columns": [
                     "Designation of Account",
                     "Currency",
@@ -66,25 +86,39 @@
                     "Particulars for any charges for liens"
                 ],
                 "rows": [
-                    {}
+                    {
+                        "Designation of Account": "d5",
+                        "Currency": "d4",
+                        "Balance (Credit)": "d3",
+                        "Interest Accrued till closing date": "d2",
+                        "Due Date": "d1",
+                        "Particulars for any charges for liens": "d0"
+                    }
                 ],
                 "addRow": true
             },
             "table_5": {
                 "heading": "Investments and other Documents of title held in Safe Custody",
+                "subheading": "",
+                "footnote": "*In case of investments held in D-Mat form, please enclose a statement of holding along with this annexure.",
                 "columns": [
                     "Designation of Account",
                     "Investment in*",
                     "Value or number of shares held"
                 ],
                 "rows": [
-                    {}
+                    {
+                        "Designation of Account": "e3",
+                        "Investment in*": "e2",
+                        "Value or number of shares held": "e1"
+                    }
                 ],
-                "addRow": true,
-                "footnote": "*In case of investments held in D-Mat form, please enclose a statement of holding along with this annexure."
+                "addRow": true
             },
             "table_6": {
                 "heading": "Margin against Letters of Credit, Guarantees issued, etc.",
+                "subheading": "",
+                "footnote": "",
                 "columns": [
                     "Beneficiary",
                     "Nature of instrument",
@@ -93,12 +127,20 @@
                     "Margin Amount"
                 ],
                 "rows": [
-                    {}
+                    {
+                        "Beneficiary": "f5",
+                        "Nature of instrument": "f4",
+                        "Term": "f3",
+                        "Currency": "f2",
+                        "Margin Amount": "f1"
+                    }
                 ],
                 "addRow": true
             },
             "table_7": {
                 "heading": "Bills for Collection",
+                "subheading": "",
+                "footnote": "",
                 "columns": [
                     "Designation",
                     "Currency",
@@ -106,12 +148,19 @@
                     "Due Date"
                 ],
                 "rows": [
-                    {}
+                    {
+                        "Designation": "g4",
+                        "Currency": "g3",
+                        "Amount": "g2",
+                        "Due Date": "g1"
+                    }
                 ],
                 "addRow": true
             },
             "table_8": {
                 "heading": "Bills for Collection",
+                "subheading": "",
+                "footnote": "(Including Trust Receipt facilities, import loans or export bills negotiated etc. with the list of documents obtained for the same)",
                 "columns": [
                     "Name of Drawee",
                     "Currency",
@@ -119,13 +168,19 @@
                     "Due Date"
                 ],
                 "rows": [
-                    {}
+                    {
+                        "Name of Drawee": "h4",
+                        "Currency": "h3",
+                        "Amount": "h2",
+                        "Due Date": "h1"
+                    }
                 ],
-                "addRow": true,
-                "footnote": "(Including Trust Receipt facilities, import loans or export bills negotiated etc. with the list of documents obtained for the same)"
+                "addRow": true
             },
             "table_9": {
                 "heading": "Letters of Credit",
+                "subheading": "",
+                "footnote": "",
                 "columns": [
                     "Letters of credit open and outstanding list of documents for the same in favour of",
                     "Currency",
@@ -133,12 +188,19 @@
                     "Term and valid upto"
                 ],
                 "rows": [
-                    {}
+                    {
+                        "Letters of credit open and outstanding list of documents for the same in favour of": "i3",
+                        "Currency": "i2",
+                        "Amount not utilised": "i1",
+                        "Term and valid upto": "i0"
+                    }
                 ],
                 "addRow": true
             },
             "table_10a": {
                 "heading": "Guarantees (a)",
+                "subheading": "",
+                "footnote": "",
                 "columns": [
                     "Guarantees given on behalf of clients",
                     "Currency",
@@ -146,12 +208,19 @@
                     "Term and Date of Expiry"
                 ],
                 "rows": [
-                    {}
+                    {
+                        "Guarantees given on behalf of clients": "j4",
+                        "Currency": "j3",
+                        "Amount": "j2",
+                        "Term and Date of Expiry": "j1"
+                    }
                 ],
                 "addRow": true
             },
             "table_10b": {
                 "heading": "Guarantees (b)",
+                "subheading": "",
+                "footnote": "",
                 "columns": [
                     "Letter of support / comfort / awareness details",
                     "Currency",
@@ -160,17 +229,25 @@
                     "Whether in the nature of guarantee by the Company"
                 ],
                 "rows": [
-                    {}
+                    {
+                        "Letter of support / comfort / awareness details": "k4",
+                        "Currency": "k3",
+                        "Amount": "k2",
+                        "Period": "k1",
+                        "Whether in the nature of guarantee by the Company": "k0"
+                    }
                 ],
                 "addRow": true
             },
             "textbox_interest": {
+                "description": "Please state the amount of interest accrued but not due and not debited by you and interest overdue, if any, stating separately for each account.",
                 "heading": "Interest Accrued",
-                "description": "Please state the amount of interest accrued but not due and not debited by you and interest overdue, if any, stating separately for each account."
+                "value": "LL"
             },
             "table_12": {
                 "heading": "Derivative Contracts",
                 "subheading": "List of all outstanding derivative contracts such as forward exchange contracts, currency and interest rate options, swaps, etc. as on closing date.",
+                "footnote": "",
                 "columns": [
                     "Nature of Contract",
                     "Contract Number",
@@ -180,24 +257,34 @@
                     "Mark to Market Valuation"
                 ],
                 "rows": [
-                    {}
+                    {
+                        "Nature of Contract": "m6",
+                        "Contract Number": "m5",
+                        "Deal Date": "m4",
+                        "Currency": "m3",
+                        "Notional Amount": "m2",
+                        "Mark to Market Valuation": "m1"
+                    }
                 ],
                 "addRow": true
             },
             "question_1": {
                 "statement": "Whether the Entity has been declared a \u201cwilful defaulter\u201d or any show cause notice issued to the company under the \u2018Master Circular on Wilful Defaulters\u2019 dated July 1, 2014, as amended, issued by the Reserve Bank of India?",
-                "type": "YesNo"
+                "type": "YesNo",
+                "response": "Yes"
             },
-            "remarks": "",
+            "remarks": "NN",
             "attachments": [],
             "confirmingpartystatement": {
+                "checkboxRequired": true,
                 "statement": "We certify that the above particulars (read alongwith the attachments if any) are full and correct and do not exclude any other financial relationship of the entity with us.",
-                "checkboxRequired": true
+                "response": "Yes",
+                "checkbox": "Yes"
             },
             "confirmingpartydetails": {
-                "organizationName": "tty",
-                "name": "jill",
-                "designation": "hr"
+                "designation": "o",
+                "name": "o",
+                "organizationName": "o"
             },
             "actions": [
                 "SaveAsDraft",
@@ -234,12 +321,12 @@
         "recipientName": "Deepak",
         "recipientEmail": "percyceptionyt@gmail.com",
         "selectionsLocked": true,
-        "confirmedBy": "jill",
-        "confirmedDesignation": "hr",
-        "confirmedOrganization": "tty",
-        "confirmedIP": "122.172.83.32",
-        "confirmedAt": "2026-01-08 18:36:38",
-        "submittedAt": "2026-01-08 18:36:38",
+        "confirmedBy": "o",
+        "confirmedDesignation": "o",
+        "confirmedOrganization": "o",
+        "confirmedIP": "49.205.148.121",
+        "confirmedAt": "2026-01-26 13:20:03",
+        "submittedAt": "2026-01-26 13:20:03",
         "status": "submitted"
     },
     "TP_BI_002": {
@@ -643,5 +730,95 @@
         "recipientName": "Dav",
         "recipientEmail": "davacih739@lawior.com",
         "selectionsLocked": true
+    },
+    "TP_RA_001": {
+        "partydetails": {
+            "ConfirmingParty": "A",
+            "Recipientname": "",
+            "RecipientEmail": "",
+            "area": "Trade Payables",
+            "amount": "100000.0",
+            "clientName": "",
+            "clientEmail": "",
+            "periodenddate": "",
+            "templatename": ""
+        },
+        "templateDetails": {
+            "table_1": {
+                "heading": "",
+                "subheading": "",
+                "footnote": "",
+                "columns": [
+                    "Amount",
+                    "Currency"
+                ],
+                "rows": [
+                    {
+                        "Amount": "a",
+                        "Currency": "10"
+                    },
+                    {
+                        "Amount": "b",
+                        "Currency": "20"
+                    }
+                ],
+                "addRow": true
+            },
+            "textbox_1": "Dear [Name of the Recipient],\n\nKindly confirm to us the following information in respect of amounts payable to you as on [Period-end Date].",
+            "remarks": "c",
+            "attachments": [],
+            "confirmingpartystatement": {
+                "checkboxRequired": true,
+                "statement": "We certify that the above particulars are full and correct and do not exclude any other amount payable to us.",
+                "response": "Yes",
+                "checkbox": "Yes"
+            },
+            "confirmingpartydetails": {
+                "designation": "f",
+                "name": "e",
+                "organizationName": "d"
+            },
+            "actions": [
+                "SaveAsDraft",
+                "SendToAuditor"
+            ]
+        },
+        "activityLog": [
+            {
+                "timestamp": "",
+                "stage": "",
+                "action": "",
+                "performedBy": "",
+                "details": "",
+                "status": ""
+            },
+            {
+                "timestamp": "",
+                "stage": "",
+                "action": "",
+                "performedBy": "",
+                "details": "",
+                "status": ""
+            }
+        ],
+        "domaintesting": {
+            "Domain": "",
+            "Status": "",
+            "Creation Date": "",
+            "Expiry Date": "",
+            "Registrar": "",
+            "result": ""
+        },
+        "recipientName": "Polin",
+        "recipientEmail": "xy@gmail.com",
+        "selectedTemplate": "Trade Payables",
+        "selectionsLocked": true,
+        "confirmedBy": "e",
+        "confirmedDesignation": "f",
+        "confirmedOrganization": "d",
+        "confirmedIP": "49.205.148.121",
+        "confirmedAt": "2026-01-26 12:32:11",
+        "submittedAt": "2026-01-26 12:32:11",
+        "status": "submitted"
     }
 }

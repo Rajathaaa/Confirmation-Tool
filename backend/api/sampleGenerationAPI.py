@@ -3772,7 +3772,15 @@ def submit_confirmation():
             }), 400
 
         print(f"🚀 Submitting confirmation {confirmation_id} with status: {status}")
+        print(f"📋 Request data keys: {list(data.keys())}")
         print(f"📋 Form data received: {json.dumps(form_data, indent=2)}")
+        print(f"📋 TemplateDetails provided: {template_details_provided is not None}")
+        print(f"📋 TemplateDetails type: {type(template_details_provided)}")
+        print(f"📋 TemplateDetails value: {template_details_provided}")
+        if template_details_provided:
+            print(f"📋 TemplateDetails keys: {list(template_details_provided.keys()) if isinstance(template_details_provided, dict) else 'Not a dict'}")
+        else:
+            print(f"⚠️ WARNING: templateDetails is None or not provided in request!")
         print(f"📋 Remarks: {remarks}")
         print(f"📋 Attachments: {attachments}")
         print(f"📋 Name: {name}, Designation: {designation}, Organization: {organization_name}")
@@ -4133,75 +4141,130 @@ def submit_confirmation():
                             confirmation_file_data[confirmation_file_key]["templateDetails"] = {}
                             print(f"  ✅ Initialized empty templateDetails for entry '{confirmation_file_key}'")
                         
-                        # IGNORE TEMPLATE - ONLY SAVE USER INPUTS FROM form_data
-                        print(f"  ✅ IGNORING template structure - extracting ONLY user inputs from form_data...")
-                        print(f"  📋 Form data keys: {list(form_data.keys())}")
-                        
-                        # Build templateDetails from ONLY user inputs - NO TEMPLATE STRUCTURE
-                        final_template_details = {}
-                        
-                        # Extract textbox inputs
-                        if "textboxData" in form_data and form_data["textboxData"]:
-                            for key, value in form_data["textboxData"].items():
-                                if value and str(value).strip() != "":
-                                    final_template_details[key] = value
-                        
-                        # Extract table inputs - ONLY rows with actual data
-                        if "tableData" in form_data and form_data["tableData"]:
-                            for table_key, table_rows in form_data["tableData"].items():
-                                if table_rows and len(table_rows) > 0:
-                                    cleaned_rows = []
-                                    for row in table_rows:
-                                        cleaned_row = {}
-                                        has_data = False
-                                        for col, val in row.items():
-                                            # Skip type spec keys and empty values
-                                            if not col.endswith("_type") and val and str(val).strip() != "":
-                                                cleaned_row[col] = val
-                                                has_data = True
-                                        if has_data:
-                                            cleaned_rows.append(cleaned_row)
-                                    if cleaned_rows:
-                                        final_template_details[table_key] = {"rows": cleaned_rows}
-                        
-                        # Extract question responses
-                        if "questionResponses" in form_data and form_data["questionResponses"]:
-                            for key, value in form_data["questionResponses"].items():
-                                if value and str(value).strip() != "":
-                                    final_template_details[key] = {"response": value}
-                        
-                        # Add remarks and attachments
-                        if remarks:
-                            final_template_details["remarks"] = remarks
-                        if attachments:
-                            final_template_details["attachments"] = attachments
-                        
-                        # Add confirming party details
-                        final_template_details["confirmingpartydetails"] = {
-                            "name": name or "",
-                            "designation": designation or "",
-                            "organizationName": organization_name or ""
-                        }
-                        
-                        # Add confirming party statement
-                        if status == "submitted":
-                            final_template_details["confirmingpartystatement"] = [{"response": "Yes"}]
+                        # Use templateDetails if provided (from CustomTemplateForm), otherwise extract from form_data
+                        if template_details_provided and isinstance(template_details_provided, dict):
+                            print(f"  ✅ Using provided templateDetails structure (from CustomTemplateForm)")
+                            print(f"  📋 TemplateDetails keys: {list(template_details_provided.keys())}")
+                            
+                            # Log table keys specifically
+                            table_keys = [k for k in template_details_provided.keys() if k.startswith('table_')]
+                            textbox_keys = [k for k in template_details_provided.keys() if k.startswith('textbox_')]
+                            print(f"  📊 Table keys in templateDetails: {table_keys}")
+                            print(f"  📝 Textbox keys in templateDetails: {textbox_keys}")
+                            
+                            # Log each table structure
+                            for table_key in table_keys:
+                                table_data = template_details_provided.get(table_key, {})
+                                print(f"  📋 {table_key}: columns={table_data.get('columns', [])}, rows_count={len(table_data.get('rows', []))}, addRow={table_data.get('addRow', False)}")
+                            
+                            # Use the provided templateDetails directly, but update with user-specific data
+                            import copy
+                            final_template_details = copy.deepcopy(template_details_provided)
+                            
+                            # Update remarks and attachments if provided separately
+                            if remarks:
+                                final_template_details["remarks"] = remarks
+                            if attachments:
+                                final_template_details["attachments"] = attachments
+                            
+                            # Update confirming party details
+                            if "confirmingpartydetails" in final_template_details:
+                                final_template_details["confirmingpartydetails"]["name"] = name or ""
+                                final_template_details["confirmingpartydetails"]["designation"] = designation or ""
+                                final_template_details["confirmingpartydetails"]["organizationName"] = organization_name or ""
+                            else:
+                                final_template_details["confirmingpartydetails"] = {
+                                    "name": name or "",
+                                    "designation": designation or "",
+                                    "organizationName": organization_name or ""
+                                }
+                            
+                            # Update confirming party statement
+                            if "confirmingpartystatement" in final_template_details:
+                                if isinstance(final_template_details["confirmingpartystatement"], list):
+                                    if len(final_template_details["confirmingpartystatement"]) > 0:
+                                        final_template_details["confirmingpartystatement"][0]["response"] = "Yes" if status == "submitted" else ""
+                                elif isinstance(final_template_details["confirmingpartystatement"], dict):
+                                    final_template_details["confirmingpartystatement"]["response"] = "Yes" if status == "submitted" else ""
+                            
+                            # Verify tables are still present after updates
+                            final_table_keys = [k for k in final_template_details.keys() if k.startswith('table_')]
+                            print(f"  💾 Saving full templateDetails structure with {len(final_template_details)} keys")
+                            print(f"  📊 Final table keys after updates: {final_table_keys}")
+                            for table_key in final_table_keys:
+                                table_data = final_template_details.get(table_key, {})
+                                print(f"  📋 Final {table_key}: columns={table_data.get('columns', [])}, rows_count={len(table_data.get('rows', []))}")
                         else:
-                            final_template_details["confirmingpartystatement"] = [{"response": ""}]
-                        
-                        print(f"  ✅ Extracted ONLY user inputs: {list(final_template_details.keys())}")
-                        print(f"  💾 Saving ONLY user inputs - NO template structure")
-                        
-                        # REMOVED ALL TEMPLATE CODE - Only using user inputs from form_data
-                        # Old template merging code has been completely removed
-                        
-                        # final_template_details is already set above from user inputs only
+                            # Fallback: Extract ONLY user inputs from form_data (for backward compatibility)
+                            print(f"  ✅ Extracting ONLY user inputs from form_data (no templateDetails provided)...")
+                            print(f"  📋 Form data keys: {list(form_data.keys())}")
+                            
+                            # Build templateDetails from ONLY user inputs - NO TEMPLATE STRUCTURE
+                            final_template_details = {}
+                            
+                            # Extract textbox inputs
+                            if "textboxData" in form_data and form_data["textboxData"]:
+                                for key, value in form_data["textboxData"].items():
+                                    if value and str(value).strip() != "":
+                                        final_template_details[key] = value
+                            
+                            # Extract table inputs - ONLY rows with actual data
+                            if "tableData" in form_data and form_data["tableData"]:
+                                for table_key, table_rows in form_data["tableData"].items():
+                                    if table_rows and len(table_rows) > 0:
+                                        cleaned_rows = []
+                                        for row in table_rows:
+                                            cleaned_row = {}
+                                            has_data = False
+                                            for col, val in row.items():
+                                                # Skip type spec keys and empty values
+                                                if not col.endswith("_type") and val and str(val).strip() != "":
+                                                    cleaned_row[col] = val
+                                                    has_data = True
+                                            if has_data:
+                                                cleaned_rows.append(cleaned_row)
+                                        if cleaned_rows:
+                                            final_template_details[table_key] = {"rows": cleaned_rows}
+                            
+                            # Extract question responses
+                            if "questionResponses" in form_data and form_data["questionResponses"]:
+                                for key, value in form_data["questionResponses"].items():
+                                    if value and str(value).strip() != "":
+                                        final_template_details[key] = {"response": value}
+                            
+                            # Add remarks and attachments
+                            if remarks:
+                                final_template_details["remarks"] = remarks
+                            if attachments:
+                                final_template_details["attachments"] = attachments
+                            
+                            # Add confirming party details
+                            final_template_details["confirmingpartydetails"] = {
+                                "name": name or "",
+                                "designation": designation or "",
+                                "organizationName": organization_name or ""
+                            }
+                            
+                            # Add confirming party statement
+                            if status == "submitted":
+                                final_template_details["confirmingpartystatement"] = [{"response": "Yes"}]
+                            else:
+                                final_template_details["confirmingpartystatement"] = [{"response": ""}]
+                            
+                            print(f"  ✅ Extracted ONLY user inputs: {list(final_template_details.keys())}")
+                            print(f"  💾 Saving ONLY user inputs - NO template structure")
                         
                         # Save the final templateDetails to confirmation file
                         if final_template_details is not None:
                             confirmation_file_data[confirmation_file_key]["templateDetails"] = final_template_details
                             print(f"  💾 Saved templateDetails to confirmation file")
                             print(f"  📊 Final templateDetails has {len(final_template_details)} keys")
+                            print(f"  📋 Final templateDetails keys: {list(final_template_details.keys())}")
+                            # Debug: Log table keys specifically
+                            table_keys = [k for k in final_template_details.keys() if k.startswith('table_')]
+                            textbox_keys = [k for k in final_template_details.keys() if k.startswith('textbox_')]
+                            print(f"  📊 Table keys found: {table_keys}")
+                            print(f"  📊 Textbox keys found: {textbox_keys}")
                         else:
                             # Even if template_details is empty, save ALL form data
                             print(f"  ⚠️ No template found, but saving ALL form data to templateDetails...")

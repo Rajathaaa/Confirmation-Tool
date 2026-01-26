@@ -41,11 +41,11 @@ const TradeReceivablesForm = ({ confirmation }: { confirmation: any }) => {
       certificationText="We certify that the above particulars (read alongwith the attachments if any) are full and correct and do not exclude any other amount receivable from us of this nature."
       onSubmit={handleSubmit}
     >
-      <p className="text-sm text-muted-foreground mb-4">
-        Kindly confirm to us the following information in respect of amounts receivable from you as on {confirmation.periodEndDate ? formatIndianDate(confirmation.periodEndDate) : "[Period-end Date]"}.
-      </p>
-
       <div className="space-y-4">
+        <p className="text-sm text-muted-foreground">
+          Kindly confirm to us the following information in respect of amounts receivable from you as on {confirmation.periodEndDate ? formatIndianDate(confirmation.periodEndDate) : "[Period-end Date]"}.
+        </p>
+
         <div className="rounded-md border">
           <Table>
             <TableHeader>
