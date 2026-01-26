@@ -3,7 +3,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Upload, Download, Eye, FileText, Send, Lock, CheckCircle, Clock, RotateCcw } from "lucide-react";
@@ -677,28 +676,76 @@ export const WorkingPaper = () => {
     setSelectedConfirmation(null);
   };
 
+  // Handle area selection
+  const handleAreaSelect = (area: string) => {
+    setSelectedArea(area);
+  };
+
+  // Render section category
+  const renderSectionCategory = (title: string, sections: Record<string, string> | undefined) => {
+    if (!sections || Object.keys(sections).length === 0) return null;
+
+    return (
+      <div className="space-y-2">
+        <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-2">
+          {title}
+        </h3>
+        <div className="space-y-1">
+          {Object.keys(sections).map((sectionName) => (
+            <button
+              key={sectionName}
+              onClick={() => handleAreaSelect(sectionName)}
+              className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${
+                selectedArea === sectionName
+                  ? "bg-primary text-primary-foreground font-medium"
+                  : "hover:bg-muted text-foreground"
+              }`}
+            >
+              {sectionName}
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="flex gap-6 h-full">
+      {/* Left Panel - Areas */}
+      <div className="w-64 space-y-4">
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm">Audit Areas</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4 max-h-[calc(100vh-200px)] overflow-y-auto">
+            {isLoadingSections ? (
+              <div className="text-center py-4 text-sm text-muted-foreground">
+                Loading sections...
+              </div>
+            ) : (
+              <>
+                {renderSectionCategory("Planning", sectionsData.Planning)}
+                {renderSectionCategory("Execution", sectionsData.Execution)}
+                {renderSectionCategory("Concluding Procedures", sectionsData.ConcludingProcedures)}
+                {getAllSections(sectionsData).length === 0 && (
+                  <div className="text-center py-4 text-sm text-muted-foreground">
+                    No sections available
+                  </div>
+                )}
+              </>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Main Content */}
+      <div className="flex-1 space-y-6">
         <div>
           <h2 className="text-2xl font-bold">Confirmation Working Paper</h2>
           <p className="text-muted-foreground">
             Review and organize confirmation responses by audit area
           </p>
         </div>
-        <Select value={selectedArea} onValueChange={setSelectedArea} disabled={isLoadingSections}>
-          <SelectTrigger className="w-64">
-            <SelectValue placeholder={isLoadingSections ? "Loading..." : "Select Area"} />
-          </SelectTrigger>
-          <SelectContent>
-            {getAllSections(sectionsData).map((area) => (
-              <SelectItem key={area} value={area}>
-                {area}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
 
       <Card>
         <CardHeader>
@@ -1063,6 +1110,7 @@ export const WorkingPaper = () => {
           </Card>
         </div>
       )}
+      </div>
     </div>
   );
 };
