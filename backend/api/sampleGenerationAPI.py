@@ -3959,37 +3959,40 @@ def submit_confirmation():
                                 confirmation_file_data = {entry.get("sample_id", f"temp_{i}"): {k: v for k, v in entry.items() if k != "sample_id"} for i, entry in enumerate(confirmation_file_data)}
                             print(f"  ✅ Loaded {confirmation_filename} with {len(confirmation_file_data)} entries from {confirmation_file_path}")
                         else:
-                            print(f"  ⚠️ {confirmation_filename} not found at {confirmation_file_path}, trying to download from SharePoint...")
+                            print(f"  ⚠️ {confirmation_filename} not found locally, trying to download from SharePoint...")
                             # Try to download from SharePoint if local file doesn't exist
                             try:
+                                import tempfile
                                 confirmation_file_path_sp = f"{fy_year}/{folder_name}/{sub_folder_name}/{confirmation_filename}"
                                 confirmation_download_url = f"https://graph.microsoft.com/v1.0/drives/{drive_id}/root:/{confirmation_file_path_sp}:/content"
                                 
                                 print(f"  📥 Attempting to download from SharePoint: {confirmation_file_path_sp}")
                                 confirmation_resp = requests.get(confirmation_download_url, headers=headers)
                                 if confirmation_resp.status_code == 200:
-                                    # Save to local file
-                                    with open(confirmation_file_path, "wb") as f:
-                                        f.write(confirmation_resp.content)
-                                    # Read the downloaded file
-                                    with open(confirmation_file_path, "r", encoding="utf-8") as f:
-                                        confirmation_file_data = json.load(f)
+                                    # Use temporary file for download (will be deleted after reading)
+                                    with tempfile.NamedTemporaryFile(mode='wb', suffix='.json', delete=False) as temp_file:
+                                        temp_file.write(confirmation_resp.content)
+                                        temp_file_path = temp_file.name
                                     
-                                    # Convert to dict format if it's a list
-                                    if isinstance(confirmation_file_data, list):
-                                        confirmation_file_data = {entry.get("sample_id", f"temp_{i}"): {k: v for k, v in entry.items() if k != "sample_id"} for i, entry in enumerate(confirmation_file_data)}
-                                    print(f"  ✅ Downloaded and loaded {confirmation_filename} with {len(confirmation_file_data)} entries from SharePoint")
+                                    try:
+                                        # Read the downloaded file
+                                        with open(temp_file_path, "r", encoding="utf-8") as f:
+                                            confirmation_file_data = json.load(f)
+                                        
+                                        # Convert to dict format if it's a list
+                                        if isinstance(confirmation_file_data, list):
+                                            confirmation_file_data = {entry.get("sample_id", f"temp_{i}"): {k: v for k, v in entry.items() if k != "sample_id"} for i, entry in enumerate(confirmation_file_data)}
+                                        print(f"  ✅ Downloaded and loaded {confirmation_filename} with {len(confirmation_file_data)} entries from SharePoint")
+                                    finally:
+                                        # Clean up temporary file
+                                        try:
+                                            os.unlink(temp_file_path)
+                                        except Exception:
+                                            pass
                                 else:
                                     print(f"  ⚠️ Could not download from SharePoint: HTTP {confirmation_resp.status_code}, creating new file")
                             except Exception as download_err:
                                 print(f"  ⚠️ Error downloading from SharePoint: {str(download_err)}, creating new file")
-                                # List files in script_dir for debugging
-                                try:
-                                    files_in_dir = os.listdir(script_dir)
-                                    confirmation_files = [f for f in files_in_dir if f.startswith("confirmation_") and f.endswith(".json")]
-                                    print(f"  📋 Found confirmation files in directory: {confirmation_files}")
-                                except Exception as list_err:
-                                    print(f"  ⚠️ Could not list directory: {str(list_err)}")
                     except Exception as e:
                         print(f"  ⚠️ Error reading {confirmation_filename}: {str(e)}")
                         import traceback
@@ -4316,29 +4319,44 @@ def submit_confirmation():
                         
                         confirmation_file_data[confirmation_file_key]["status"] = status
                         
-                        # Save updated confirmation file to local filesystem
-                        print(f"  💾 Saving templateDetails and confirmation metadata to {confirmation_filename}...")
-                        with open(confirmation_file_path, "w", encoding="utf-8") as f:
-                            json.dump(confirmation_file_data, f, indent=4)
-                        print(f"  ✅ Saved {confirmation_filename} to local filesystem")
-                        
-                        # Upload updated confirmation file back to SharePoint
+                        # Upload updated confirmation file back to SharePoint (using temporary file)
                         try:
+                            import tempfile
                             confirmation_file_path_sp = f"{fy_year}/{folder_name}/{sub_folder_name}/{confirmation_filename}"
                             print(f"  📤 Uploading updated {confirmation_filename} back to SharePoint...")
-                            section_list = [f"confirmation_{area_code}"]
-                            confirmation_file_web_url = jugg(
-                                file_path=confirmation_file_path,
-                                reference_value="",
-                                folder_name=folder_name,
-                                sub_folder_name=sub_folder_name,
-                                fy_year=fy_year,
-                                section_list=section_list,
-                                headers=headers,
-                                site_id=site_id,
-                                drive_id=drive_id
-                            )
-                            print(f"  ✅ Successfully uploaded {confirmation_filename} to SharePoint")
+                            
+                            # Create a temporary directory and file with the correct name
+                            temp_dir = tempfile.mkdtemp()
+                            temp_file_path = os.path.join(temp_dir, confirmation_filename)
+                            
+                            try:
+                                # Write JSON data to temporary file with correct name
+                                with open(temp_file_path, "w", encoding="utf-8") as temp_file:
+                                    json.dump(confirmation_file_data, temp_file, indent=4)
+                                
+                                section_list = [f"confirmation_{area_code}"]
+                                confirmation_file_web_url = jugg(
+                                    file_path=temp_file_path,
+                                    reference_value="",
+                                    folder_name=folder_name,
+                                    sub_folder_name=sub_folder_name,
+                                    fy_year=fy_year,
+                                    section_list=section_list,
+                                    headers=headers,
+                                    site_id=site_id,
+                                    drive_id=drive_id
+                                )
+                                print(f"  ✅ Successfully uploaded {confirmation_filename} to SharePoint")
+                            finally:
+                                # Clean up temporary directory and file
+                                try:
+                                    if os.path.exists(temp_file_path):
+                                        os.unlink(temp_file_path)
+                                    if os.path.exists(temp_dir):
+                                        os.rmdir(temp_dir)
+                                    print(f"  🗑️ Deleted temporary file: {temp_file_path}")
+                                except Exception as cleanup_err:
+                                    print(f"  ⚠️ Could not delete temporary file: {str(cleanup_err)}")
                         except Exception as upload_err:
                             print(f"  ⚠️ Error uploading to SharePoint: {str(upload_err)}")
                             import traceback
@@ -4897,27 +4915,34 @@ def lock_recipient_template_selections():
         if not drive_id:
             raise Exception(f"Library '{doc_library}' not found on site '{site_name}'")
 
-        script_dir = os.path.dirname(os.path.abspath(__file__))
+        import tempfile
         confirmation_filename = f"confirmation_{area_code}.json"
-        temp_file_path = os.path.join(script_dir, confirmation_filename)
         
         file_path_on_sharepoint = f"{fy_year}/{folder_name}/{sub_folder_name}/{confirmation_filename}"
         download_url = f"https://graph.microsoft.com/v1.0/drives/{drive_id}/root:/{file_path_on_sharepoint}:/content"
         
         # Load existing confirmation data
         confirmation_data = {}
+        temp_file_path = None
         try:
             download_resp = requests.get(download_url, headers=headers)
             if download_resp.status_code == 200:
-                # Handle binary download
-                with open(temp_file_path, "wb") as f:
-                    f.write(download_resp.content)
-                with open(temp_file_path, "r", encoding="utf-8") as f:
-                    confirmation_data = json.load(f)
+                # Use temporary file for download
+                with tempfile.NamedTemporaryFile(mode='wb', suffix='.json', delete=False) as temp_file:
+                    temp_file.write(download_resp.content)
+                    temp_file_path = temp_file.name
                 
-                # Convert to dict format if it's a list
-                if isinstance(confirmation_data, list):
-                    confirmation_data = {entry.get("sample_id", f"temp_{i}"): {k: v for k, v in entry.items() if k != "sample_id"} for i, entry in enumerate(confirmation_data)}
+                try:
+                    with open(temp_file_path, "r", encoding="utf-8") as f:
+                        confirmation_data = json.load(f)
+                    
+                    # Convert to dict format if it's a list
+                    if isinstance(confirmation_data, list):
+                        confirmation_data = {entry.get("sample_id", f"temp_{i}"): {k: v for k, v in entry.items() if k != "sample_id"} for i, entry in enumerate(confirmation_data)}
+                finally:
+                    # Clean up download temp file
+                    if temp_file_path and os.path.exists(temp_file_path):
+                        os.unlink(temp_file_path)
         except:
             pass  # Create new if doesn't exist
 
@@ -4942,27 +4967,37 @@ def lock_recipient_template_selections():
                     }
                     print(f"  ✅ Created partydetails with area '{template_name}' for {sample_id}")
 
-        # Save updated data
-        with open(temp_file_path, "w", encoding="utf-8") as f:
-            json.dump(confirmation_data, f, indent=4)
-
-        # Upload to SharePoint
-        section_list = [f"confirmation_{area_code}"]
-        jugg(
-            file_path=temp_file_path,
-            reference_value="",
-            folder_name=folder_name,
-            sub_folder_name=sub_folder_name,
-            fy_year=fy_year,
-            section_list=section_list,
-            headers=headers,
-            site_id=site_id,
-            drive_id=drive_id
-        )
-
-        # Clean up temp file
-        if os.path.exists(temp_file_path):
-            os.remove(temp_file_path)
+        # Save updated data to temporary file for upload (with correct filename)
+        temp_dir = tempfile.mkdtemp()
+        temp_file_path = os.path.join(temp_dir, confirmation_filename)
+        
+        try:
+            # Write JSON data to temporary file with correct name
+            with open(temp_file_path, "w", encoding="utf-8") as temp_file:
+                json.dump(confirmation_data, temp_file, indent=4)
+            
+            # Upload to SharePoint
+            section_list = [f"confirmation_{area_code}"]
+            jugg(
+                file_path=temp_file_path,
+                reference_value="",
+                folder_name=folder_name,
+                sub_folder_name=sub_folder_name,
+                fy_year=fy_year,
+                section_list=section_list,
+                headers=headers,
+                site_id=site_id,
+                drive_id=drive_id
+            )
+        finally:
+            # Clean up temp file and directory
+            try:
+                if os.path.exists(temp_file_path):
+                    os.unlink(temp_file_path)
+                if os.path.exists(temp_dir):
+                    os.rmdir(temp_dir)
+            except Exception:
+                pass
 
         print(f"🎉 Successfully locked recipient/template selections for '{sample_set_name}'")
         return jsonify({
@@ -5027,27 +5062,34 @@ def update_sample_area():
         if not drive_id:
             raise Exception(f"Library '{doc_library}' not found on site '{site_name}'")
 
-        script_dir = os.path.dirname(os.path.abspath(__file__))
+        import tempfile
         confirmation_filename = f"confirmation_{area_code}.json"
-        temp_file_path = os.path.join(script_dir, confirmation_filename)
         
         file_path_on_sharepoint = f"{fy_year}/{folder_name}/{sub_folder_name}/{confirmation_filename}"
         download_url = f"https://graph.microsoft.com/v1.0/drives/{drive_id}/root:/{file_path_on_sharepoint}:/content"
         
         # Load existing confirmation data
         confirmation_data = {}
+        temp_file_path = None
         try:
             download_resp = requests.get(download_url, headers=headers)
             if download_resp.status_code == 200:
-                # Handle binary download
-                with open(temp_file_path, "wb") as f:
-                    f.write(download_resp.content)
-                with open(temp_file_path, "r", encoding="utf-8") as f:
-                    confirmation_data = json.load(f)
+                # Use temporary file for download
+                with tempfile.NamedTemporaryFile(mode='wb', suffix='.json', delete=False) as temp_file:
+                    temp_file.write(download_resp.content)
+                    temp_file_path = temp_file.name
                 
-                # Convert to dict format if it's a list
-                if isinstance(confirmation_data, list):
-                    confirmation_data = {entry.get("sample_id", f"temp_{i}"): {k: v for k, v in entry.items() if k != "sample_id"} for i, entry in enumerate(confirmation_data)}
+                try:
+                    with open(temp_file_path, "r", encoding="utf-8") as f:
+                        confirmation_data = json.load(f)
+                    
+                    # Convert to dict format if it's a list
+                    if isinstance(confirmation_data, list):
+                        confirmation_data = {entry.get("sample_id", f"temp_{i}"): {k: v for k, v in entry.items() if k != "sample_id"} for i, entry in enumerate(confirmation_data)}
+                finally:
+                    # Clean up download temp file
+                    if temp_file_path and os.path.exists(temp_file_path):
+                        os.unlink(temp_file_path)
         except:
             return jsonify({
                 'error': 'Confirmation file not found',
@@ -5071,27 +5113,37 @@ def update_sample_area():
                 }
                 print(f"  ✅ Created partydetails with area '{template_name}' for {sample_id}")
 
-            # Save updated data
-            with open(temp_file_path, "w", encoding="utf-8") as f:
-                json.dump(confirmation_data, f, indent=4)
-
-            # Upload to SharePoint
-            section_list = [f"confirmation_{area_code}"]
-            jugg(
-                file_path=temp_file_path,
-                reference_value="",
-                folder_name=folder_name,
-                sub_folder_name=sub_folder_name,
-                fy_year=fy_year,
-                section_list=section_list,
-                headers=headers,
-                site_id=site_id,
-                drive_id=drive_id
-            )
-
-            # Clean up temp file
-            if os.path.exists(temp_file_path):
-                os.remove(temp_file_path)
+            # Save updated data to temporary file for upload (with correct filename)
+            temp_dir = tempfile.mkdtemp()
+            temp_file_path = os.path.join(temp_dir, confirmation_filename)
+            
+            try:
+                # Write JSON data to temporary file with correct name
+                with open(temp_file_path, "w", encoding="utf-8") as temp_file:
+                    json.dump(confirmation_data, temp_file, indent=4)
+                
+                # Upload to SharePoint
+                section_list = [f"confirmation_{area_code}"]
+                jugg(
+                    file_path=temp_file_path,
+                    reference_value="",
+                    folder_name=folder_name,
+                    sub_folder_name=sub_folder_name,
+                    fy_year=fy_year,
+                    section_list=section_list,
+                    headers=headers,
+                    site_id=site_id,
+                    drive_id=drive_id
+                )
+            finally:
+                # Clean up temp file and directory
+                try:
+                    if os.path.exists(temp_file_path):
+                        os.unlink(temp_file_path)
+                    if os.path.exists(temp_dir):
+                        os.rmdir(temp_dir)
+                except Exception:
+                    pass
 
             print(f"🎉 Successfully updated area for sample {sample_id}")
             return jsonify({
