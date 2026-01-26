@@ -42,23 +42,27 @@ interface Confirmation {
   periodEndDate?: string; // Add this
 }
 
-const AUDIT_AREAS = [
-  "Trade Receivables",
-  "Trade Payables",
-  "Cash & Cash Equivalents",
-  "Litigations & Claims",
-  "Related Party Disclosure",
-  "Borrowings",
-  "Inventory",
-  "Other Assets - Security Deposits",
-  "Other Liabilities - Security Deposits",
-  "Other Receivables - Advance to Supplier",
-  "Other Receivables - Capital Advances",
-  "Other Liabilities - Advance from Customer",
-  "Other Liabilities - Capex Vendors",
-  "Plan Assets",
-  "Trustee",
-];
+// Sections will be loaded from SharePoint
+interface SectionsData {
+  Planning?: Record<string, string>;
+  Execution?: Record<string, string>;
+  ConcludingProcedures?: Record<string, string>;
+}
+
+// Helper function to get all sections as a flat array
+const getAllSections = (sections: SectionsData): string[] => {
+  const allSections: string[] = [];
+  if (sections.Planning) {
+    allSections.push(...Object.keys(sections.Planning));
+  }
+  if (sections.Execution) {
+    allSections.push(...Object.keys(sections.Execution));
+  }
+  if (sections.ConcludingProcedures) {
+    allSections.push(...Object.keys(sections.ConcludingProcedures));
+  }
+  return allSections;
+};
 
 // Convert mockData to Confirmation format
 const mockConfirmations: Record<string, Confirmation[]> = {
@@ -437,16 +441,45 @@ const ConfirmationFormView = ({ confirmation }: { confirmation: Confirmation }) 
 };
 
 export const WorkingPaper = () => {
-  const [selectedArea, setSelectedArea] = useState("Trade Receivables");
+  const [selectedArea, setSelectedArea] = useState<string>("");
   const [selectedConfirmation, setSelectedConfirmation] = useState<Confirmation | null>(null);
   const [resendDialogOpen, setResendDialogOpen] = useState(false);
   const [resendRemarks, setResendRemarks] = useState("");
   const [confirmations, setConfirmations] = useState<Record<string, Confirmation[]>>({});
+  const [sectionsData, setSectionsData] = useState<SectionsData>({});
+  const [isLoadingSections, setIsLoadingSections] = useState(true);
 
-  // Fetch confirmed confirmations from SharePoint on component mount
+  // Fetch sections and confirmed confirmations from SharePoint on component mount
   useEffect(() => {
+    fetchSections();
     fetchConfirmedConfirmations();
   }, []);
+
+  // Fetch sections from SharePoint
+  const fetchSections = async () => {
+    try {
+      setIsLoadingSections(true);
+      const response = await fetch('http://localhost:3002/api/get-sections');
+      if (!response.ok) {
+        throw new Error('Failed to fetch sections');
+      }
+      const result = await response.json();
+      const sections = result.data || {};
+      
+      console.log('📥 Fetched sections from SharePoint:', sections);
+      setSectionsData(sections);
+      
+      // Set the first section as selected if available
+      const allSections = getAllSections(sections);
+      if (allSections.length > 0 && !selectedArea) {
+        setSelectedArea(allSections[0]);
+      }
+    } catch (error: any) {
+      console.error('Error fetching sections:', error);
+    } finally {
+      setIsLoadingSections(false);
+    }
+  };
 
   const fetchConfirmedConfirmations = async () => {
     try {
@@ -653,12 +686,12 @@ export const WorkingPaper = () => {
             Review and organize confirmation responses by audit area
           </p>
         </div>
-        <Select value={selectedArea} onValueChange={setSelectedArea}>
+        <Select value={selectedArea} onValueChange={setSelectedArea} disabled={isLoadingSections}>
           <SelectTrigger className="w-64">
-            <SelectValue />
+            <SelectValue placeholder={isLoadingSections ? "Loading..." : "Select Area"} />
           </SelectTrigger>
           <SelectContent>
-            {AUDIT_AREAS.map((area) => (
+            {getAllSections(sectionsData).map((area) => (
               <SelectItem key={area} value={area}>
                 {area}
               </SelectItem>

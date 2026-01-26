@@ -5459,6 +5459,77 @@ def get_custom_template():
             'message': str(e)
         }), 500
 
+# ======================================
+# API ENDPOINT: GET SECTIONS
+# ======================================
+@app.route('/api/get-sections', methods=['GET'])
+def get_sections():
+    try:
+        # Configuration for Sections.json
+        sections_doc_library = "Test15"
+        sections_fy_year = "Test15_FY25"
+        sections_folder_name = "juggernaut"
+        sections_file_name = "Sections.json"
+        
+        print(f"🚀 Downloading sections file: {sections_file_name}")
+
+        # Get access token
+        access_token = get_access_token()
+        headers = {"Authorization": f"Bearer {access_token}"}
+
+        # Get site ID
+        site_url = f"https://graph.microsoft.com/v1.0/sites/{site_hostname}:{site_path}"
+        site_resp = requests.get(site_url, headers=headers)
+        site_resp.raise_for_status()
+        site_id = site_resp.json()["id"]
+
+        # Get drive ID
+        drives_resp = requests.get(f"https://graph.microsoft.com/v1.0/sites/{site_id}/drives", headers=headers)
+        drives_resp.raise_for_status()
+        drives = drives_resp.json()["value"]
+        drive_id = next((d["id"] for d in drives if d["name"] == sections_doc_library), None)
+
+        if not drive_id:
+            raise Exception(f"Library '{sections_doc_library}' not found in site '{site_path}'")
+
+        # Download file from SharePoint
+        download_url = f"https://graph.microsoft.com/v1.0/drives/{drive_id}/root:/{sections_fy_year}/{sections_folder_name}/{sections_file_name}:/content"
+        
+        try:
+            download_resp = requests.get(download_url, headers=headers)
+            download_resp.raise_for_status()
+            
+            # Read the JSON content
+            sections_data = download_resp.json()
+            
+            print(f"✅ Successfully downloaded {sections_file_name}")
+            
+            return jsonify({
+                'success': True,
+                'message': 'Successfully downloaded sections data',
+                'data': sections_data
+            })
+        except requests.exceptions.HTTPError as e:
+            if e.response.status_code == 404:
+                # File doesn't exist, return error
+                print(f"❌ File {sections_file_name} does not exist on SharePoint")
+                return jsonify({
+                    'success': False,
+                    'error': 'File not found',
+                    'message': f'File {sections_file_name} does not exist on SharePoint'
+                }), 404
+            else:
+                raise
+
+    except Exception as e:
+        print(f"❌ Error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'error': 'Failed to get sections data',
+            'message': str(e)
+        }), 500
+
 if __name__ == '__main__':
     app.run(port=3002, debug=True)
 

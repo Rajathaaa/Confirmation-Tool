@@ -228,16 +228,29 @@ const calculateSampleSizeFromMatrix = (
   return matrixEntry[relianceKey][riskKey];
 };
 
-const AUDIT_AREAS = [
-  "Trade Receivables",
-  "Trade Payables",
-  "Cash & Cash Equivalents",
-  "Inventory",
-  "Fixed Assets",
-  "Investments",
-  "Loans & Advances",
-  "Other Current Assets",
-];
+// Sections will be loaded from SharePoint
+interface SectionsData {
+  Planning?: Record<string, string>;
+  Execution?: Record<string, string>;
+  ConcludingProcedures?: Record<string, string>;
+}
+
+// Helper function to get section code from section name
+const getSectionCode = (sectionsData: SectionsData, sectionName: string): string => {
+  if (!sectionsData) return "";
+  
+  // Search in all categories
+  for (const category of Object.values(sectionsData)) {
+    if (category && typeof category === 'object') {
+      for (const [name, code] of Object.entries(category)) {
+        if (name === sectionName) {
+          return code;
+        }
+      }
+    }
+  }
+  return "";
+};
 
 // Add a constant for all confirmation form names
 const CONFIRMATION_FORM_NAMES = [
@@ -263,7 +276,9 @@ const CONFIRMATION_FORM_NAMES = [
 export const SampleGeneration = () => {
   const { toast } = useToast();
   const [selectedAreas, setSelectedAreas] = useState<string[]>([]);
-  const [activeArea, setActiveArea] = useState("Trade Receivables");
+  const [activeArea, setActiveArea] = useState<string>("");
+  const [sectionsData, setSectionsData] = useState<SectionsData>({});
+  const [isLoadingSections, setIsLoadingSections] = useState(true);
   // State for locked sampling methods and selections
   const [lockedSamplingMethods, setLockedSamplingMethods] = useState<Record<string, { method: string; simpleMethod?: string; locked: boolean }>>({});
   const [lockedSelections, setLockedSelections] = useState<Record<string, Record<string, { recipientName: string; recipientEmail: string; templateName: string }>>>({});
@@ -286,10 +301,57 @@ export const SampleGeneration = () => {
   // State for confirming party contacts from Access & Roles
   const [confirmingPartyContacts, setConfirmingPartyContacts] = useState<Array<{ name: string; email: string }>>([]);
 
-  // Fetch confirming party contacts from SharePoint on component mount
+  // Fetch sections and confirming party contacts from SharePoint on component mount
   useEffect(() => {
+    fetchSections();
     fetchConfirmingPartyContacts();
   }, []);
+
+  // Helper function to get all sections as a flat array
+  const getAllSections = (sections: SectionsData): string[] => {
+    const allSections: string[] = [];
+    if (sections.Planning) {
+      allSections.push(...Object.keys(sections.Planning));
+    }
+    if (sections.Execution) {
+      allSections.push(...Object.keys(sections.Execution));
+    }
+    if (sections.ConcludingProcedures) {
+      allSections.push(...Object.keys(sections.ConcludingProcedures));
+    }
+    return allSections;
+  };
+
+  // Fetch sections from SharePoint
+  const fetchSections = async () => {
+    try {
+      setIsLoadingSections(true);
+      const response = await fetch('http://localhost:3002/api/get-sections');
+      if (!response.ok) {
+        throw new Error('Failed to fetch sections');
+      }
+      const result = await response.json();
+      const sections = result.data || {};
+      
+      console.log('📥 Fetched sections from SharePoint:', sections);
+      setSectionsData(sections);
+      
+      // Set the first section as active if available
+      const allSections = getAllSections(sections);
+      if (allSections.length > 0 && !activeArea) {
+        setActiveArea(allSections[0]);
+      }
+    } catch (error: any) {
+      console.error('Error fetching sections:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch sections from SharePoint",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingSections(false);
+    }
+  };
 
   const fetchConfirmingPartyContacts = async () => {
     try {
@@ -445,7 +507,7 @@ export const SampleGeneration = () => {
       if (response.ok) {
         const result = await response.json();
         const auditAreasData = result.data || {};
-        const areaCode = AREA_MAP[activeArea] || "";
+        const areaCode = getAreaCode(activeArea);
         
         if (areaCode && auditAreasData[areaCode] && Array.isArray(auditAreasData[areaCode])) {
           const lockedMethods: Record<string, { method: string; simpleMethod?: string; locked: boolean }> = {};
@@ -1458,16 +1520,9 @@ export const SampleGeneration = () => {
     return [...INBUILT_TEMPLATES, ...customTemplates];
   };
 
-  // Area mapping (same as backend)
-  const AREA_MAP: Record<string, string> = {
-    "Trade Receivables": "TR",
-    "Cash & Cash Equivalents": "CCE",
-    "Trade Payables": "TP",
-    "Other Current Assets": "OCA",
-    "Inventory": "INV",
-    "Fixed Assets": "FA",
-    "Investments": "INST",
-    "Loans & Advances": "LA"
+  // Get area code from sections data
+  const getAreaCode = (areaName: string): string => {
+    return getSectionCode(sectionsData, areaName);
   };
 
   // Fetch audit areas JSON from SharePoint
@@ -1487,9 +1542,9 @@ export const SampleGeneration = () => {
       
       // Iterate through each area code in the JSON
       Object.keys(auditAreasData).forEach((areaCode) => {
-        // Find the full area name from AREA_MAP
-        const areaName = Object.keys(AREA_MAP).find(
-          key => AREA_MAP[key] === areaCode
+        // Find the full area name from sections data
+        const areaName = getAllSections(sectionsData).find(
+          section => getAreaCode(section) === areaCode
         );
         
         if (areaName && auditAreasData[areaCode]) {
@@ -1700,8 +1755,8 @@ export const SampleGeneration = () => {
       sampleSets[area].some(set => set.id === sampleSetId)
     ) || activeArea;
     
-    // Get area code from AREA_MAP
-    const areaCode = AREA_MAP[auditArea] || "";
+    // Get area code from sections data
+    const areaCode = getAreaCode(auditArea);
     
     // Get sample set name abbreviation (first 2 chars after removing spaces)
     const sampleSetAbbr = getSampleSetAbbr(sampleSet.name);
@@ -1909,8 +1964,8 @@ export const SampleGeneration = () => {
         const sampleIdParts = sampleId.split('_');
         if (sampleIdParts.length > 0) {
           const areaCode = sampleIdParts[0];
-          // Find area from AREA_MAP reverse lookup
-          const foundArea = Object.keys(AREA_MAP).find(area => AREA_MAP[area] === areaCode);
+          // Find area from sections data reverse lookup
+          const foundArea = getAllSections(sectionsData).find(area => getAreaCode(area) === areaCode);
           if (foundArea) {
             sampleArea = foundArea;
           }
@@ -3143,6 +3198,46 @@ export const SampleGeneration = () => {
     );
   };
 
+  // Handle area selection
+  const handleAreaSelect = (area: string) => {
+    setActiveArea(area);
+    // Automatically add the area to selectedAreas if not already present
+    if (!selectedAreas.includes(area)) {
+      setSelectedAreas([...selectedAreas, area]);
+      if (!sampleSets[area]) {
+        setSampleSets({ ...sampleSets, [area]: [] });
+      }
+    }
+  };
+
+  // Render section category
+  const renderSectionCategory = (title: string, sections: Record<string, string> | undefined) => {
+    if (!sections || Object.keys(sections).length === 0) return null;
+
+    return (
+      <div className="space-y-2">
+        <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-2">
+          {title}
+        </h3>
+        <div className="space-y-1">
+          {Object.keys(sections).map((sectionName) => (
+            <button
+              key={sectionName}
+              onClick={() => handleAreaSelect(sectionName)}
+              className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${
+                activeArea === sectionName
+                  ? "bg-primary text-primary-foreground font-medium"
+                  : "hover:bg-muted text-foreground"
+              }`}
+            >
+              {sectionName}
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="flex gap-6 h-full">
       {/* Left Panel - Areas */}
@@ -3151,37 +3246,42 @@ export const SampleGeneration = () => {
           <CardHeader className="pb-3">
             <CardTitle className="text-sm">Audit Areas</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2">
-            <Select value={activeArea} onValueChange={(value) => {
-              setActiveArea(value);
-              // Automatically add the area to selectedAreas if not already present
-              if (!selectedAreas.includes(value)) {
-                setSelectedAreas([...selectedAreas, value]);
-                if (!sampleSets[value]) {
-                  setSampleSets({ ...sampleSets, [value]: [] });
-                }
-              }
-            }}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select Area" />
-              </SelectTrigger>
-              <SelectContent>
-                {AUDIT_AREAS.map((area) => (
-                  <SelectItem key={area} value={area}>{area}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <CardContent className="space-y-4 max-h-[calc(100vh-200px)] overflow-y-auto">
+            {isLoadingSections ? (
+              <div className="text-center py-4 text-sm text-muted-foreground">
+                Loading sections...
+              </div>
+            ) : (
+              <>
+                {renderSectionCategory("Planning", sectionsData.Planning)}
+                {renderSectionCategory("Execution", sectionsData.Execution)}
+                {renderSectionCategory("Concluding Procedures", sectionsData.ConcludingProcedures)}
+                {getAllSections(sectionsData).length === 0 && (
+                  <div className="text-center py-4 text-sm text-muted-foreground">
+                    No sections available
+                  </div>
+                )}
+              </>
+            )}
           </CardContent>
         </Card>
       </div>
 
       {/* Main Content - Sample Sets */}
       <div className="flex-1 space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl font-bold">{activeArea}</h2>
-            <p className="text-muted-foreground text-sm">Manage sample sets for this area</p>
+        {!activeArea ? (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center">
+              <p className="text-muted-foreground">Select an audit area to get started</p>
+            </div>
           </div>
+        ) : (
+          <>
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold">{activeArea}</h2>
+                <p className="text-muted-foreground text-sm">Manage sample sets for this area</p>
+              </div>
           <Button onClick={() => setShowNewSetForm(true)}>
             <Plus className="h-4 w-4 mr-2" />
             Add Sample Set
@@ -6026,6 +6126,8 @@ export const SampleGeneration = () => {
               Add Sample Set
             </Button>
           </Card>
+        )}
+          </>
         )}
       </div>
     </div>
