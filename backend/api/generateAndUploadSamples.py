@@ -16,22 +16,85 @@ client_id = "b357e50c-c5ef-484d-84df-fe470fe76528"
 client_secret = "JAZ8Q~xlY-EDlgbLtgJaqjPNAjsHfYFavwxbkdjE"
 
 site_name = "TestCloud"
+site_hostname = "juggernautenterprises.sharepoint.com"
+site_path = "/sites/TestCloud"
 doc_library = "TestClient"
 fy_year = "TestClient_FY25"
 folder_name = "tools"
 sub_folder_name = "Confirmation"
 
-# Area mapping
-AREA_MAP = {
-    "Trade Receivables": "TR",
-    "Cash & Cash Equivalents": "CCE",
-    "Trade Payables": "TP",
-    "Other Current Assets": "OCA",
-    "Inventory": "INV",
-    "Fixed Assets": "FA",
-    "Investments": "INST",
-    "Loans & Advances": "LA"
-}
+# Helper function to get area code from sections data
+def get_area_code_from_sections(sections_data, area_name):
+    """Get area code from sections.json data"""
+    if not sections_data:
+        return None
+    
+    # Search in all categories (Planning, Execution, ConcludingProcedures)
+    for category in sections_data.values():
+        if isinstance(category, dict):
+            for section_name, section_code in category.items():
+                if section_name == area_name:
+                    return section_code
+    return None
+
+# Cache for sections data
+_sections_cache = None
+_sections_cache_time = None
+CACHE_DURATION = 300  # 5 minutes
+
+def get_sections_data():
+    """Fetch sections data from SharePoint with caching"""
+    global _sections_cache, _sections_cache_time
+    import time
+    
+    # Return cached data if still valid
+    if _sections_cache and _sections_cache_time:
+        if time.time() - _sections_cache_time < CACHE_DURATION:
+            return _sections_cache
+    
+    try:
+        # Configuration for Sections.json
+        sections_doc_library = "Test15"
+        sections_fy_year = "Test15_FY25"
+        sections_folder_name = "juggernaut"
+        sections_file_name = "Sections.json"
+        
+        # Get access token
+        access_token = get_access_token()
+        headers = {"Authorization": f"Bearer {access_token}"}
+        
+        # Get site ID
+        site_url = f"https://graph.microsoft.com/v1.0/sites/{site_hostname}:{site_path}"
+        site_resp = requests.get(site_url, headers=headers)
+        site_resp.raise_for_status()
+        site_id = site_resp.json()["id"]
+        
+        # Get drive ID
+        drives_resp = requests.get(f"https://graph.microsoft.com/v1.0/sites/{site_id}/drives", headers=headers)
+        drives_resp.raise_for_status()
+        drives = drives_resp.json()["value"]
+        drive_id = next((d["id"] for d in drives if d["name"] == sections_doc_library), None)
+        
+        if not drive_id:
+            print(f"⚠️ Library '{sections_doc_library}' not found, using empty sections")
+            return {}
+        
+        # Download file from SharePoint
+        download_url = f"https://graph.microsoft.com/v1.0/drives/{drive_id}/root:/{sections_fy_year}/{sections_folder_name}/{sections_file_name}:/content"
+        
+        download_resp = requests.get(download_url, headers=headers)
+        download_resp.raise_for_status()
+        sections_data = download_resp.json()
+        
+        # Cache the data
+        _sections_cache = sections_data
+        _sections_cache_time = time.time()
+        
+        print(f"✅ Loaded sections data from SharePoint")
+        return sections_data
+    except Exception as e:
+        print(f"⚠️ Error fetching sections data: {str(e)}, using empty dict")
+        return {}
 
 # ======================================
 # SHAREPOINT AUTH
@@ -52,9 +115,11 @@ def get_access_token():
 # GENERATE SAMPLE IDS
 # ======================================
 def generate_ssid(area, name, num):
-    area_code = AREA_MAP.get(area)
+    # Get area code from sections data
+    sections_data = get_sections_data()
+    area_code = get_area_code_from_sections(sections_data, area)
     if not area_code:
-        raise ValueError(f"Invalid area name provided: {area}")
+        raise ValueError(f"Invalid area name provided: {area}. Area not found in Sections.json")
 
     cleaned_name = name.replace(" ", "")
     name_prefix = cleaned_name[:2].upper()
@@ -72,10 +137,11 @@ def create_json_data(area, name, num, conf_name_list, amt_list, recipient_name_l
     if len(conf_name_list) != num or len(amt_list) != num:
         raise ValueError("Length of conf_name and amt lists must match 'num'")
 
-    # Validate area and compute area code
-    area_code = AREA_MAP.get(area)
+    # Validate area and compute area code from sections data
+    sections_data = get_sections_data()
+    area_code = get_area_code_from_sections(sections_data, area)
     if not area_code:
-        raise ValueError(f"Invalid area name provided: {area}")
+        raise ValueError(f"Invalid area name provided: {area}. Area not found in Sections.json")
 
     ssids = generate_ssid(area, name, num)
     data = {}
@@ -227,7 +293,9 @@ def generate_and_upload_samples():
         amt_list = [float(str(amt).replace(',', '')) if amt else 0 for amt in amt_list]
 
         # Get area code for filename
-        area_code = AREA_MAP.get(audit_area, "UNKNOWN")
+        # Get area code from sections data
+        sections_data = get_sections_data()
+        area_code = get_area_code_from_sections(sections_data, audit_area) or "UNKNOWN"
         output_filename = f"confirmation_{area_code}.json"
         section_list = [f"confirmation_{area_code}"]
 
