@@ -82,7 +82,7 @@ const ConfirmingPartyConfirmations = () => {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Shield className="h-8 w-8 text-primary" />
+              <img src="/logo.png" alt="Verity AI" className="h-10" />
               <h1 className="text-2xl font-bold text-foreground">Confirming Party Portal</h1>
             </div>
             <Button variant="outline" onClick={() => navigate("/")}>

@@ -78,7 +78,7 @@ const EngagementDashboard = () => {
       <div className="w-64 border-r bg-card/50 backdrop-blur-sm flex flex-col">
         <div className="p-4 border-b">
           <div className="flex items-center gap-3">
-            <Shield className="h-6 w-6 text-primary" />
+            <img src="/logo.png" alt="Verity AI" className="h-6" />
             <h2 className="text-lg font-bold text-foreground">Navigation</h2>
           </div>
         </div>

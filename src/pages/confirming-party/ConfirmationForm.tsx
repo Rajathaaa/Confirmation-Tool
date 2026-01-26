@@ -315,7 +315,7 @@ const ConfirmationForm = () => {
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back
               </Button>
-              <Shield className="h-8 w-8 text-primary" />
+              <img src="/logo.png" alt="Verity AI" className="h-10" />
               <h1 className="text-xl font-bold text-foreground">Error</h1>
             </div>
           </div>
@@ -348,7 +348,7 @@ const ConfirmationForm = () => {
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back
               </Button>
-              <Shield className="h-8 w-8 text-primary" />
+              <img src="/logo.png" alt="Verity AI" className="h-10" />
               <h1 className="text-xl font-bold text-foreground">Loading...</h1>
             </div>
           </div>
@@ -1649,7 +1649,7 @@ const ConfirmationForm = () => {
               Back
             </Button>
             <div className="flex items-center gap-2">
-              <Shield className="h-8 w-8 text-primary" />
+              <img src="/logo.png" alt="Verity AI" className="h-10" />
               <div>
                 <h1 className="text-xl font-bold text-foreground">
                   {confirmation.area || "Confirmation"} - {confirmation.confirmationFor || "Unknown"}

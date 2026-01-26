@@ -38,8 +38,7 @@ const RoleSelection = () => {
       {/* Header */}
       <header className="border-b bg-card/50 backdrop-blur-sm">
         <div className="container mx-auto px-4 py-4 flex items-center gap-2">
-          <Shield className="h-8 w-8 text-primary" />
-          <h1 className="text-2xl font-bold text-foreground">Confirmation Tool</h1>
+          <img src="/logo_name.png" alt="Verity AI" className="h-10" />
         </div>
       </header>
 

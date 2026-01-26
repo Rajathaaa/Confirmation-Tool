@@ -102,9 +102,9 @@ const Index = () => {
       {/* Header */}
       <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Shield className="h-8 w-8 text-primary" />
-            <h1 className="text-2xl font-bold text-foreground">Confirmation Tool</h1>
+          <div className="flex items-center gap-3">
+            <img src="/logo.png" alt="Verity AI" className="h-12" />
+            <h1 className="text-3xl font-bold text-foreground">Confirmation Tool</h1>
           </div>
           {userRole && (
             <div className="flex items-center gap-4">
@@ -131,6 +131,9 @@ const Index = () => {
       <section className="container mx-auto px-4 py-20">
         <div className="max-w-6xl mx-auto space-y-12 animate-fade-in">
           <div className="text-center space-y-6">
+            <div className="flex justify-center mb-6">
+              <img src="/logo_name.png" alt="Verity AI" className="h-16" />
+            </div>
             <h2 className="text-5xl font-bold text-foreground leading-tight">
               Professional Audit Confirmation Platform
             </h2>

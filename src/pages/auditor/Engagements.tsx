@@ -64,7 +64,7 @@ const Engagements = () => {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <Shield className="h-8 w-8 text-primary" />
+              <img src="/logo_name.png" alt="Verity AI" className="h-10" />
               <div>
                 <h1 className="text-2xl font-bold text-foreground">Auditor Dashboard</h1>
                 <p className="text-sm text-muted-foreground">Manage your audit engagements</p>
