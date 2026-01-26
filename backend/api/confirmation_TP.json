@@ -12,283 +12,40 @@
             "templatename": ""
         },
         "templateDetails": {
-            "textbox_1": "Dear [Name of the Recipient],\n\nKindly confirm to us the details required as below in respect of all the transactions between [Client Organization name] and [Confirming Party].",
+            "textbox_1": "Dear [Name of the Recipient],\n\nKindly confirm to us the following information in respect of amounts payable to you as on [Period-end Date].",
             "table_1": {
-                "heading": "Nature of relationship with [Client Organization Name]",
+                "heading": "",
                 "subheading": "",
                 "footnote": "",
                 "columns": [
-                    "Sl. No.",
-                    "Nature of Relationship as at [Period end date]",
-                    "Response"
+                    "Amount",
+                    "Currency"
                 ],
                 "rows": [
                     {
-                        "Sl. No.": "1.",
-                        "Nature of Relationship as at [Period end date]": "Wholly Owned Subsidiary",
-                        "Response": ""
+                        "Amount": "aa",
+                        "Currency": "aaa"
                     },
                     {
-                        "Sl. No.": "2.",
-                        "Nature of Relationship as at [Period end date]": "Subsidiary",
-                        "Response": ""
-                    },
-                    {
-                        "Sl. No.": "3.",
-                        "Nature of Relationship as at [Period end date]": "Fellow Subsidiary",
-                        "Response": ""
-                    },
-                    {
-                        "Sl. No.": "4.",
-                        "Nature of Relationship as at [Period end date]": "Joint Venture",
-                        "Response": ""
-                    },
-                    {
-                        "Sl. No.": "5.",
-                        "Nature of Relationship as at [Period end date]": "Associate",
-                        "Response": ""
-                    },
-                    {
-                        "Sl. No.": "6.",
-                        "Nature of Relationship as at [Period end date]": "Key Managerial Personnel [KMP]",
-                        "Response": ""
-                    },
-                    {
-                        "Sl. No.": "7.",
-                        "Nature of Relationship as at [Period end date]": "Relative of KMP",
-                        "Response": ""
-                    },
-                    {
-                        "Sl. No.": "8.",
-                        "Nature of Relationship as at [Period end date]": "Company in which KMP or his/her relative has significant influence",
-                        "Response": ""
-                    },
-                    {
-                        "Sl. No.": "9.",
-                        "Nature of Relationship as at [Period end date]": "Any other relationship (not mentioned above)",
-                        "Response": ""
-                    },
-                    {
-                        "Sl. No.": "10.",
-                        "Nature of Relationship as at [Period end date]": "Any change in relationship during the year or subsequent to year-end",
-                        "Response": ""
-                    }
-                ],
-                "addRow": false
-            },
-            "table_2": {
-                "heading": "Details of transactions with [Client Organization Name] during the year ended [Period End Date]",
-                "subheading": "",
-                "footnote": "",
-                "columns": [
-                    "Nature of Transaction",
-                    "Currency",
-                    "Amount Involved"
-                ],
-                "rows": [
-                    {
-                        "Nature of Transaction": "",
-                        "Currency": "",
-                        "Amount Involved": ""
+                        "Amount": "b",
+                        "Currency": "bb"
                     }
                 ],
                 "addRow": true
             },
-            "question_1": {
-                "conditional": {
-                    "showIf": "Yes",
-                    "table_loans_borrowed": {
-                        "heading": "",
-                        "columns": [
-                            "Particulars",
-                            "Details"
-                        ],
-                        "rows": [
-                            {
-                                "Particulars": "Principal Amount borrowed",
-                                "Details": ""
-                            },
-                            {
-                                "Particulars": "Currency",
-                                "Details": ""
-                            },
-                            {
-                                "Particulars": "Purpose of loan proceeds utilization",
-                                "Details": ""
-                            },
-                            {
-                                "Particulars": "Unutilized loan amount and temporary deployment",
-                                "Details": ""
-                            },
-                            {
-                                "Particulars": "Loan amount payable as on [Period end date]",
-                                "Details": ""
-                            },
-                            {
-                                "Particulars": "Interest rate and interest amount",
-                                "Details": ""
-                            },
-                            {
-                                "Particulars": "Interest payable as on [Period end date]",
-                                "Details": ""
-                            },
-                            {
-                                "Particulars": "Overdue amount as on [Period end date]",
-                                "Details": ""
-                            },
-                            {
-                                "Particulars": "Principal amounts due within one year",
-                                "Details": ""
-                            },
-                            {
-                                "Particulars": "Details of renewals / modifications",
-                                "Details": ""
-                            }
-                        ]
-                    },
-                    "table_loans_borrowed_security": {
-                        "heading": "Details of Security",
-                        "columns": [
-                            "Particulars",
-                            "Nature of Security",
-                            "Value & Currency"
-                        ],
-                        "rows": [
-                            {
-                                "Particulars": "Primary Securities",
-                                "Nature of Security": "",
-                                "Value & Currency": ""
-                            },
-                            {
-                                "Particulars": "Collateral Securities",
-                                "Nature of Security": "",
-                                "Value & Currency": ""
-                            }
-                        ]
-                    }
-                },
-                "response": "No",
-                "statement": "Are there any loans borrowed by [Confirming Party]?"
-            },
-            "question_2": {
-                "conditional": {
-                    "showIf": "Yes",
-                    "table_loans_given": {
-                        "heading": "",
-                        "columns": [
-                            "Particulars",
-                            "Details"
-                        ],
-                        "rows": [
-                            {
-                                "Particulars": "Principal Amount given",
-                                "Details": ""
-                            },
-                            {
-                                "Particulars": "Currency",
-                                "Details": ""
-                            },
-                            {
-                                "Particulars": "Loan amount receivable as on [Period end date]",
-                                "Details": ""
-                            },
-                            {
-                                "Particulars": "Interest rate and interest amount",
-                                "Details": ""
-                            },
-                            {
-                                "Particulars": "Interest receivable as on [Period end date]",
-                                "Details": ""
-                            },
-                            {
-                                "Particulars": "Overdue amount as on [Period end date]",
-                                "Details": ""
-                            },
-                            {
-                                "Particulars": "Principal amounts due within one year",
-                                "Details": ""
-                            },
-                            {
-                                "Particulars": "Details of renewals / modifications",
-                                "Details": ""
-                            }
-                        ]
-                    },
-                    "table_loans_given_security": {
-                        "heading": "Details of Security",
-                        "columns": [
-                            "Particulars",
-                            "Nature of Security",
-                            "Value & Currency"
-                        ],
-                        "rows": [
-                            {
-                                "Particulars": "Primary Securities",
-                                "Nature of Security": "",
-                                "Value & Currency": ""
-                            },
-                            {
-                                "Particulars": "Collateral Securities",
-                                "Nature of Security": "",
-                                "Value & Currency": ""
-                            }
-                        ]
-                    }
-                },
-                "response": "No",
-                "statement": "Are there any loans given by [Confirming Party]?"
-            },
-            "table_3": {
-                "heading": "Details of outstanding balances with [Confirming Party] as at [Period-end date]",
-                "subheading": "",
-                "footnote": "",
-                "columns": [
-                    "Nature of balance",
-                    "Currency",
-                    "Amount Outstanding",
-                    "Overdue Amount (if any)"
-                ],
-                "rows": [
-                    {
-                        "Nature of balance": "",
-                        "Currency": "",
-                        "Amount Outstanding": "",
-                        "Overdue Amount (if any)": ""
-                    }
-                ],
-                "addRow": true
-            },
-            "table_4": {
-                "heading": "Details of other items not covered above",
-                "subheading": "",
-                "footnote": "",
-                "columns": [
-                    "Particulars",
-                    "Currency",
-                    "Amount involved"
-                ],
-                "rows": [
-                    {
-                        "Particulars": "",
-                        "Currency": "",
-                        "Amount involved": ""
-                    }
-                ],
-                "addRow": true
-            },
-            "remarks": "",
+            "remarks": "C3",
             "attachments": [],
             "confirmingpartystatement": [
                 {
                     "response": "Yes",
-                    "statement": "We certify that the above particulars (read alongwith the attachments if any) are full and correct and have been executed at arm\u2019s length*.\n\n*The expression arm\u2019s length means a transaction between two related parties that is conducted as if they were unrelated, so that there is no conflict of interest.",
+                    "statement": "We certify that the above particulars (read alongwith the attachments if any) are full and correct and do not exclude any other amount payable to us of this nature.",
                     "checkbox": "Yes"
                 }
             ],
             "confirmingpartydetails": {
-                "designation": "CTO",
-                "name": "Rahil",
-                "organizationName": "Verity"
+                "designation": "ewr",
+                "name": "wef",
+                "organizationName": "dwe"
             },
             "actions": [
                 "SaveAsDraft",
@@ -325,12 +82,12 @@
         "recipientName": "Deepak",
         "recipientEmail": "percyceptionyt@gmail.com",
         "selectionsLocked": true,
-        "confirmedBy": "Rahil",
-        "confirmedDesignation": "CTO",
-        "confirmedOrganization": "Verity",
+        "confirmedBy": "wef",
+        "confirmedDesignation": "ewr",
+        "confirmedOrganization": "dwe",
         "confirmedIP": "49.205.148.121",
-        "confirmedAt": "2026-01-26 15:27:27",
-        "submittedAt": "2026-01-26 15:27:27",
+        "confirmedAt": "2026-01-26 18:51:15",
+        "submittedAt": "2026-01-26 18:51:15",
         "status": "submitted"
     },
     "TP_BI_002": {
