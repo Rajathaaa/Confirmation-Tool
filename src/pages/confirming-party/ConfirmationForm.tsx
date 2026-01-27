@@ -1,7 +1,7 @@
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Shield, ArrowLeft, Plus } from "lucide-react";
 import CashAndCashEquivalentsForm from "./forms/CashAndCashEquivalentsForm";
 import LitigationsAndClaimsForm from "./forms/LitigationsAndClaimsForm";
@@ -205,6 +205,8 @@ const ConfirmationForm = () => {
   const [error, setError] = useState<string | null>(null);
   const [customTemplate, setCustomTemplate] = useState<any>(null);
   const [loadingTemplate, setLoadingTemplate] = useState(false);
+  const [submittedTemplateDetails, setSubmittedTemplateDetails] = useState<any>(null);
+  const [loadingSubmittedData, setLoadingSubmittedData] = useState(false);
 
   useEffect(() => {
     const fetchConfirmation = async () => {
@@ -253,10 +255,154 @@ const ConfirmationForm = () => {
     fetchConfirmation();
   }, [location.state, id]);
 
-  // Fetch template (standard or custom) from SharePoint
+  // Fetch confirmation templateDetails from confirmation file for all confirmations
+  useEffect(() => {
+    const fetchConfirmationData = async () => {
+      if (!confirmation || !confirmation.area) {
+        return;
+      }
+
+      setLoadingSubmittedData(true);
+      try {
+        const response = await fetch('http://localhost:3002/api/get-submitted-confirmation', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            confirmationId: confirmation.id || confirmation.letterId,
+            area: confirmation.area
+          }),
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          const templateDetails = result.templateDetails;
+          
+          console.log('📥 Received templateDetails from API:', templateDetails);
+          console.log('📊 templateDetails keys:', templateDetails ? Object.keys(templateDetails) : 'null');
+          console.log('📊 templateDetails length:', templateDetails ? Object.keys(templateDetails).length : 0);
+          
+          // Check if templateDetails is empty object
+          if (!templateDetails || (typeof templateDetails === 'object' && Object.keys(templateDetails).length === 0)) {
+            console.log('⚠️ templateDetails is empty, fetching blank template...');
+            // Fetch blank template instead
+            const templateName = confirmation.selectedTemplate || confirmation.area;
+            if (templateName) {
+              const templateResponse = await fetch('http://localhost:3002/api/get-custom-template', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  templateName: templateName
+                }),
+              });
+
+              if (templateResponse.ok) {
+                const templateResult = await templateResponse.json();
+                setSubmittedTemplateDetails(templateResult.templateData?.templateDetails || {});
+                console.log('✅ Loaded blank template for confirmation');
+              } else {
+                setSubmittedTemplateDetails({});
+              }
+            } else {
+              setSubmittedTemplateDetails({});
+            }
+          } else {
+            setSubmittedTemplateDetails(templateDetails);
+            console.log('✅ Loaded confirmation templateDetails with data:', {
+              hasTextboxes: Object.keys(templateDetails).some(k => k.startsWith('textbox_')),
+              hasTables: Object.keys(templateDetails).some(k => k.startsWith('table_')),
+              hasQuestions: Object.keys(templateDetails).some(k => k.startsWith('question_')),
+              keys: Object.keys(templateDetails)
+            });
+          }
+        } else {
+          // If confirmation not found in file or error (400, 404, etc.), try to fetch blank template
+          let errorMessage = 'Unknown error';
+          try {
+            const errorData = await response.json();
+            errorMessage = errorData.message || 'Unknown error';
+            console.warn(`Confirmation API error (${response.status}): ${errorMessage}, fetching blank template...`);
+          } catch (e) {
+            console.warn(`Confirmation API error (${response.status}): Failed to parse error response, fetching blank template...`);
+          }
+          
+          const templateName = confirmation.selectedTemplate || confirmation.area;
+          if (templateName) {
+            try {
+              const templateResponse = await fetch('http://localhost:3002/api/get-custom-template', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  templateName: templateName
+                }),
+              });
+
+              if (templateResponse.ok) {
+                const templateResult = await templateResponse.json();
+                const blankTemplateDetails = templateResult.templateData?.templateDetails || {};
+                setSubmittedTemplateDetails(blankTemplateDetails);
+                console.log('✅ Loaded blank template as fallback:', {
+                  hasData: Object.keys(blankTemplateDetails).length > 0,
+                  keys: Object.keys(blankTemplateDetails)
+                });
+              } else {
+                console.warn('Failed to load blank template, setting empty');
+                setSubmittedTemplateDetails({});
+              }
+            } catch (templateError) {
+              console.error('Error loading blank template:', templateError);
+              setSubmittedTemplateDetails({});
+            }
+          } else {
+            console.warn('No template name available, setting empty');
+            setSubmittedTemplateDetails({});
+          }
+        }
+      } catch (error: any) {
+        console.error('Error loading confirmation data:', error);
+        // Try to fetch blank template as fallback
+        const templateName = confirmation.selectedTemplate || confirmation.area;
+        if (templateName) {
+          try {
+            const templateResponse = await fetch('http://localhost:3002/api/get-custom-template', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                templateName: templateName
+              }),
+            });
+
+            if (templateResponse.ok) {
+              const templateResult = await templateResponse.json();
+              setSubmittedTemplateDetails(templateResult.templateData?.templateDetails || {});
+              console.log('✅ Loaded blank template as fallback after error');
+            }
+          } catch (templateError) {
+            console.error('Error loading blank template:', templateError);
+          }
+        }
+      } finally {
+        setLoadingSubmittedData(false);
+      }
+    };
+
+    fetchConfirmationData();
+  }, [confirmation]);
+
+  // Fetch template (standard or custom) from SharePoint (only if confirmation data not loaded)
   useEffect(() => {
     const fetchTemplate = async () => {
-      if (!confirmation) return;
+      if (!confirmation || submittedTemplateDetails !== null) {
+        // Skip template loading if we already have confirmation data or are loading it
+        return;
+      }
       
       // Check both selectedTemplate and area for template name
       const templateName = confirmation.selectedTemplate || confirmation.area;
@@ -442,6 +588,48 @@ const ConfirmationForm = () => {
       });
       
       setTableData(initialTableData);
+    }, [templateDetails]);
+
+    // Initialize textbox data from templateDetails
+    useEffect(() => {
+      const initialTextboxData: Record<string, string> = {};
+      
+      Object.keys(templateDetails).forEach((key) => {
+        if (key.startsWith('textbox_')) {
+          const value = templateDetails[key];
+          // Extract actual value if it's a string
+          if (typeof value === 'string') {
+            initialTextboxData[key] = value;
+          }
+        }
+      });
+      
+      setTextboxData(initialTextboxData);
+    }, [templateDetails]);
+
+    // Initialize ConfirmingPartyTextBox and question responses from templateDetails
+    useEffect(() => {
+      const initialQuestionResponses: Record<string, string> = {};
+      
+      Object.keys(templateDetails).forEach((key) => {
+        // Handle ConfirmingPartyTextBox
+        if (key.startsWith('ConfirmingPartyTextBox_')) {
+          const textbox = templateDetails[key];
+          if (Array.isArray(textbox) && textbox[0] && textbox[0].user_response) {
+            initialQuestionResponses[key] = textbox[0].user_response;
+          }
+        }
+        
+        // Handle question responses (question_1, question_2, etc.)
+        if (key.startsWith('question_')) {
+          const question = templateDetails[key];
+          if (question && question.response) {
+            initialQuestionResponses[key] = question.response;
+          }
+        }
+      });
+      
+      setQuestionResponses(initialQuestionResponses);
     }, [templateDetails]);
 
     const addTableRow = (tableKey: string, columns: string[]) => {
@@ -1006,15 +1194,44 @@ const ConfirmationForm = () => {
       return true; // Default to required
     };
 
+    // Extract initial values from templateDetails
+    const initialRemarks = templateDetails.remarks || "";
+    const initialName = templateDetails.confirmingpartydetails?.name || "";
+    const initialDesignation = templateDetails.confirmingpartydetails?.designation || "";
+    const initialOrganizationName = templateDetails.confirmingpartydetails?.organizationName || "";
+    
+    // Extract isCertified from confirmingpartystatement
+    let initialIsCertified = false;
+    const statement = templateDetails.confirmingpartystatement;
+    if (Array.isArray(statement) && statement[0]) {
+      initialIsCertified = statement[0].response === "Yes" || statement[0].checkbox === "Yes";
+    } else if (statement && typeof statement === 'object') {
+      initialIsCertified = statement.response === "Yes" || statement.checkbox === "Yes";
+    }
+
     return (
       <BaseConfirmationForm
         confirmation={confirmation}
         onSubmit={handleSubmit}
         certificationText={getCertificationText()}
+        initialRemarks={initialRemarks}
+        initialName={initialName}
+        initialDesignation={initialDesignation}
+        initialOrganizationName={initialOrganizationName}
+        initialIsCertified={initialIsCertified}
       >
         <div className="space-y-6">
           {/* Render elements in the exact order they appear in the JSON template */}
           {(() => {
+            // Handle empty templateDetails
+            if (!templateDetails || (typeof templateDetails === 'object' && Object.keys(templateDetails).length === 0)) {
+              return (
+                <div className="text-center py-8 text-muted-foreground">
+                  <p>No template structure available. Please contact support.</p>
+                </div>
+              );
+            }
+            
             // Use Object.entries() to preserve order - this maintains insertion order for string keys
             // in modern JavaScript (ES2015+), which matches the order in the JSON template
             // However, to ensure correct ordering especially for table_10a, table_10b, etc., we'll use a custom sort
@@ -1547,6 +1764,207 @@ const ConfirmationForm = () => {
     );
   };
 
+  // Read-only view for submitted confirmations
+  const SubmittedConfirmationView = ({ templateDetails }: { templateDetails: any }) => {
+    // Handle empty templateDetails - display blank template structure
+    if (!templateDetails || Object.keys(templateDetails).length === 0) {
+      return (
+        <Card>
+          <CardHeader>
+            <CardTitle>Submitted Confirmation</CardTitle>
+            <CardDescription>This confirmation was submitted with no data. Displaying blank template structure.</CardDescription>
+          </CardHeader>
+          <CardContent className="p-8 text-center">
+            <p className="text-muted-foreground">No data was submitted for this confirmation.</p>
+          </CardContent>
+        </Card>
+      );
+    }
+
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Submitted Confirmation</CardTitle>
+          <CardDescription>This confirmation has been submitted and is read-only.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Render textboxes */}
+          {Object.keys(templateDetails)
+            .filter(key => key.startsWith('textbox_'))
+            .sort((a, b) => {
+              const numA = parseInt(a.replace('textbox_', '')) || 0;
+              const numB = parseInt(b.replace('textbox_', '')) || 0;
+              return numA - numB;
+            })
+            .map(key => {
+              const text = templateDetails[key];
+              if (!text) return null;
+              return (
+                <div key={key} className="prose prose-sm max-w-none">
+                  <p className="whitespace-pre-wrap">{text}</p>
+                </div>
+              );
+            })}
+
+          {/* Render tables */}
+          {Object.keys(templateDetails)
+            .filter(key => key.startsWith('table_'))
+            .sort((a, b) => {
+              const numA = parseInt(a.replace('table_', '')) || 0;
+              const numB = parseInt(b.replace('table_', '')) || 0;
+              return numA - numB;
+            })
+            .map(key => {
+              const table = templateDetails[key];
+              if (!table || !table.columns) return null;
+              
+              return (
+                <div key={key} className="space-y-2">
+                  {table.heading && (
+                    <h3 className="text-lg font-semibold">{table.heading}</h3>
+                  )}
+                  {table.subheading && (
+                    <p className="text-sm text-muted-foreground">{table.subheading}</p>
+                  )}
+                  <div className="border rounded-md overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          {table.columns.map((col: string, idx: number) => (
+                            <TableHead key={idx}>{col || `Column ${idx + 1}`}</TableHead>
+                          ))}
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {table.rows && table.rows.length > 0 ? (
+                          table.rows.map((row: any, rowIdx: number) => (
+                            <TableRow key={rowIdx}>
+                              {table.columns.map((col: string, colIdx: number) => (
+                                <TableCell key={colIdx}>
+                                  {row[col] !== undefined && row[col] !== null ? String(row[col]) : ""}
+                                </TableCell>
+                              ))}
+                            </TableRow>
+                          ))
+                        ) : (
+                          <TableRow>
+                            <TableCell colSpan={table.columns.length} className="text-center text-muted-foreground">
+                              No data
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                  {table.footnote_1 && (
+                    <p className="text-xs text-muted-foreground mt-1">{table.footnote_1}</p>
+                  )}
+                </div>
+              );
+            })}
+
+          {/* Render ConfirmingPartyTextBox */}
+          {Object.keys(templateDetails)
+            .filter(key => key.startsWith('ConfirmingPartyTextBox_'))
+            .sort((a, b) => {
+              const numA = parseInt(a.replace('ConfirmingPartyTextBox_', '')) || 0;
+              const numB = parseInt(b.replace('ConfirmingPartyTextBox_', '')) || 0;
+              return numA - numB;
+            })
+            .map(key => {
+              const textbox = templateDetails[key];
+              if (!textbox || !Array.isArray(textbox) || textbox.length === 0) return null;
+              
+              return textbox.map((item: any, idx: number) => (
+                <div key={`${key}-${idx}`} className="space-y-2 border-l-4 border-primary pl-4">
+                  {item.heading && (
+                    <h4 className="font-semibold">{item.heading}</h4>
+                  )}
+                  {item.subheading && (
+                    <p className="text-sm text-muted-foreground">{item.subheading}</p>
+                  )}
+                  {item.user_response && (
+                    <p className="text-sm">{item.user_response}</p>
+                  )}
+                </div>
+              ));
+            })}
+
+          {/* Render remarks */}
+          {templateDetails.remarks && (
+            <div className="space-y-2">
+              <h4 className="font-semibold">Remarks</h4>
+              <p className="text-sm whitespace-pre-wrap">{templateDetails.remarks}</p>
+            </div>
+          )}
+
+          {/* Render attachments */}
+          {templateDetails.attachments && templateDetails.attachments.length > 0 && (
+            <div className="space-y-2">
+              <h4 className="font-semibold">Attachments</h4>
+              <ul className="list-disc list-inside space-y-1">
+                {templateDetails.attachments.map((attachment: string, idx: number) => (
+                  <li key={idx} className="text-sm">{attachment}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Render confirming party statement */}
+          {templateDetails.confirmingpartystatement && (
+            <div className="space-y-2 border-t pt-4">
+              <h4 className="font-semibold">Confirmation Statement</h4>
+              {Array.isArray(templateDetails.confirmingpartystatement) ? (
+                templateDetails.confirmingpartystatement.map((stmt: any, idx: number) => (
+                  <div key={idx} className="space-y-2">
+                    <p className="text-sm">{stmt.statement}</p>
+                    {stmt.response && (
+                      <p className="text-sm font-medium">Response: {stmt.response}</p>
+                    )}
+                  </div>
+                ))
+              ) : (
+                <div className="space-y-2">
+                  <p className="text-sm">{templateDetails.confirmingpartystatement.statement}</p>
+                  {templateDetails.confirmingpartystatement.response && (
+                    <p className="text-sm font-medium">Response: {templateDetails.confirmingpartystatement.response}</p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Render confirming party details */}
+          {templateDetails.confirmingpartydetails && (
+            <div className="space-y-2 border-t pt-4">
+              <h4 className="font-semibold">Confirming Party Details</h4>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                {templateDetails.confirmingpartydetails.organizationName && (
+                  <div>
+                    <span className="font-medium">Organization: </span>
+                    <span>{templateDetails.confirmingpartydetails.organizationName}</span>
+                  </div>
+                )}
+                {templateDetails.confirmingpartydetails.name && (
+                  <div>
+                    <span className="font-medium">Name: </span>
+                    <span>{templateDetails.confirmingpartydetails.name}</span>
+                  </div>
+                )}
+                {templateDetails.confirmingpartydetails.designation && (
+                  <div>
+                    <span className="font-medium">Designation: </span>
+                    <span>{templateDetails.confirmingpartydetails.designation}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    );
+  };
+
   // Render template form (standard or custom) loaded from SharePoint
   const renderCustomTemplate = () => {
     if (!customTemplate || !customTemplate.templateDetails) {
@@ -1563,6 +1981,56 @@ const ConfirmationForm = () => {
   };
 
   const renderFormByArea = () => {
+    // Check if we have confirmation data loaded from confirmation file
+    // This applies to all confirmations, not just submitted ones
+    if (loadingSubmittedData) {
+      return (
+        <Card>
+          <CardContent className="p-8 text-center">
+            <LoadingSpinner size="lg" text="Loading confirmation data..." />
+          </CardContent>
+        </Card>
+      );
+    }
+    
+    // If templateDetails exists (even if empty), show it
+    // Empty templateDetails will show blank template structure
+    // For submitted confirmations, show read-only view
+    // For other statuses, show editable view if needed
+    if (submittedTemplateDetails !== null) {
+      // Check if templateDetails is empty - if so, fetch blank template
+      const isEmpty = !submittedTemplateDetails || (typeof submittedTemplateDetails === 'object' && Object.keys(submittedTemplateDetails).length === 0);
+      
+      if (isEmpty) {
+        // If empty, we should have already fetched blank template, but if not, show loading
+        if (loadingTemplate) {
+          return (
+            <Card>
+              <CardContent className="p-8 text-center">
+                <LoadingSpinner size="lg" text="Loading template..." />
+              </CardContent>
+            </Card>
+          );
+        }
+        // If still empty after loading, show blank template from customTemplate
+        if (customTemplate && customTemplate.templateDetails) {
+          if (confirmation.status === "submitted") {
+            return <SubmittedConfirmationView templateDetails={customTemplate.templateDetails} />;
+          } else {
+            return <CustomTemplateForm templateDetails={customTemplate.templateDetails} />;
+          }
+        }
+      } else {
+        // We have data, show it
+        if (confirmation.status === "submitted") {
+          return <SubmittedConfirmationView templateDetails={submittedTemplateDetails} />;
+        } else {
+          // For non-submitted confirmations, use the template data but allow editing
+          return <CustomTemplateForm templateDetails={submittedTemplateDetails} />;
+        }
+      }
+    }
+
     // Check if template was loaded from SharePoint (standard or custom)
     if (customTemplate && customTemplate.templateDetails) {
       // Template loaded from SharePoint, use unified template form

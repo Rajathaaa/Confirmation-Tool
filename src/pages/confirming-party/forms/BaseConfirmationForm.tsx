@@ -16,6 +16,12 @@ interface BaseConfirmationFormProps {
   onSubmit: (data: any) => void;
   hideRemarks?: boolean; // Add this prop
   getFormData?: () => any; // Callback to get form-specific data (amounts, accounts, etc.)
+  initialRemarks?: string;
+  initialAttachments?: string[];
+  initialName?: string;
+  initialDesignation?: string;
+  initialOrganizationName?: string;
+  initialIsCertified?: boolean;
 }
 
 const BaseConfirmationFormInner = ({
@@ -24,16 +30,31 @@ const BaseConfirmationFormInner = ({
   certificationText = "We certify that the above particulars (read alongwith the attachments if any) are full and correct.",
   onSubmit,
   hideRemarks = false, // Add default value
-  getFormData // Callback to get form-specific data
+  getFormData, // Callback to get form-specific data
+  initialRemarks = "",
+  initialAttachments = [],
+  initialName = "",
+  initialDesignation = "",
+  initialOrganizationName = "",
+  initialIsCertified = false
 }: BaseConfirmationFormProps) => {
   const [formData, setFormData] = useState<any>({});
-  const [remarks, setRemarks] = useState("");
+  const [remarks, setRemarks] = useState(initialRemarks);
   const [attachments, setAttachments] = useState<File[]>([]);
-  const [organizationName, setOrganizationName] = useState("");
-  const [name, setName] = useState("");
-  const [designation, setDesignation] = useState("");
-  const [isCertified, setIsCertified] = useState(false);
+  const [organizationName, setOrganizationName] = useState(initialOrganizationName);
+  const [name, setName] = useState(initialName);
+  const [designation, setDesignation] = useState(initialDesignation);
+  const [isCertified, setIsCertified] = useState(initialIsCertified);
   const { getAllFormData } = useFormData();
+
+  // Initialize from props when they change
+  useEffect(() => {
+    setRemarks(initialRemarks);
+    setOrganizationName(initialOrganizationName);
+    setName(initialName);
+    setDesignation(initialDesignation);
+    setIsCertified(initialIsCertified);
+  }, [initialRemarks, initialOrganizationName, initialName, initialDesignation, initialIsCertified]);
 
   const handleSaveDraft = async () => {
     const draftData = {
@@ -44,7 +65,7 @@ const BaseConfirmationFormInner = ({
       designation,
       isCertified,
       attachments: attachments.map(f => f.name),
-      status: "draft"
+      status: "pending"
     };
     
     // Call backend API to save draft
@@ -66,7 +87,7 @@ const BaseConfirmationFormInner = ({
           name: name,
           designation: designation,
           organizationName: organizationName,
-          status: "draft"
+          status: "pending"
         }),
       });
 

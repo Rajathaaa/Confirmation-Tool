@@ -3845,7 +3845,7 @@ def submit_confirmation():
         name = data.get('name', '')
         designation = data.get('designation', '')
         organization_name = data.get('organizationName', '')
-        status = data.get('status', 'confirmed')  # 'confirmed' or 'draft'
+        status = data.get('status', 'confirmed')  # 'confirmed', 'pending', or 'submitted'
 
         if not confirmation_id:
             return jsonify({
@@ -3945,7 +3945,7 @@ def submit_confirmation():
                 if status == "submitted":
                     conf["confirmedAt"] = now
                     conf["submittedAt"] = now
-                elif status == "draft":
+                elif status == "pending":
                     conf["draftSavedAt"] = now
                 
                 break
@@ -4441,7 +4441,7 @@ def submit_confirmation():
                         if status == "submitted":
                             confirmation_file_data[confirmation_file_key]["confirmedAt"] = now
                             confirmation_file_data[confirmation_file_key]["submittedAt"] = now
-                        elif status == "draft":
+                        elif status == "pending":
                             confirmation_file_data[confirmation_file_key]["draftSavedAt"] = now
                         
                         confirmation_file_data[confirmation_file_key]["status"] = status
@@ -5702,6 +5702,218 @@ def get_custom_template():
         traceback.print_exc()
         return jsonify({
             'error': 'Failed to get template',
+            'message': str(e)
+        }), 500
+
+# ======================================
+# API ENDPOINT 33: GET SUBMITTED CONFIRMATION TEMPLATE DETAILS
+# ======================================
+@app.route('/api/get-submitted-confirmation', methods=['POST'])
+def get_submitted_confirmation():
+    try:
+        data = request.json
+        if not data:
+            return jsonify({
+                'error': 'Invalid request',
+                'message': 'Request body is required'
+            }), 400
+            
+        confirmation_id = data.get('confirmationId')
+        area = data.get('area')
+
+        if not confirmation_id or not area:
+            return jsonify({
+                'error': 'Missing required fields',
+                'message': 'confirmationId and area are required'
+            }), 400
+
+        print(f"🚀 Getting submitted confirmation: {confirmation_id} for area: {area}")
+
+        # Get area code from sections data
+        sections_data = get_sections_data()
+        area_code = get_area_code_from_sections(sections_data, area)
+        
+        # If area_code is not found, it might be a custom template name
+        # We'll search all confirmation files
+        is_custom_template = not area_code
+        if is_custom_template:
+            print(f"⚠️ Area '{area}' not found in sections, treating as custom template. Will search all confirmation files.")
+            area_code = None  # Keep as None to indicate we need to search all files
+
+        # Get access token
+        access_token = get_access_token()
+        headers = {"Authorization": f"Bearer {access_token}"}
+
+        # Get site ID
+        site_url = f"https://graph.microsoft.com/v1.0/sites/{site_hostname}:{site_path}"
+        site_resp = requests.get(site_url, headers=headers)
+        site_resp.raise_for_status()
+        site_id = site_resp.json()["id"]
+
+        # Get drive ID
+        drives_resp = requests.get(f"https://graph.microsoft.com/v1.0/sites/{site_id}/drives", headers=headers)
+        drives_resp.raise_for_status()
+        drives = drives_resp.json()["value"]
+        drive_id = next((d["id"] for d in drives if d["name"] == doc_library), None)
+
+        if not drive_id:
+            raise Exception(f"Library '{doc_library}' not found in site '{site_path}'")
+
+        # Try different ID variations
+        id_variations = [
+            confirmation_id,  # Exact match
+            confirmation_id.replace("CNF-", ""),  # Remove CNF- prefix
+            confirmation_id.replace("cnf-", ""),  # Remove cnf- prefix (lowercase)
+            confirmation_id.upper(),  # Uppercase
+            confirmation_id.lower(),  # Lowercase
+        ]
+        
+        # If area_code is None (custom template), search all files immediately
+        # Otherwise, try the expected file first, then search all files if not found
+        confirmation_entry = None
+        confirmation_key = None
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        
+        # List of all possible area codes to search
+        all_area_codes = ["TR", "CCE", "TP", "OCA", "INV", "FA", "INST", "LA", "RPT", "BOR", "LIT", "EAC"]
+        
+        # If we have a valid area_code, try that file first
+        # Otherwise (custom template), search all files immediately
+        if area_code and area_code in all_area_codes:
+            file_name = f"confirmation_{area_code}.json"
+            download_url = f"https://graph.microsoft.com/v1.0/drives/{drive_id}/root:/{fy_year}/{folder_name}/{sub_folder_name}/{file_name}:/content"
+            
+            try:
+                download_resp = requests.get(download_url, headers=headers)
+                if download_resp.status_code == 200:
+                    temp_file_path = os.path.join(script_dir, file_name)
+                    with open(temp_file_path, "wb") as f:
+                        f.write(download_resp.content)
+                    with open(temp_file_path, "r", encoding="utf-8") as f:
+                        confirmation_data = json.load(f)
+                    
+                    # Handle both dict and list formats
+                    if isinstance(confirmation_data, list):
+                        confirmation_data = {entry.get("sample_id", f"temp_{i}"): {k: v for k, v in entry.items() if k != "sample_id"} for i, entry in enumerate(confirmation_data)}
+                        print("✅ Converted list format to dict format")
+                    
+                    # Search for confirmation in this file
+                    for id_var in id_variations:
+                        if id_var in confirmation_data:
+                            confirmation_entry = confirmation_data[id_var]
+                            confirmation_key = id_var
+                            print(f"✅ Found confirmation entry with key: {confirmation_key} in {file_name}")
+                            break
+                        
+                        for key, value in confirmation_data.items():
+                            if (value.get("letterId") == id_var or 
+                                value.get("id") == id_var or
+                                key.upper() == id_var.upper()):
+                                confirmation_entry = value
+                                confirmation_key = key
+                                print(f"✅ Found confirmation entry with key: {confirmation_key} in {file_name}")
+                                break
+                        
+                        if confirmation_entry:
+                            break
+                    
+                    # Clean up temp file
+                    if os.path.exists(temp_file_path):
+                        os.remove(temp_file_path)
+            except Exception as e:
+                print(f"⚠️ Error reading {file_name}: {str(e)}")
+        
+        # If not found in expected file (or area_code is None), search all files
+        if not confirmation_entry:
+            print(f"🔍 Confirmation not found in expected file, searching all confirmation files...")
+            
+            # Try searching in other confirmation files as fallback
+            found_in_other_file = False
+            searched_files = []
+            
+            for other_area_code in all_area_codes:
+                # Skip the file we already checked (if area_code was valid)
+                if area_code and other_area_code == area_code:
+                    continue
+                
+                other_file_name = f"confirmation_{other_area_code}.json"
+                searched_files.append(other_file_name)
+                try:
+                    other_download_url = f"https://graph.microsoft.com/v1.0/drives/{drive_id}/root:/{fy_year}/{folder_name}/{sub_folder_name}/{other_file_name}:/content"
+                    other_download_resp = requests.get(other_download_url, headers=headers)
+                    
+                    if other_download_resp.status_code == 200:
+                        other_temp_file_path = os.path.join(script_dir, other_file_name)
+                        with open(other_temp_file_path, "wb") as f:
+                            f.write(other_download_resp.content)
+                        with open(other_temp_file_path, "r", encoding="utf-8") as f:
+                            other_confirmation_data = json.load(f)
+                        
+                        # Handle both dict and list formats
+                        if isinstance(other_confirmation_data, list):
+                            other_confirmation_data = {entry.get("sample_id", f"temp_{i}"): {k: v for k, v in entry.items() if k != "sample_id"} for i, entry in enumerate(other_confirmation_data)}
+                        
+                        # Search for confirmation in this file
+                        for id_var in id_variations:
+                            if id_var in other_confirmation_data:
+                                confirmation_entry = other_confirmation_data[id_var]
+                                confirmation_key = id_var
+                                found_in_other_file = True
+                                print(f"✅ Found confirmation in {other_file_name} with key: {confirmation_key}")
+                                break
+                            
+                            for key, value in other_confirmation_data.items():
+                                if (value.get("letterId") == id_var or 
+                                    value.get("id") == id_var or
+                                    key.upper() == id_var.upper()):
+                                    confirmation_entry = value
+                                    confirmation_key = key
+                                    found_in_other_file = True
+                                    print(f"✅ Found confirmation in {other_file_name} with key: {confirmation_key}")
+                                    break
+                            
+                            if found_in_other_file:
+                                break
+                        
+                        # Clean up temp file
+                        if os.path.exists(other_temp_file_path):
+                            os.remove(other_temp_file_path)
+                        
+                        if found_in_other_file:
+                            break
+                except Exception as e:
+                    # File doesn't exist or error reading, continue to next file
+                    continue
+            
+            if not confirmation_entry:
+                print(f"⚠️ Confirmation not found in any file. Searched: {len(searched_files)} files")
+                return jsonify({
+                    'error': 'Confirmation not found',
+                    'message': f'Confirmation "{confirmation_id}" not found in any confirmation file. Tried variations: {id_variations[:3]}'
+                }), 404
+
+        # Extract templateDetails (can be empty object)
+        template_details = confirmation_entry.get("templateDetails", {})
+        
+        # Return empty object if templateDetails is empty (frontend will handle showing blank template)
+        if not template_details or (isinstance(template_details, dict) and len(template_details) == 0):
+            print(f"⚠️ templateDetails is empty for confirmation: {confirmation_id}, returning empty object")
+        else:
+            print(f"✅ Successfully retrieved templateDetails for confirmation: {confirmation_id}")
+        
+        return jsonify({
+            'success': True,
+            'message': f'Successfully retrieved template details for confirmation: {confirmation_id}',
+            'confirmationId': confirmation_id,
+            'templateDetails': template_details
+        })
+
+    except Exception as e:
+        print(f"❌ Error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'error': 'Failed to get submitted confirmation',
             'message': str(e)
         }), 500
 
