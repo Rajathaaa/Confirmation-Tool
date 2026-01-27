@@ -9,6 +9,7 @@ import { Send, Bell, Lock, CheckCircle, Clock, Upload, Eye, FileText, RotateCcw 
 import { useState, useEffect } from "react";
 import { formatIndianDate, formatIndianDateTime } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { LoadingSpinner } from "@/components/ui/loading";
 
 interface ActivityLogEntry {
   timestamp: string;
@@ -218,6 +219,39 @@ const mockConfirmations: Confirmation[] = [
 
 // Component to render confirmation form template in read-only mode
 const ConfirmationFormView = ({ confirmation }: { confirmation: Confirmation }) => {
+  const [templateStructure, setTemplateStructure] = useState<any>(null);
+  const [loadingTemplate, setLoadingTemplate] = useState(false);
+
+  useEffect(() => {
+    const fetchTemplate = async () => {
+      if (!confirmation.area) return;
+      
+      setLoadingTemplate(true);
+      try {
+        const response = await fetch('http://localhost:3002/api/get-custom-template', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            templateName: confirmation.area
+          }),
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          setTemplateStructure(result.templateData?.templateDetails);
+        }
+      } catch (error) {
+        console.error('Error loading template:', error);
+      } finally {
+        setLoadingTemplate(false);
+      }
+    };
+
+    fetchTemplate();
+  }, [confirmation.area]);
+
   if (!confirmation.formData) {
     return (
       <div className="text-center py-8 text-muted-foreground">
@@ -225,6 +259,193 @@ const ConfirmationFormView = ({ confirmation }: { confirmation: Confirmation }) 
       </div>
     );
   }
+
+  // Extract saved form data
+  const savedTextboxData = confirmation.formData.textboxData || {};
+  const savedTableData = confirmation.formData.tableData || {};
+  const savedQuestionResponses = confirmation.formData.questionResponses || {};
+  const savedConfirmingPartyDetails = confirmation.formData.confirmingpartydetails || {};
+  const savedConfirmingPartyStatement = confirmation.formData.confirmingpartystatement || {};
+
+  // Render dynamic template structure
+  const renderDynamicTemplate = () => {
+    if (loadingTemplate) {
+      return <LoadingSpinner size="md" text="Loading template structure..." />;
+    }
+
+    if (!templateStructure) {
+      // Fallback to old hardcoded rendering
+      return renderFormByArea();
+    }
+
+    const renderedElements: JSX.Element[] = [];
+    const entries = Object.entries(templateStructure);
+    
+    // Sort entries to maintain order (similar to ConfirmationForm)
+    const getSortOrder = (key: string): number => {
+      const systemFields = ['remarks', 'attachments', 'confirmingpartystatement', 'confirmingpartydetails', 'actions'];
+      if (systemFields.includes(key)) return 10000 + systemFields.indexOf(key);
+      
+      if (key.startsWith('textbox_')) {
+        if (key === 'textbox_1') return 1;
+        if (key === 'textbox_interest') return 200;
+        const match = key.match(/textbox_(\d+)/);
+        return match ? 100 + parseInt(match[1], 10) : 300;
+      }
+      
+      if (key.startsWith('table_')) {
+        if (key === 'table_10a') return 11;
+        if (key === 'table_10b') return 12;
+        if (key === 'table_12') return 14;
+        const numMatch = key.match(/table_(\d+)/);
+        if (numMatch) {
+          const num = parseInt(numMatch[1], 10);
+          if (num >= 1 && num <= 9) return 1 + num;
+        }
+        return 400;
+      }
+      
+      if (key.startsWith('question_')) {
+        const match = key.match(/question_(\d+)/);
+        return match ? 300 + parseInt(match[1], 10) : 350;
+      }
+      
+      return 500;
+    };
+
+    const sortedEntries = entries.sort(([keyA], [keyB]) => getSortOrder(keyA) - getSortOrder(keyB));
+
+    for (const [key, value] of sortedEntries) {
+      // Skip system fields
+      if (['remarks', 'attachments', 'confirmingpartystatement', 'confirmingpartydetails', 'actions'].includes(key)) {
+        continue;
+      }
+
+      // Render textboxes
+      if (key.startsWith('textbox_')) {
+        const savedValue = savedTextboxData[key] || "";
+        const displayValue = typeof value === 'string' 
+          ? value.replace(/\[Name of the Recipient\]/g, confirmation.recipientName || "[Name of the Recipient]")
+                 .replace(/\[Period-end Date\]/g, confirmation.periodEndDate ? formatIndianDate(confirmation.periodEndDate) : "[Period-end Date]")
+                 .replace(/\[Client Organization Name\]/g, confirmation.confirmingParty || "[Client Organization Name]")
+          : "";
+        
+        renderedElements.push(
+          <div key={key} className="space-y-2">
+            {typeof value === 'object' && value !== null && (value as any).heading && (
+              <h3 className="font-semibold">{(value as any).heading}</h3>
+            )}
+            {typeof value === 'object' && value !== null && (value as any).description && (
+              <p className="text-sm text-muted-foreground">{(value as any).description}</p>
+            )}
+            <div className="bg-muted p-3 rounded-md">
+              <p className="text-sm whitespace-pre-wrap">{displayValue || savedValue || "(No response)"}</p>
+            </div>
+          </div>
+        );
+      }
+
+      // Render tables
+      if (key.startsWith('table_')) {
+        const table = value as any;
+        if (table && table.columns) {
+          const savedRows = savedTableData[key] || [];
+          
+          renderedElements.push(
+            <div key={key} className="space-y-2">
+              {table.heading && <h3 className="font-semibold">{table.heading}</h3>}
+              {table.subheading && <p className="text-sm text-muted-foreground">{table.subheading}</p>}
+              {savedRows.length > 0 ? (
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        {table.columns.map((col: string, idx: number) => (
+                          <TableHead key={idx}>{col}</TableHead>
+                        ))}
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {savedRows.map((row: any, rowIdx: number) => (
+                        <TableRow key={rowIdx}>
+                          {table.columns.map((col: string, colIdx: number) => (
+                            <TableCell key={colIdx}>{row[col] || "-"}</TableCell>
+                          ))}
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">No data provided</p>
+              )}
+            </div>
+          );
+        }
+      }
+
+      // Render questions
+      if (key.startsWith('question_')) {
+        const question = value as any;
+        const savedResponse = savedQuestionResponses[key] || "";
+        
+        renderedElements.push(
+          <div key={key} className="space-y-2">
+            {question.statement && (
+              <Label className="text-base font-medium">{question.statement}</Label>
+            )}
+            <div className="bg-muted p-3 rounded-md">
+              <p className="font-medium">{savedResponse || "(No response)"}</p>
+            </div>
+          </div>
+        );
+
+        // Render conditional tables if response matches
+        if (question.conditional && question.conditional.showIf && savedResponse === question.conditional.showIf) {
+          Object.keys(question.conditional).forEach((conditionalKey) => {
+            if (conditionalKey !== 'showIf' && conditionalKey.startsWith('table_')) {
+              const conditionalTable = question.conditional[conditionalKey];
+              const conditionalRows = savedTableData[conditionalKey] || [];
+              
+              if (conditionalTable && conditionalTable.columns) {
+                renderedElements.push(
+                  <div key={conditionalKey} className="space-y-2 mt-4">
+                    {conditionalTable.heading && <h4 className="font-semibold">{conditionalTable.heading}</h4>}
+                    {conditionalRows.length > 0 ? (
+                      <div className="rounded-md border">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              {conditionalTable.columns.map((col: string, idx: number) => (
+                                <TableHead key={idx}>{col}</TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {conditionalRows.map((row: any, rowIdx: number) => (
+                              <TableRow key={rowIdx}>
+                                {conditionalTable.columns.map((col: string, colIdx: number) => (
+                                  <TableCell key={colIdx}>{row[col] || "-"}</TableCell>
+                                ))}
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">No data provided</p>
+                    )}
+                  </div>
+                );
+              }
+            }
+          });
+        }
+      }
+    }
+
+    return renderedElements;
+  };
 
   const renderFormByArea = () => {
     switch (confirmation.area) {
@@ -421,10 +642,50 @@ const ConfirmationFormView = ({ confirmation }: { confirmation: Confirmation }) 
       {/* Letter Header */}
       <div className="space-y-2 border-b pb-4">
         <p className="text-sm text-muted-foreground">
-          Dear {confirmation.recipientName},
+          Dear {confirmation.recipientName || savedConfirmingPartyDetails.name || "[Recipient Name]"},
         </p>
-        {renderFormByArea()}
+        <p className="text-sm text-muted-foreground mb-4">
+          Form template for {confirmation.area}
+        </p>
+        {renderDynamicTemplate()}
       </div>
+
+      {/* Confirming Party Details */}
+      {(savedConfirmingPartyDetails.name || savedConfirmingPartyDetails.designation || savedConfirmingPartyDetails.organizationName) && (
+        <div className="space-y-2 pt-4 border-t">
+          <h4 className="font-semibold">Confirming Party Details</h4>
+          <div className="grid grid-cols-2 gap-4">
+            {savedConfirmingPartyDetails.organizationName && (
+              <div>
+                <p className="text-sm text-muted-foreground">Organization Name</p>
+                <p className="font-medium">{savedConfirmingPartyDetails.organizationName}</p>
+              </div>
+            )}
+            {savedConfirmingPartyDetails.name && (
+              <div>
+                <p className="text-sm text-muted-foreground">Name</p>
+                <p className="font-medium">{savedConfirmingPartyDetails.name}</p>
+              </div>
+            )}
+            {savedConfirmingPartyDetails.designation && (
+              <div>
+                <p className="text-sm text-muted-foreground">Designation</p>
+                <p className="font-medium">{savedConfirmingPartyDetails.designation}</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Confirming Party Statement */}
+      {savedConfirmingPartyStatement.response && (
+        <div className="space-y-2 pt-4 border-t">
+          <h4 className="font-semibold">Confirming Party Statement</h4>
+          <div className="bg-muted p-3 rounded-md">
+            <p className="font-medium">{savedConfirmingPartyStatement.response}</p>
+          </div>
+        </div>
+      )}
 
       {/* Certification */}
       {confirmation.formData.isCertified && (
@@ -438,8 +699,8 @@ const ConfirmationFormView = ({ confirmation }: { confirmation: Confirmation }) 
         </div>
       )}
 
-      {/* Signatory Information */}
-      {confirmation.formData.name && (
+      {/* Signatory Information (fallback for old format) */}
+      {confirmation.formData.name && !savedConfirmingPartyDetails.name && (
         <div className="grid grid-cols-2 gap-4 pt-4 border-t">
           {confirmation.formData.organizationName && (
             <div>
@@ -471,13 +732,18 @@ export const RolloutReminder = () => {
   const [resendRemarks, setResendRemarks] = useState("");
   const [sendRemarks, setSendRemarks] = useState("");
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
+  const [isLoadingConfirmations, setIsLoadingConfirmations] = useState(true);
+  const [lockingConfirmationId, setLockingConfirmationId] = useState<string | null>(null);
 
   // Fetch confirmation requests from authorization letters on component mount
   useEffect(() => {
     fetchConfirmationRequests();
   }, []);
 
-  const fetchConfirmationRequests = async () => {
+  const fetchConfirmationRequests = async (showLoading: boolean = true) => {
+    if (showLoading) {
+      setIsLoadingConfirmations(true);
+    }
     try {
       const response = await fetch('http://localhost:3002/api/get-authorization-letters');
       if (!response.ok) {
@@ -552,7 +818,8 @@ export const RolloutReminder = () => {
           remarks: undefined,
           attachments: [],
           // Use activity logs from activity_log.json (same source as ClientAuthorization)
-          activityLog: activityLogs[letter.id] || [],
+          // Normalize letter ID for matching (remove AL- prefix if present)
+          activityLog: activityLogs[letter.id] || activityLogs[letter.id?.replace(/^AL-/, '')] || [],
           periodEndDate: letter.periodEndDate || ""
         }));
         
@@ -596,10 +863,15 @@ export const RolloutReminder = () => {
         }
         
         setConfirmations(convertedConfirmations);
+      } else {
+        setConfirmations([]);
       }
     } catch (error: any) {
       console.error('Error fetching confirmation requests:', error);
       // Keep using empty array if fetch fails
+      setConfirmations([]);
+    } finally {
+      setIsLoadingConfirmations(false);
     }
   };
 
@@ -636,7 +908,19 @@ export const RolloutReminder = () => {
     }
   };
 
-  const lockConfirmation = async (id: string) => {
+  const lockConfirmation = async (id: string, e?: React.MouseEvent) => {
+    // Prevent default button behavior and event propagation
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+
+    // Prevent multiple simultaneous lock operations
+    if (lockingConfirmationId) {
+      return;
+    }
+
+    setLockingConfirmationId(id);
     try {
       // Find the confirmation to get its confirmation ID (not letter ID)
       const confirmation = confirmations.find(c => c.id === id);
@@ -681,8 +965,8 @@ export const RolloutReminder = () => {
         description: "Confirmation locked successfully",
       });
 
-      // Refresh confirmations
-      await fetchConfirmationRequests();
+      // Refresh confirmations without showing full loading spinner
+      await fetchConfirmationRequests(false);
     } catch (error: any) {
       console.error('Error locking confirmation:', error);
       toast({
@@ -690,6 +974,8 @@ export const RolloutReminder = () => {
         description: error.message || "Failed to lock confirmation",
         variant: "destructive"
       });
+    } finally {
+      setLockingConfirmationId(null);
     }
   };
 
@@ -721,8 +1007,8 @@ export const RolloutReminder = () => {
       setSendDialogOpen(false);
       setSelectedConfirmation(null);
 
-      // Refresh confirmations to get updated activity logs
-      await fetchConfirmationRequests();
+      // Refresh confirmations to get updated activity logs without showing full loading spinner
+      await fetchConfirmationRequests(false);
     } catch (error: any) {
       console.error('Error sending confirmation:', error);
       toast({
@@ -761,8 +1047,8 @@ export const RolloutReminder = () => {
       setResendDialogOpen(false);
       setSelectedConfirmation(null);
 
-      // Refresh confirmations to get updated activity logs
-      await fetchConfirmationRequests();
+      // Refresh confirmations to get updated activity logs without showing full loading spinner
+      await fetchConfirmationRequests(false);
     } catch (error: any) {
       console.error('Error resending confirmation:', error);
       toast({
@@ -804,8 +1090,21 @@ export const RolloutReminder = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {confirmations.map((confirmation) => (
-                  <TableRow key={confirmation.id}>
+                {isLoadingConfirmations ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-12">
+                      <LoadingSpinner size="lg" text="Loading confirmation requests..." />
+                    </TableCell>
+                  </TableRow>
+                ) : confirmations.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      No confirmation requests found
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  confirmations.map((confirmation) => (
+                    <TableRow key={confirmation.id}>
                     <TableCell className="font-medium">{confirmation.area}</TableCell>
                     <TableCell>{confirmation.confirmingParty}</TableCell>
                     <TableCell>
@@ -1149,19 +1448,31 @@ export const RolloutReminder = () => {
                             </Dialog>
                             
                             <Button
+                              type="button"
                               size="sm"
                               variant="outline"
-                              onClick={() => lockConfirmation(confirmation.id)}
+                              onClick={(e) => lockConfirmation(confirmation.id, e)}
+                              disabled={lockingConfirmationId === confirmation.id}
                             >
-                              <Lock className="h-4 w-4 mr-1" />
-                              Lock
+                              {lockingConfirmationId === confirmation.id ? (
+                                <>
+                                  <LoadingSpinner size="sm" className="mr-1" />
+                                  Locking...
+                                </>
+                              ) : (
+                                <>
+                                  <Lock className="h-4 w-4 mr-1" />
+                                  Lock
+                                </>
+                              )}
                             </Button>
                           </>
                         )}
                       </div>
                     </TableCell>
                   </TableRow>
-                ))}
+                  ))
+                )}
               </TableBody>
             </Table>
           </div>

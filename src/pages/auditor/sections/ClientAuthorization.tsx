@@ -8,6 +8,7 @@ import { CheckCircle, Clock, XCircle, Eye, Download, Send } from "lucide-react";
 import { useState, useEffect } from "react";
 import { formatIndianDateTime } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { LoadingSpinner } from "@/components/ui/loading";
 
 interface ClientUser {
   id: string;
@@ -51,6 +52,9 @@ export const ClientAuthorization = () => {
   const { toast } = useToast();
   const [letters, setLetters] = useState<AuthorizationLetter[]>([]);
   const [clientUsers, setClientUsers] = useState<ClientUser[]>([]);
+  const [isLoadingLetters, setIsLoadingLetters] = useState(true);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(true);
+  const [processingLetterId, setProcessingLetterId] = useState<string | null>(null);
 
   // Fetch authorization letters, activity logs, and client users from SharePoint on component mount
   useEffect(() => {
@@ -59,6 +63,7 @@ export const ClientAuthorization = () => {
   }, []);
 
   const fetchClientUsers = async () => {
+    setIsLoadingUsers(true);
     try {
       const response = await fetch('http://localhost:3002/api/get-people-data');
       if (!response.ok) {
@@ -89,10 +94,15 @@ export const ClientAuthorization = () => {
         description: "Failed to fetch client users from SharePoint",
         variant: "destructive",
       });
+    } finally {
+      setIsLoadingUsers(false);
     }
   };
 
-  const fetchAuthorizationLetters = async () => {
+  const fetchAuthorizationLetters = async (showLoading: boolean = true) => {
+    if (showLoading) {
+      setIsLoadingLetters(true);
+    }
     try {
       const response = await fetch('http://localhost:3002/api/get-authorization-letters');
       if (!response.ok) {
@@ -147,23 +157,31 @@ export const ClientAuthorization = () => {
       
       // Convert SharePoint data to local format
       if (lettersData.letters && lettersData.letters.length > 0) {
-        const convertedLetters = lettersData.letters.map((letter: any) => ({
-          id: letter.id || `AL-${Date.now()}`,
-          area: letter.area || "",
-          confirmingParty: letter.confirmingParty || "",
-          amount: letter.amount || "",
-          recipientName: letter.recipientName || "",
-          recipientOrg: letter.recipientOrg || letter.confirmingParty || "",
-          recipientEmail: letter.recipientEmail || "",
-          clientName: letter.clientName || "",
-          clientEmail: letter.clientEmail || "",
-          status: (letter.status || "draft") as "draft" | "pending" | "authorized" | "rejected",
-          authorizedBy: letter.authorizedBy,
-          authorizedDate: letter.authorizedDate,
-          authorizedIP: letter.authorizedIP,
-          // Merge activity logs from both sources (letter.activityLog and activity_log.json)
-          activityLog: activityLogs[letter.id] || letter.activityLog || []
-        }));
+        const convertedLetters = lettersData.letters.map((letter: any) => {
+          const letterId = letter.id || `AL-${Date.now()}`;
+          // Normalize letter ID for activity log matching (remove AL- prefix if present)
+          const normalizedLetterId = letterId.replace(/^AL-/, '');
+          // Try matching with both the original ID and normalized ID
+          const matchedActivityLog = activityLogs[letterId] || activityLogs[normalizedLetterId] || letter.activityLog || [];
+          
+          return {
+            id: letterId,
+            area: letter.area || "",
+            confirmingParty: letter.confirmingParty || "",
+            amount: letter.amount || "",
+            recipientName: letter.recipientName || "",
+            recipientOrg: letter.recipientOrg || letter.confirmingParty || "",
+            recipientEmail: letter.recipientEmail || "",
+            clientName: letter.clientName || "",
+            clientEmail: letter.clientEmail || "",
+            status: (letter.status || "draft") as "draft" | "pending" | "authorized" | "rejected",
+            authorizedBy: letter.authorizedBy,
+            authorizedDate: letter.authorizedDate,
+            authorizedIP: letter.authorizedIP,
+            // Merge activity logs from both sources (letter.activityLog and activity_log.json)
+            activityLog: matchedActivityLog
+          };
+        });
         setLetters(convertedLetters);
       } else {
         // Clear letters if no data
@@ -172,6 +190,8 @@ export const ClientAuthorization = () => {
     } catch (error: any) {
       console.error('Error fetching authorization letters:', error);
       // Keep using mock data if fetch fails
+    } finally {
+      setIsLoadingLetters(false);
     }
   };
 
@@ -259,8 +279,21 @@ export const ClientAuthorization = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {letters.map((letter) => (
-                  <TableRow key={letter.id}>
+                {isLoadingLetters ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center py-12">
+                      <LoadingSpinner size="lg" text="Loading authorization letters..." />
+                    </TableCell>
+                  </TableRow>
+                ) : letters.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                      No authorization letters found
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  letters.map((letter) => (
+                    <TableRow key={letter.id} className={processingLetterId === letter.id ? "opacity-50" : ""}>
                     <TableCell className="font-medium">{letter.id}</TableCell>
                     <TableCell>{letter.area}</TableCell>
                     <TableCell>{letter.confirmingParty}</TableCell>
@@ -335,6 +368,9 @@ export const ClientAuthorization = () => {
                           size="sm"
                           variant="default"
                           onClick={async () => {
+                            if (processingLetterId) return; // Prevent multiple simultaneous operations
+                            
+                            setProcessingLetterId(letter.id);
                             try {
                               // Validate that a client is selected
                               if (!letter.clientEmail || !letter.clientName) {
@@ -398,13 +434,15 @@ export const ClientAuthorization = () => {
 
                               // 3. Add Stage 2 activity log entry
                               const performedBy = "Auditor"; // TODO: Get actual auditor name from auth context
+                              // Normalize letter ID (remove AL- prefix if present) for activity log matching
+                              const normalizedLetterId = letter.id?.replace(/^AL-/, '') || letter.id;
                               const activityLogResponse = await fetch('http://localhost:3002/api/add-activity-log', {
                                 method: 'POST',
                                 headers: {
                                   'Content-Type': 'application/json',
                                 },
                                 body: JSON.stringify({
-                                  letterId: letter.id,
+                                  letterId: normalizedLetterId,
                                   stage: "Send to Client",
                                   action: "Sent to client for authorization",
                                   performedBy: performedBy,
@@ -425,7 +463,7 @@ export const ClientAuthorization = () => {
                               // Refresh authorization letters to get updated status and activity logs
                               // Wait a bit to ensure SharePoint update has propagated
                               setTimeout(() => {
-                                fetchAuthorizationLetters();
+                                fetchAuthorizationLetters(false);
                               }, 500);
                             } catch (error: any) {
                               console.error('Error sending authorization letter:', error);
@@ -434,11 +472,23 @@ export const ClientAuthorization = () => {
                                 description: `Failed to send authorization letter: ${error.message}`,
                                 variant: "destructive",
                               });
+                            } finally {
+                              setProcessingLetterId(null);
                             }
                           }}
+                          disabled={processingLetterId === letter.id}
                         >
-                          <Send className="h-3 w-3 mr-1" />
-                          Send
+                          {processingLetterId === letter.id ? (
+                            <>
+                              <LoadingSpinner size="sm" className="mr-1" />
+                              Processing...
+                            </>
+                          ) : (
+                            <>
+                              <Send className="h-3 w-3 mr-1" />
+                              Send
+                            </>
+                          )}
                         </Button>
                       ) : letter.status === "rejected" ? (
                         <div className="flex items-center gap-2">
@@ -506,13 +556,15 @@ export const ClientAuthorization = () => {
 
                                 // 3. Add Stage 2 activity log entry (resend)
                                 const performedBy = "Auditor"; // TODO: Get actual auditor name from auth context
+                                // Normalize letter ID (remove AL- prefix if present) for activity log matching
+                                const normalizedLetterId = letter.id?.replace(/^AL-/, '') || letter.id;
                                 const activityLogResponse = await fetch('http://localhost:3002/api/add-activity-log', {
                                   method: 'POST',
                                   headers: {
                                     'Content-Type': 'application/json',
                                   },
                                   body: JSON.stringify({
-                                    letterId: letter.id,
+                                    letterId: normalizedLetterId,
                                     stage: "Send to Client",
                                     action: "Sent to client for authorization",
                                     performedBy: performedBy,
@@ -533,7 +585,7 @@ export const ClientAuthorization = () => {
                                 // Refresh authorization letters to get updated status and activity logs
                                 // Wait a bit to ensure SharePoint update has propagated
                                 setTimeout(() => {
-                                  fetchAuthorizationLetters();
+                                  fetchAuthorizationLetters(false);
                                 }, 500);
                               } catch (error: any) {
                                 console.error('Error resending authorization letter:', error);
@@ -658,7 +710,8 @@ export const ClientAuthorization = () => {
                       </div>
                     </TableCell>
                   </TableRow>
-                ))}
+                  ))
+                )}
               </TableBody>
             </Table>
           </div>

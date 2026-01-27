@@ -11,6 +11,7 @@ import { UserPlus, Trash2, Shield, Users, Building2, ChevronDown, ChevronUp } fr
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
+import { LoadingSpinner } from "@/components/ui/loading";
 
 interface AuditorUser {
   id: string;
@@ -37,71 +38,13 @@ interface ConfirmingPartyContact {
   recipientDesignation?: string;
 }
 
-const mockAuditors: AuditorUser[] = [
-  {
-    id: "AU-001",
-    email: "james.anderson@auditfirm.com",
-    name: "James Anderson",
-    designation: "Partner",
-    role: "Engagement Partner"
-  },
-  {
-    id: "AU-002",
-    email: "sarah.mitchell@auditfirm.com",
-    name: "Sarah Mitchell",
-    designation: "Senior Manager",
-    role: "Engagement Owner"
-  },
-  {
-    id: "AU-003",
-    email: "david.lee@auditfirm.com",
-    name: "David Lee",
-    designation: "Senior Associate",
-    role: "Engagement Team"
-  }
-];
-
-const mockClients: ClientUser[] = [
-  {
-    id: "CL-001",
-    name: "Sarah Johnson",
-    designation: "CFO",
-    email: "sarah.j@techcorp.com",
-    role: "Authorizer",
-    areas: ["Trade Receivables", "Trade Payables", "Cash & Cash Equivalents"]
-  },
-  {
-    id: "CL-002",
-    name: "Robert Chen",
-    designation: "Finance Manager",
-    email: "r.chen@techcorp.com",
-    role: "Viewer",
-    areas: ["Trade Receivables"]
-  }
-];
-
-const mockConfirmingParties: ConfirmingPartyContact[] = [
-  {
-    id: "CP-001",
-    organization: "ABC Corporation Ltd.",
-    recipientEmail: "john.smith@abccorp.com",
-    recipientName: "John Smith",
-    recipientDesignation: "Accounts Manager"
-  },
-  {
-    id: "CP-002",
-    organization: "XYZ Industries",
-    recipientEmail: "e.chen@xyzind.com",
-    recipientName: "Emily Chen"
-  }
-];
-
 export const AccessRoles = () => {
   const { toast } = useToast();
-  const [auditors, setAuditors] = useState(mockAuditors);
-  const [clients, setClients] = useState(mockClients);
-  const [confirmingParties, setConfirmingParties] = useState(mockConfirmingParties);
+  const [auditors, setAuditors] = useState<AuditorUser[]>([]);
+  const [clients, setClients] = useState<ClientUser[]>([]);
+  const [confirmingParties, setConfirmingParties] = useState<ConfirmingPartyContact[]>([]);
   const [expandedClientAreas, setExpandedClientAreas] = useState<Set<string>>(new Set());
+  const [isLoadingPeople, setIsLoadingPeople] = useState(true);
   
   // Fetch people data from SharePoint on component mount
   useEffect(() => {
@@ -109,6 +52,7 @@ export const AccessRoles = () => {
   }, []);
 
   const fetchPeopleData = async () => {
+    setIsLoadingPeople(true);
     try {
       const response = await fetch('http://localhost:3002/api/get-people-data');
       if (!response.ok) {
@@ -131,6 +75,8 @@ export const AccessRoles = () => {
             : "Engagement Team" as const
         }));
         setAuditors(convertedAuditors);
+      } else {
+        setAuditors([]);
       }
       
       if (peopleData.clients && peopleData.clients.length > 0) {
@@ -143,6 +89,8 @@ export const AccessRoles = () => {
           areas: client.areas || []
         }));
         setClients(convertedClients);
+      } else {
+        setClients([]);
       }
       
       if (peopleData.confirming_parties && peopleData.confirming_parties.length > 0) {
@@ -154,11 +102,23 @@ export const AccessRoles = () => {
           recipientDesignation: party.designation || undefined
         }));
         setConfirmingParties(convertedParties);
+      } else {
+        setConfirmingParties([]);
       }
       
     } catch (error: any) {
       console.error('Error fetching people data:', error);
-      // Keep using mock data if fetch fails
+      toast({
+        title: "Error",
+        description: "Failed to fetch people data from SharePoint",
+        variant: "destructive",
+      });
+      // Set empty arrays on error
+      setAuditors([]);
+      setClients([]);
+      setConfirmingParties([]);
+    } finally {
+      setIsLoadingPeople(false);
     }
   };
   
@@ -541,8 +501,21 @@ export const AccessRoles = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {auditors.map((auditor) => (
-                      <TableRow key={auditor.id}>
+                    {isLoadingPeople ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center py-12">
+                          <LoadingSpinner size="lg" text="Loading auditor team members..." />
+                        </TableCell>
+                      </TableRow>
+                    ) : auditors.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                          No auditor team members found
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      auditors.map((auditor) => (
+                        <TableRow key={auditor.id}>
                         <TableCell className="font-medium">{auditor.name}</TableCell>
                         <TableCell>{auditor.email}</TableCell>
                         <TableCell>{auditor.designation}</TableCell>
@@ -590,7 +563,8 @@ export const AccessRoles = () => {
                           </Button>
                         </TableCell>
                       </TableRow>
-                    ))}
+                      ))
+                    )}
                   </TableBody>
                 </Table>
               </div>
@@ -706,9 +680,22 @@ export const AccessRoles = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {clients.map((client) => {
-                      const isExpanded = expandedClientAreas.has(client.id);
-                      const firstArea = client.areas[0] || "";
+                    {isLoadingPeople ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center py-12">
+                          <LoadingSpinner size="lg" text="Loading client users..." />
+                        </TableCell>
+                      </TableRow>
+                    ) : clients.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                          No client users found
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      clients.map((client) => {
+                        const isExpanded = expandedClientAreas.has(client.id);
+                        const firstArea = client.areas[0] || "";
                       const remainingCount = client.areas.length - 1;
 
                       return (
@@ -810,7 +797,8 @@ export const AccessRoles = () => {
                           </TableCell>
                         </TableRow>
                       );
-                    })}
+                      })
+                    )}
                   </TableBody>
                 </Table>
               </div>
@@ -899,8 +887,21 @@ export const AccessRoles = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {confirmingParties.map((party) => (
-                      <TableRow key={party.id}>
+                    {isLoadingPeople ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center py-12">
+                          <LoadingSpinner size="lg" text="Loading confirming party contacts..." />
+                        </TableCell>
+                      </TableRow>
+                    ) : confirmingParties.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                          No confirming party contacts found
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      confirmingParties.map((party) => (
+                        <TableRow key={party.id}>
                         <TableCell className="font-medium">{party.organization}</TableCell>
                         <TableCell>{party.recipientName}</TableCell>
                         <TableCell>{party.recipientEmail}</TableCell>
@@ -948,7 +949,8 @@ export const AccessRoles = () => {
                           </Button>
                         </TableCell>
                       </TableRow>
-                    ))}
+                      ))
+                    )}
                   </TableBody>
                 </Table>
               </div>

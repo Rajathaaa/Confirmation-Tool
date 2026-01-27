@@ -2410,19 +2410,33 @@ def run_domain_test():
                 elif w.expiration_date:
                     expiry_date = w.expiration_date.strftime("%Y-%m-%d")
                 
+                # Check if domain exists by checking multiple fields
+                # Some TLDs (like .in) may not populate domain_name, so we check:
+                # - domain_name (primary check)
+                # - registrar (if domain exists, registrar is usually present)
+                # - creation_date or expiration_date (registration dates indicate domain exists)
+                domain_exists = (
+                    (w.domain_name is not None and w.domain_name != "") or
+                    (w.registrar is not None and w.registrar != "") or
+                    (w.creation_date is not None and w.creation_date != "") or
+                    (w.expiration_date is not None and w.expiration_date != "")
+                )
+                
                 domain_info = {
                     "domain": domain,
-                    "status": "Active" if w.domain_name else "Inactive/Not Found",
+                    "status": "Active" if domain_exists else "Inactive/Not Found",
                     "creation_date": creation_date,
                     "expiry_date": expiry_date,
                     "registrar": w.registrar if w.registrar else ""
                 }
                 
                 # If domain exists and is active, status is "passed"
-                if w.domain_name:
+                if domain_exists:
                     test_status = "passed"
+                    print(f"✅ Domain {domain} exists - registrar: {w.registrar}, creation: {creation_date}, expiry: {expiry_date}")
                 else:
                     test_status = "failed"
+                    print(f"❌ Domain {domain} not found - domain_name: {w.domain_name}, registrar: {w.registrar}")
             except Exception as e:
                 print(f"⚠️ Error fetching whois data: {str(e)}")
                 domain_info = {
@@ -3612,7 +3626,7 @@ def send_confirmation_to_party():
             pending_confirmations_data["confirmations"] = []
 
         # Create or update pending confirmation
-        confirmation_id = f"CNF-{letter_id.replace('AL-', '')}"
+        confirmation_id = letter_id.replace('AL-', '')
         existing_confirmation = None
         for i, conf in enumerate(pending_confirmations_data["confirmations"]):
             if conf.get("id") == confirmation_id:

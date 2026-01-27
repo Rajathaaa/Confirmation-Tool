@@ -26,6 +26,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatNumberInput, parseIndianNumber } from "@/lib/utils";
+import { LoadingSpinner } from "@/components/ui/loading";
 
 // Mock data fallback - in real app, this would come from an API
 const mockConfirmations: Record<string, any> = {
@@ -1573,7 +1574,7 @@ const ConfirmationForm = () => {
       return (
         <Card>
           <CardContent className="p-8 text-center">
-            <p>Loading template...</p>
+            <LoadingSpinner size="lg" text="Loading template..." />
           </CardContent>
         </Card>
       );

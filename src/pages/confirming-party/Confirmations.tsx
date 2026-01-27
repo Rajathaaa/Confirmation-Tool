@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Shield, Users, ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
+import { LoadingSpinner } from "@/components/ui/loading";
 
 interface ConfirmationRequest {
   id: string;
@@ -21,6 +22,7 @@ interface ConfirmationRequest {
 const ConfirmingPartyConfirmations = () => {
   const navigate = useNavigate();
   const [confirmations, setConfirmations] = useState<ConfirmationRequest[]>([]);
+  const [isLoadingConfirmations, setIsLoadingConfirmations] = useState(true);
 
   // Fetch pending confirmations from SharePoint on component mount
   useEffect(() => {
@@ -28,6 +30,7 @@ const ConfirmingPartyConfirmations = () => {
   }, []);
 
   const fetchPendingConfirmations = async () => {
+    setIsLoadingConfirmations(true);
     try {
       const response = await fetch('http://localhost:3002/api/get-pending-confirmations');
       if (!response.ok) {
@@ -56,6 +59,8 @@ const ConfirmingPartyConfirmations = () => {
     } catch (error: any) {
       console.error('Error fetching pending confirmations:', error);
       // Keep using empty array if fetch fails
+    } finally {
+      setIsLoadingConfirmations(false);
     }
   };
 
@@ -115,7 +120,13 @@ const ConfirmingPartyConfirmations = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {confirmations.length === 0 ? (
+                  {isLoadingConfirmations ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-12">
+                        <LoadingSpinner size="lg" text="Loading pending confirmations..." />
+                      </TableCell>
+                    </TableRow>
+                  ) : confirmations.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                         No pending confirmations at this time.

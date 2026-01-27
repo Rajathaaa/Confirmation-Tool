@@ -20,6 +20,7 @@ import { formatIndianDate, parseIndianDate, formatIndianDateTime, cn } from "@/l
 import React from "react";
 import { useToast } from "@/hooks/use-toast";
 import * as XLSX from "xlsx";
+import { LoadingSpinner } from "@/components/ui/loading";
 
 // Add template interfaces
 interface AuthorizationTemplate {
@@ -297,6 +298,7 @@ export const SampleGeneration = () => {
   const [confirmationData, setConfirmationData] = useState<Record<string, any>>({});
   const [isLoadingConfirmationData, setIsLoadingConfirmationData] = useState(false);
   const [samplesFromJson, setSamplesFromJson] = useState<Record<string, Sample[]>>({});
+  const [generatingSampleSetId, setGeneratingSampleSetId] = useState<string | null>(null);
   
   // State for confirming party contacts from Access & Roles
   const [confirmingPartyContacts, setConfirmingPartyContacts] = useState<Array<{ name: string; email: string }>>([]);
@@ -875,15 +877,17 @@ export const SampleGeneration = () => {
 
   // Generate samples based on configuration
   const handleGenerateSamples = async (sampleSetId: string) => {
-    const config = samplingConfigs[sampleSetId];
-    if (!config) {
-      toast({
-        title: "Error",
-        description: "Please configure sampling method first",
-        variant: "destructive",
-      });
-      return;
-    }
+    setGeneratingSampleSetId(sampleSetId);
+    try {
+      const config = samplingConfigs[sampleSetId];
+      if (!config) {
+        toast({
+          title: "Error",
+          description: "Please configure sampling method first",
+          variant: "destructive",
+        });
+        return;
+      }
 
     const dateTime = new Date().toISOString();
     let samples: Sample[] = [];
@@ -1329,6 +1333,9 @@ export const SampleGeneration = () => {
         title: "Success",
         description: `Generated ${samples.length} samples successfully`,
       });
+    }
+    } finally {
+      setGeneratingSampleSetId(null);
     }
   };
 
@@ -2469,8 +2476,12 @@ export const SampleGeneration = () => {
   };
 
   // Generate authorization letters after template selection
+  const [isGeneratingLetters, setIsGeneratingLetters] = useState(false);
+  
   const handleGenerateLetters = async () => {
     if (!selectedSampleSetId) return;
+    
+    setIsGeneratingLetters(true);
     
     const samples = getSamplesForSet(selectedSampleSetId);
     const templates = getAllTemplates();
@@ -2608,13 +2619,15 @@ export const SampleGeneration = () => {
         const performedBy = "Auditor"; // TODO: Get actual auditor name from auth context
         for (const letter of letters) {
           try {
+            // Normalize letter ID (remove AL- prefix if present) for activity log matching
+            const normalizedLetterId = letter.id?.replace(/^AL-/, '') || letter.id;
             await fetch('http://localhost:3002/api/add-activity-log', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
               },
               body: JSON.stringify({
-                letterId: letter.id,
+                letterId: normalizedLetterId,
                 stage: "Creation",
                 action: "Confirmation request created",
                 performedBy: performedBy,
@@ -2647,6 +2660,8 @@ export const SampleGeneration = () => {
         description: `Failed to create authorization letters: ${error.message}`,
         variant: "destructive",
       });
+    } finally {
+      setIsGeneratingLetters(false);
     }
   };
 
@@ -3248,8 +3263,8 @@ export const SampleGeneration = () => {
           </CardHeader>
           <CardContent className="space-y-4 max-h-[calc(100vh-200px)] overflow-y-auto">
             {isLoadingSections ? (
-              <div className="text-center py-4 text-sm text-muted-foreground">
-                Loading sections...
+              <div className="text-center py-8">
+                <LoadingSpinner size="md" text="Loading sections..." />
               </div>
             ) : (
               <>
@@ -3964,7 +3979,7 @@ export const SampleGeneration = () => {
                     <Button 
                       className="flex-1" 
                       onClick={() => handleGenerateSamples(set.id)}
-                      disabled={set.status === "generated" || lockedSamplingMethods[set.id]?.locked || (() => {
+                      disabled={generatingSampleSetId === set.id || set.status === "generated" || lockedSamplingMethods[set.id]?.locked || (() => {
                         const config = samplingConfigs[set.id];
                         const hasFileData = fileData[set.id] && Array.isArray(fileData[set.id]) && fileData[set.id].length > 0;
                         
@@ -4016,8 +4031,17 @@ export const SampleGeneration = () => {
                         return true;
                       })()}
                     >
-                        <Download className="h-4 w-4 mr-2" />
-                      Generate Sample
+                      {generatingSampleSetId === set.id ? (
+                        <>
+                          <LoadingSpinner size="sm" className="mr-2" />
+                          Generating...
+                        </>
+                      ) : (
+                        <>
+                          <Download className="h-4 w-4 mr-2" />
+                          Generate Sample
+                        </>
+                      )}
                       </Button>
                     <Dialog 
                           open={templateSelectionDialogOpen && selectedSampleSetId === set.id}
@@ -4822,7 +4846,65 @@ export const SampleGeneration = () => {
                                                                           {/* Configuration Panel - Inside Data Cell */}
                                                                           {isCellSelected && (
                                                                             <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-xs space-y-2">
-                                                                              {/* ... existing configuration panel code ... */}
+                                                                              <div>
+                                                                                <Label className="text-xs mb-1 block">Cell Type</Label>
+                                                                                <Select
+                                                                                  value={cell.cellType}
+                                                                                  onValueChange={(value: "text" | "calendar" | "customDropdown") => {
+                                                                                    updateTableCell(
+                                                                                      element.id,
+                                                                                      row.id,
+                                                                                      cell.id,
+                                                                                      { 
+                                                                                        cellType: value,
+                                                                                        // Clear custom dropdown options if changing away from customDropdown
+                                                                                        customDropdownOptions: value === "customDropdown" ? cell.customDropdownOptions : undefined
+                                                                                      }
+                                                                                    );
+                                                                                    
+                                                                                    if (value === "customDropdown") {
+                                                                                      setEditingCellForDropdown({
+                                                                                        elementId: element.id,
+                                                                                        rowId: row.id,
+                                                                                        cellId: cell.id,
+                                                                                        isHeader: false
+                                                                                      });
+                                                                                      setCustomDropdownDialogOpen(true);
+                                                                                    }
+                                                                                  }}
+                                                                                >
+                                                                                  <SelectTrigger className="h-7 text-xs">
+                                                                                    <SelectValue />
+                                                                                  </SelectTrigger>
+                                                                                  <SelectContent>
+                                                                                    <SelectItem value="text">Text Field</SelectItem>
+                                                                                    <SelectItem value="calendar">Calendar Dropdown</SelectItem>
+                                                                                    <SelectItem value="customDropdown">Custom Dropdown</SelectItem>
+                                                                                  </SelectContent>
+                                                                                </Select>
+                                                                              </div>
+                                                                              {cell.cellType === "customDropdown" && cell.customDropdownOptions && (
+                                                                                <div className="text-xs text-muted-foreground">
+                                                                                  Options: {cell.customDropdownOptions.join(", ")}
+                                                                                  <Button
+                                                                                    variant="ghost"
+                                                                                    size="sm"
+                                                                                    className="h-5 text-xs ml-2"
+                                                                                    onClick={(e) => {
+                                                                                      e.stopPropagation();
+                                                                                      setEditingCellForDropdown({
+                                                                                        elementId: element.id,
+                                                                                        rowId: row.id,
+                                                                                        cellId: cell.id,
+                                                                                        isHeader: false
+                                                                                      });
+                                                                                      setCustomDropdownDialogOpen(true);
+                                                                                    }}
+                                                                                  >
+                                                                                    Edit Options
+                                                                                  </Button>
+                                                                                </div>
+                                                                              )}
                                                                             </div>
                                                                           )}
                                                                           
@@ -5240,7 +5322,7 @@ export const SampleGeneration = () => {
                               <div className="flex items-center justify-between">
                                 <h3 className="text-lg font-semibold">Samples in This Set</h3>
                                 {isLoadingConfirmationData && (
-                                  <p className="text-sm text-muted-foreground">Loading samples from SharePoint...</p>
+                                  <p className="text-sm text-muted-foreground">Loading samples...</p>
                                 )}
                               </div>
                               <div className="rounded-md border">
@@ -5257,8 +5339,8 @@ export const SampleGeneration = () => {
                                   <TableBody>
                                     {isLoadingConfirmationData ? (
                                       <TableRow>
-                                        <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                                          Loading samples from SharePoint...
+                                        <TableCell colSpan={5} className="text-center py-8">
+                                          <LoadingSpinner size="md" text="Loading samples..." />
                                         </TableCell>
                                       </TableRow>
                                     ) : getSamplesForSet(set.id).length === 0 ? (
@@ -5408,8 +5490,18 @@ export const SampleGeneration = () => {
                               >
                                 Cancel
                               </Button>
-                              <Button onClick={handleGenerateLetters}>
-                                Generate Authorization Letters
+                              <Button 
+                                onClick={handleGenerateLetters}
+                                disabled={isGeneratingLetters}
+                              >
+                                {isGeneratingLetters ? (
+                                  <>
+                                    <LoadingSpinner size="sm" className="mr-2" />
+                                    Generating Authorization Letters...
+                                  </>
+                                ) : (
+                                  "Generate Authorization Letters"
+                                )}
                               </Button>
                             </div>
                           </div>
@@ -5552,7 +5644,7 @@ export const SampleGeneration = () => {
                             {isLoadingSamplingLog ? (
                               <div className="text-center py-8 text-muted-foreground">
                                 <ScrollText className="h-12 w-12 mx-auto mb-4 opacity-50 animate-spin" />
-                                <p>Loading sampling log from SharePoint...</p>
+                                <p>Loading sampling log...</p>
                               </div>
                             ) : (samplingLogsFromSharePoint[set.id] && samplingLogsFromSharePoint[set.id].length > 0) ? (
                               // Display logs from SharePoint (most recent first)
@@ -6116,7 +6208,11 @@ export const SampleGeneration = () => {
           ))}
         </div>
 
-        {(!sampleSets[activeArea] || sampleSets[activeArea].length === 0) && !showNewSetForm && (
+        {isLoadingConfirmationData ? (
+          <Card className="p-12 text-center">
+            <LoadingSpinner size="lg" text="Loading sample sets..." />
+          </Card>
+        ) : (!sampleSets[activeArea] || sampleSets[activeArea].length === 0) && !showNewSetForm ? (
           <Card className="p-12 text-center">
             <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
             <h3 className="text-lg font-semibold mb-2">No Sample Sets</h3>
@@ -6126,7 +6222,7 @@ export const SampleGeneration = () => {
               Add Sample Set
             </Button>
           </Card>
-        )}
+        ) : null}
           </>
         )}
       </div>

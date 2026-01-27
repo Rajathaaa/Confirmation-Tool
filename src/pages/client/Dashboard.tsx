@@ -8,6 +8,7 @@ import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { formatIndianDateTime, formatIndianNumber, formatIndianDate } from "@/lib/utils";
+import { LoadingSpinner, LoadingOverlay } from "@/components/ui/loading";
 
 interface AuthorizationRequest {
   id: string;
@@ -918,6 +919,8 @@ const ConfirmationFormView = ({ request }: { request: AuthorizationRequest }) =>
 const ClientDashboard = () => {
   const navigate = useNavigate();
   const [requests, setRequests] = useState(mockAuthorizationRequests);
+  const [isLoadingRequests, setIsLoadingRequests] = useState(true);
+  const [processingRequestId, setProcessingRequestId] = useState<string | null>(null);
   const userRole = getCurrentUserRole();
 
   // Check if user has access
@@ -928,7 +931,10 @@ const ClientDashboard = () => {
     fetchAuthorizationRequests();
   }, []);
 
-  const fetchAuthorizationRequests = async () => {
+  const fetchAuthorizationRequests = async (showLoading: boolean = true) => {
+    if (showLoading) {
+      setIsLoadingRequests(true);
+    }
     try {
       const response = await fetch('http://localhost:3002/api/get-authorization-requests');
       if (!response.ok) {
@@ -961,16 +967,21 @@ const ClientDashboard = () => {
           clientOrganization: req.clientOrganization || ""
         }));
         setRequests(convertedRequests);
+      } else {
+        setRequests([]);
       }
     } catch (error: any) {
       console.error('Error fetching authorization requests:', error);
       // Keep using mock data if fetch fails
+    } finally {
+      setIsLoadingRequests(false);
     }
   };
 
   const handleAuthorize = async (id: string) => {
     if (userRole !== "Authorizer") return; // Safety check
     
+    setProcessingRequestId(id);
     try {
       const currentUser = mockClientUsers.find(u => u.email === currentUserEmail);
       const authorizedBy = currentUser?.name || "Unknown";
@@ -1059,17 +1070,20 @@ const ClientDashboard = () => {
       
       // Refresh requests to get updated data after a short delay to ensure SharePoint update has propagated
       setTimeout(() => {
-        fetchAuthorizationRequests();
+        fetchAuthorizationRequests(false);
       }, 500);
     } catch (error: any) {
       console.error('Error authorizing request:', error);
       alert(`Failed to authorize: ${error.message}`);
+    } finally {
+      setProcessingRequestId(null);
     }
   };
 
   const handleReject = async (id: string) => {
     if (userRole !== "Authorizer") return; // Safety check
     
+    setProcessingRequestId(id);
     try {
       const currentUser = mockClientUsers.find(u => u.email === currentUserEmail);
       const authorizedBy = currentUser?.name || "Unknown";
@@ -1150,11 +1164,13 @@ const ClientDashboard = () => {
 
       alert("Confirmation rejected.");
       
-      // Refresh requests to get updated data
-      fetchAuthorizationRequests();
+      // Refresh requests to get updated data without showing full loading spinner
+      fetchAuthorizationRequests(false);
     } catch (error: any) {
       console.error('Error rejecting request:', error);
       alert(`Failed to reject: ${error.message}`);
+    } finally {
+      setProcessingRequestId(null);
     }
   };
 
@@ -1289,22 +1305,34 @@ const ClientDashboard = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Area</TableHead>
-                    <TableHead>Confirming Party</TableHead>
-                    <TableHead>Recipient Email</TableHead>
-                    <TableHead>Recipient Name</TableHead>
-                    <TableHead>Confirmation Status</TableHead>
-                    <TableHead className="text-right">Authorize?</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {requests.map((request) => (
-                    <TableRow key={request.id}>
-                      <TableCell className="font-medium">{request.area}</TableCell>
+            {isLoadingRequests ? (
+              <div className="flex items-center justify-center py-12">
+                <LoadingSpinner size="lg" text="Loading authorization requests..." />
+              </div>
+            ) : (
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Area</TableHead>
+                      <TableHead>Confirming Party</TableHead>
+                      <TableHead>Recipient Email</TableHead>
+                      <TableHead>Recipient Name</TableHead>
+                      <TableHead>Confirmation Status</TableHead>
+                      <TableHead className="text-right">Authorize?</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {requests.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                          No authorization requests found
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      requests.map((request) => (
+                        <TableRow key={request.id} className={processingRequestId === request.id ? "opacity-50" : ""}>
+                          <TableCell className="font-medium">{request.area}</TableCell>
                       <TableCell>{request.confirmingParty}</TableCell>
                       <TableCell>
                         <code className="text-xs bg-muted px-2 py-1 rounded">
@@ -1470,17 +1498,37 @@ const ClientDashboard = () => {
                                 size="default"
                                 className="bg-gradient-to-br from-emerald-500 via-green-600 to-emerald-700 hover:from-emerald-600 hover:via-green-700 hover:to-emerald-800 text-white font-semibold shadow-md hover:shadow-lg transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] px-7 py-2.5 rounded-xl border-0 hover:border-green-400/30 border-2"
                                 onClick={() => handleAuthorize(request.id)}
+                                disabled={processingRequestId === request.id}
                               >
-                                <CheckCircle className="h-4 w-4 mr-2 stroke-[2.5]" />
-                                Accept
+                                {processingRequestId === request.id ? (
+                                  <>
+                                    <LoadingSpinner size="sm" className="mr-2" />
+                                    Processing...
+                                  </>
+                                ) : (
+                                  <>
+                                    <CheckCircle className="h-4 w-4 mr-2 stroke-[2.5]" />
+                                    Accept
+                                  </>
+                                )}
                               </Button>
                               <Button
                                 size="default"
                                 className="bg-gradient-to-br from-rose-500 via-red-600 to-rose-700 hover:from-rose-600 hover:via-red-700 hover:to-rose-800 text-white font-semibold shadow-md hover:shadow-lg transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] px-7 py-2.5 rounded-xl border-0 hover:border-red-400/30 border-2"
                                 onClick={() => handleReject(request.id)}
+                                disabled={processingRequestId === request.id}
                               >
-                                <XCircle className="h-4 w-4 mr-2 stroke-[2.5]" />
-                                Reject
+                                {processingRequestId === request.id ? (
+                                  <>
+                                    <LoadingSpinner size="sm" className="mr-2" />
+                                    Processing...
+                                  </>
+                                ) : (
+                                  <>
+                                    <XCircle className="h-4 w-4 mr-2 stroke-[2.5]" />
+                                    Reject
+                                  </>
+                                )}
                               </Button>
                             </div>
                           ) : (
@@ -1517,11 +1565,13 @@ const ClientDashboard = () => {
                         )}
                       </TableCell>
                     </TableRow>
-                  ))}
+                    ))
+                  )}
                 </TableBody>
               </Table>
             </div>
-          </CardContent>
+          )}
+        </CardContent>
         </Card>
       </div>
     </div>

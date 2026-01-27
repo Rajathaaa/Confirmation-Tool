@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Globe, CheckCircle, AlertTriangle, XCircle, Play } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { LoadingSpinner } from "@/components/ui/loading";
 
 interface ConfirmingParty {
   id: string;
@@ -29,13 +30,16 @@ export const ConfirmingPartyDetails = () => {
   const { toast } = useToast();
   const [parties, setParties] = useState<ConfirmingParty[]>([]);
   const [selectedPartyId, setSelectedPartyId] = useState<string | null>(null);
+  const [isLoadingParties, setIsLoadingParties] = useState(true);
 
   // Fetch confirming parties and domain test data from SharePoint on component mount
   useEffect(() => {
     const loadData = async () => {
+      setIsLoadingParties(true);
       await fetchConfirmingParties();
       // Fetch domain test data after parties are loaded so we can match them
       await fetchDomainTestData();
+      setIsLoadingParties(false);
     };
     loadData();
   }, []);
@@ -340,7 +344,6 @@ export const ConfirmingPartyDetails = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Area</TableHead>
                   <TableHead>Confirming Party</TableHead>
                   <TableHead>Recipient Email</TableHead>
                   <TableHead>Recipient Name</TableHead>
@@ -350,9 +353,21 @@ export const ConfirmingPartyDetails = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {parties.map((party) => (
-                  <TableRow key={party.id}>
-                    <TableCell className="font-medium">{party.area}</TableCell>
+                {isLoadingParties ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-12">
+                      <LoadingSpinner size="lg" text="Loading confirming parties and domain test data..." />
+                    </TableCell>
+                  </TableRow>
+                ) : parties.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                      No confirming parties found
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  parties.map((party) => (
+                    <TableRow key={party.id}>
                     <TableCell>{party.name}</TableCell>
                     <TableCell>
                       <code className="text-xs bg-muted px-2 py-1 rounded">
@@ -380,7 +395,8 @@ export const ConfirmingPartyDetails = () => {
                       )}
                     </TableCell>
                   </TableRow>
-                ))}
+                  ))
+                )}
               </TableBody>
             </Table>
           </div>
