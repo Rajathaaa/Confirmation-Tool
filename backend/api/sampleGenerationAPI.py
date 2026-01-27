@@ -5994,6 +5994,103 @@ def get_sections():
         }), 500
 
 # ======================================
+# API ENDPOINT: GET ATTACHMENT URL
+# ======================================
+@app.route('/api/get-attachment-url', methods=['POST'])
+def get_attachment_url():
+    try:
+        data = request.json
+        if not data:
+            return jsonify({
+                'error': 'Invalid request',
+                'message': 'Request body is required'
+            }), 400
+        
+        filename = data.get('filename')
+        
+        if not filename:
+            return jsonify({
+                'error': 'Missing required fields',
+                'message': 'filename is required'
+            }), 400
+        
+        print(f"🔍 Looking up URL for attachment: {filename}")
+        
+        # Get access token
+        access_token = get_access_token()
+        headers = {"Authorization": f"Bearer {access_token}"}
+        
+        # Get site ID
+        site_resp = requests.get(
+            f"https://graph.microsoft.com/v1.0/sites/{site_hostname}:{site_path}",
+            headers=headers
+        )
+        site_resp.raise_for_status()
+        site_id = site_resp.json()["id"]
+        
+        # Get drive ID
+        drives_resp = requests.get(f"https://graph.microsoft.com/v1.0/sites/{site_id}/drives", headers=headers)
+        drives_resp.raise_for_status()
+        drives = drives_resp.json()["value"]
+        drive_id = next((d["id"] for d in drives if d["name"] == doc_library), None)
+        
+        if not drive_id:
+            raise Exception(f"Library '{doc_library}' not found on site '{site_name}'")
+        
+        # Download db.json to find attachment URL
+        db_url = f"https://graph.microsoft.com/v1.0/drives/{drive_id}/root:/{fy_year}/juggernaut/db.json:/content"
+        db_resp = requests.get(db_url, headers=headers)
+        
+        if db_resp.status_code == 200:
+            db_data = db_resp.json()
+            
+            # Search for attachment in db.json
+            if "tools" in db_data and "Confirmation" in db_data["tools"]:
+                entries = db_data["tools"]["Confirmation"]
+                if isinstance(entries, list):
+                    for entry in entries:
+                        if isinstance(entry, dict) and entry.get("name") == filename:
+                            file_url = entry.get("url", "")
+                            if file_url:
+                                print(f"✅ Found URL for {filename}: {file_url}")
+                                return jsonify({
+                                    'success': True,
+                                    'url': file_url,
+                                    'filename': filename
+                                })
+            
+            # If not found in db.json, construct SharePoint URL
+            file_path_on_sharepoint = f"{fy_year}/{folder_name}/{sub_folder_name}/{filename}"
+            sharepoint_url = f"https://{site_hostname}/sites/{site_name}/Shared%20Documents/{file_path_on_sharepoint.replace('/', '/')}"
+            
+            print(f"⚠️ Attachment not found in db.json, using constructed URL: {sharepoint_url}")
+            return jsonify({
+                'success': True,
+                'url': sharepoint_url,
+                'filename': filename
+            })
+        else:
+            # If db.json doesn't exist, construct SharePoint URL
+            file_path_on_sharepoint = f"{fy_year}/{folder_name}/{sub_folder_name}/{filename}"
+            sharepoint_url = f"https://{site_hostname}/sites/{site_name}/Shared%20Documents/{file_path_on_sharepoint.replace('/', '/')}"
+            
+            print(f"⚠️ db.json not found, using constructed URL: {sharepoint_url}")
+            return jsonify({
+                'success': True,
+                'url': sharepoint_url,
+                'filename': filename
+            })
+    
+    except Exception as e:
+        print(f"❌ Error getting attachment URL: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'error': 'Failed to get attachment URL',
+            'message': str(e)
+        }), 500
+
+# ======================================
 # API ENDPOINT: UPLOAD ATTACHMENT FILE
 # ======================================
 @app.route('/api/upload-attachment', methods=['POST'])

@@ -1783,6 +1783,87 @@ const ConfirmationForm = () => {
     );
   };
 
+  // Component to render attachments with clickable links
+  const AttachmentList = ({ attachments }: { attachments: any[] }) => {
+    const [attachmentUrls, setAttachmentUrls] = useState<Record<string, string>>({});
+    const [loadingUrls, setLoadingUrls] = useState<Set<string>>(new Set());
+
+    useEffect(() => {
+      // Fetch URLs for string attachments that don't have URLs
+      attachments.forEach((att: any) => {
+        const attachmentName = typeof att === 'string' ? att : (att.originalFileName || att.name || att);
+        const attachmentUrl = typeof att === 'object' && att !== null ? att.url : '';
+        
+        // If it's a string attachment without URL, fetch the URL
+        if (typeof att === 'string' && !attachmentUrls[attachmentName] && !loadingUrls.has(attachmentName)) {
+          setLoadingUrls(prev => new Set(prev).add(attachmentName));
+          
+          fetch('http://localhost:3002/api/get-attachment-url', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              filename: attachmentName
+            }),
+          })
+          .then(response => response.json())
+          .then(data => {
+            if (data.success && data.url) {
+              setAttachmentUrls(prev => ({
+                ...prev,
+                [attachmentName]: data.url
+              }));
+            }
+          })
+          .catch(error => {
+            console.error(`Error fetching URL for ${attachmentName}:`, error);
+          })
+          .finally(() => {
+            setLoadingUrls(prev => {
+              const newSet = new Set(prev);
+              newSet.delete(attachmentName);
+              return newSet;
+            });
+          });
+        }
+      });
+    }, [attachments]);
+
+    return (
+      <div className="space-y-2">
+        <h4 className="font-semibold">Attachments</h4>
+        <ul className="list-disc list-inside space-y-1">
+          {attachments.map((att: any, idx: number) => {
+            // Handle both old format (string) and new format (object)
+            const attachmentName = typeof att === 'string' ? att : (att.originalFileName || att.name || att);
+            const attachmentUrl = typeof att === 'object' && att !== null ? att.url : (attachmentUrls[attachmentName] || '');
+            
+            return (
+              <li key={idx} className="text-sm">
+                {attachmentUrl ? (
+                  <a
+                    href={attachmentUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary hover:underline cursor-pointer"
+                  >
+                    {attachmentName}
+                  </a>
+                ) : (
+                  <span className={loadingUrls.has(attachmentName) ? "text-muted-foreground" : ""}>
+                    {attachmentName}
+                    {loadingUrls.has(attachmentName) && " (loading...)"}
+                  </span>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+    );
+  };
+
   // Read-only view for submitted confirmations
   const SubmittedConfirmationView = ({ templateDetails }: { templateDetails: any }) => {
     // Handle empty templateDetails - display blank template structure
@@ -1919,33 +2000,7 @@ const ConfirmationForm = () => {
 
           {/* Render attachments */}
           {templateDetails.attachments && templateDetails.attachments.length > 0 && (
-            <div className="space-y-2">
-              <h4 className="font-semibold">Attachments</h4>
-              <ul className="list-disc list-inside space-y-1">
-                {templateDetails.attachments.map((att: any, idx: number) => {
-                  // Handle both old format (string) and new format (object)
-                  const attachmentName = typeof att === 'string' ? att : (att.originalFileName || att.name || att);
-                  const attachmentUrl = typeof att === 'object' && att !== null ? att.url : '';
-                  
-                  return (
-                    <li key={idx} className="text-sm">
-                      {attachmentUrl ? (
-                        <a
-                          href={attachmentUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-primary hover:underline"
-                        >
-                          {attachmentName}
-                        </a>
-                      ) : (
-                        <span>{attachmentName}</span>
-                      )}
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
+            <AttachmentList attachments={templateDetails.attachments} />
           )}
 
           {/* Render confirming party statement */}
