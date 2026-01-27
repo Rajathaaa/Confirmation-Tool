@@ -4937,10 +4937,18 @@ def lock_sampling_method():
             os.remove(temp_file_path)
 
         print(f"🎉 Successfully locked sampling method for '{sample_set_name}'")
+        
+        # Find the sample set data to return
+        sample_set_data = None
+        for item in data_dict[area_code]:
+            if isinstance(item, dict) and sample_set_name in item:
+                sample_set_data = item[sample_set_name]
+                break
+        
         return jsonify({
             'success': True,
             'message': f'Successfully locked sampling method for "{sample_set_name}"',
-            'data': data_dict[area_code][sample_set_name]
+            'data': sample_set_data
         })
 
     except Exception as e:
@@ -5456,6 +5464,52 @@ def create_custom_template():
         # Clean up temp file
         if os.path.exists(temp_file_path):
             os.remove(temp_file_path)
+
+        # Also update templates.json file
+        templates_json_file_name = "templates.json"
+        templates_json_temp_path = os.path.join(script_dir, templates_json_file_name)
+        
+        # Download existing templates.json if it exists
+        templates_json_data = {}
+        try:
+            templates_json_download_url = f"https://graph.microsoft.com/v1.0/drives/{drive_id}/root:/{fy_year}/{folder_name}/{sub_folder_name}/{templates_json_file_name}:/content"
+            templates_json_download_resp = requests.get(templates_json_download_url, headers=headers)
+            if templates_json_download_resp.status_code == 200:
+                # Handle binary download
+                with open(templates_json_temp_path, "wb") as f:
+                    f.write(templates_json_download_resp.content)
+                with open(templates_json_temp_path, "r", encoding="utf-8") as f:
+                    templates_json_data = json.load(f)
+                print(f"✅ Loaded existing templates.json")
+        except:
+            print(f"ℹ️ No existing templates.json file, creating new one")
+        
+        # Add the new custom template to templates.json
+        templates_json_data[template_name] = "custom"
+        
+        # Save to temp file
+        with open(templates_json_temp_path, "w", encoding="utf-8") as f:
+            json.dump(templates_json_data, f, indent=2)
+        
+        # Upload templates.json to SharePoint
+        section_list_templates = ["templates"]
+        jugg(
+            file_path=templates_json_temp_path,
+            reference_value="",
+            folder_name=folder_name,
+            sub_folder_name=sub_folder_name,
+            fy_year=fy_year,
+            section_list=section_list_templates,
+            headers=headers,
+            site_id=site_id,
+            drive_id=drive_id
+        )
+        
+        # Clean up temp file
+        if os.path.exists(templates_json_temp_path):
+            os.remove(templates_json_temp_path)
+        
+        print(f"✅ Successfully updated templates.json with custom template: {template_name}")
 
         print(f"🎉 Successfully created and uploaded template: {template_name}")
         return jsonify({
