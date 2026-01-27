@@ -5925,6 +5925,84 @@ def get_submitted_confirmation():
 # ======================================
 # API ENDPOINT: GET SECTIONS
 # ======================================
+@app.route('/api/get-templates', methods=['GET'])
+def get_templates():
+    try:
+        print(f"🚀 Downloading templates.json from SharePoint")
+        
+        # Get access token
+        access_token = get_access_token()
+        headers = {"Authorization": f"Bearer {access_token}"}
+        
+        # Get site ID
+        site_resp = requests.get(
+            f"https://graph.microsoft.com/v1.0/sites/{site_hostname}:{site_path}",
+            headers=headers
+        )
+        site_resp.raise_for_status()
+        site_id = site_resp.json()["id"]
+        
+        # Get drive ID
+        drives_resp = requests.get(f"https://graph.microsoft.com/v1.0/sites/{site_id}/drives", headers=headers)
+        drives_resp.raise_for_status()
+        drives = drives_resp.json()["value"]
+        drive_id = next((d["id"] for d in drives if d["name"] == doc_library), None)
+        
+        if not drive_id:
+            raise Exception(f"Library '{doc_library}' not found on site '{site_name}'")
+        
+        # Download templates.json from SharePoint
+        file_name = "templates.json"
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        temp_file_path = os.path.join(script_dir, file_name)
+        
+        file_path_on_sharepoint = f"{fy_year}/{folder_name}/{sub_folder_name}/{file_name}"
+        download_url = f"https://graph.microsoft.com/v1.0/drives/{drive_id}/root:/{file_path_on_sharepoint}:/content"
+        
+        try:
+            download_resp = requests.get(download_url, headers=headers)
+            download_resp.raise_for_status()
+            
+            # Handle binary download
+            with open(temp_file_path, "wb") as f:
+                f.write(download_resp.content)
+            with open(temp_file_path, "r", encoding="utf-8") as f:
+                templates_data = json.load(f)
+            
+            print(f"✅ Successfully downloaded templates.json")
+            
+            # Clean up temp file
+            if os.path.exists(temp_file_path):
+                os.remove(temp_file_path)
+            
+            return jsonify({
+                'success': True,
+                'message': f'Successfully downloaded templates.json',
+                'data': templates_data,
+                'filename': file_name
+            })
+        except requests.exceptions.HTTPError as e:
+            if e.response.status_code == 404:
+                # File doesn't exist, return empty structure
+                print(f"ℹ️ File templates.json does not exist on SharePoint, returning empty structure")
+                return jsonify({
+                    'success': True,
+                    'message': f'File templates.json does not exist, returning empty structure',
+                    'data': {},
+                    'filename': file_name
+                })
+            else:
+                raise
+    
+    except Exception as e:
+        print(f"❌ Error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'error': 'Failed to get templates',
+            'message': str(e)
+        }), 500
+
 @app.route('/api/get-sections', methods=['GET'])
 def get_sections():
     try:

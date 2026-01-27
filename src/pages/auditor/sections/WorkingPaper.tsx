@@ -41,26 +41,14 @@ interface Confirmation {
   periodEndDate?: string; // Add this
 }
 
-// Sections will be loaded from SharePoint
-interface SectionsData {
-  Planning?: Record<string, string>;
-  Execution?: Record<string, string>;
-  ConcludingProcedures?: Record<string, string>;
+// Templates will be loaded from SharePoint
+interface TemplatesData {
+  [templateName: string]: "standard" | "custom";
 }
 
-// Helper function to get all sections as a flat array
-const getAllSections = (sections: SectionsData): string[] => {
-  const allSections: string[] = [];
-  if (sections.Planning) {
-    allSections.push(...Object.keys(sections.Planning));
-  }
-  if (sections.Execution) {
-    allSections.push(...Object.keys(sections.Execution));
-  }
-  if (sections.ConcludingProcedures) {
-    allSections.push(...Object.keys(sections.ConcludingProcedures));
-  }
-  return allSections;
+// Helper function to get all templates as a flat array
+const getAllTemplates = (templates: TemplatesData): string[] => {
+  return Object.keys(templates || {});
 };
 
 // Convert mockData to Confirmation format
@@ -445,36 +433,36 @@ export const WorkingPaper = () => {
   const [resendDialogOpen, setResendDialogOpen] = useState(false);
   const [resendRemarks, setResendRemarks] = useState("");
   const [confirmations, setConfirmations] = useState<Record<string, Confirmation[]>>({});
-  const [sectionsData, setSectionsData] = useState<SectionsData>({});
+  const [templatesData, setTemplatesData] = useState<TemplatesData>({});
   const [isLoadingSections, setIsLoadingSections] = useState(true);
 
-  // Fetch sections and confirmed confirmations from SharePoint on component mount
+  // Fetch templates and confirmed confirmations from SharePoint on component mount
   useEffect(() => {
-    fetchSections();
+    fetchTemplates();
     fetchConfirmedConfirmations();
   }, []);
 
-  // Fetch sections from SharePoint
-  const fetchSections = async () => {
+  // Fetch templates from SharePoint
+  const fetchTemplates = async () => {
     try {
       setIsLoadingSections(true);
-      const response = await fetch('http://localhost:3002/api/get-sections');
+      const response = await fetch('http://localhost:3002/api/get-templates');
       if (!response.ok) {
-        throw new Error('Failed to fetch sections');
+        throw new Error('Failed to fetch templates');
       }
       const result = await response.json();
-      const sections = result.data || {};
+      const templates = result.data || {};
       
-      console.log('📥 Fetched sections from SharePoint:', sections);
-      setSectionsData(sections);
+      console.log('📥 Fetched templates from SharePoint:', templates);
+      setTemplatesData(templates);
       
-      // Set the first section as selected if available
-      const allSections = getAllSections(sections);
-      if (allSections.length > 0 && !selectedArea) {
-        setSelectedArea(allSections[0]);
+      // Set the first template as selected if available
+      const allTemplates = getAllTemplates(templates);
+      if (allTemplates.length > 0 && !selectedArea) {
+        setSelectedArea(allTemplates[0]);
       }
     } catch (error: any) {
-      console.error('Error fetching sections:', error);
+      console.error('Error fetching templates:', error);
     } finally {
       setIsLoadingSections(false);
     }
@@ -679,34 +667,7 @@ export const WorkingPaper = () => {
   // Handle area selection
   const handleAreaSelect = (area: string) => {
     setSelectedArea(area);
-  };
-
-  // Render section category
-  const renderSectionCategory = (title: string, sections: Record<string, string> | undefined) => {
-    if (!sections || Object.keys(sections).length === 0) return null;
-
-    return (
-      <div className="space-y-2">
-        <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-2">
-          {title}
-        </h3>
-        <div className="space-y-1">
-          {Object.keys(sections).map((sectionName) => (
-            <button
-              key={sectionName}
-              onClick={() => handleAreaSelect(sectionName)}
-              className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${
-                selectedArea === sectionName
-                  ? "bg-primary text-primary-foreground font-medium"
-                  : "hover:bg-muted text-foreground"
-              }`}
-            >
-              {sectionName}
-            </button>
-          ))}
-        </div>
-      </div>
-    );
+    setSelectedConfirmation(null);
   };
 
   return (
@@ -720,16 +681,29 @@ export const WorkingPaper = () => {
           <CardContent className="space-y-4 max-h-[calc(100vh-200px)] overflow-y-auto">
             {isLoadingSections ? (
               <div className="text-center py-4 text-sm text-muted-foreground">
-                Loading sections...
+                Loading templates...
               </div>
             ) : (
               <>
-                {renderSectionCategory("Planning", sectionsData.Planning)}
-                {renderSectionCategory("Execution", sectionsData.Execution)}
-                {renderSectionCategory("Concluding Procedures", sectionsData.ConcludingProcedures)}
-                {getAllSections(sectionsData).length === 0 && (
+                <div className="space-y-1">
+                  {getAllTemplates(templatesData).map((templateName) => (
+                    <button
+                      key={templateName}
+                      onClick={() => handleAreaSelect(templateName)}
+                      className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors break-words ${
+                        selectedArea === templateName
+                          ? "bg-primary text-primary-foreground font-medium"
+                          : "hover:bg-muted text-foreground"
+                      }`}
+                      style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}
+                    >
+                      {templateName}
+                    </button>
+                  ))}
+                </div>
+                {getAllTemplates(templatesData).length === 0 && (
                   <div className="text-center py-4 text-sm text-muted-foreground">
-                    No sections available
+                    No templates available
                   </div>
                 )}
               </>
