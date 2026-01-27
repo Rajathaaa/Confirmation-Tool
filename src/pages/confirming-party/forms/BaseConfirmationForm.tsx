@@ -17,7 +17,7 @@ interface BaseConfirmationFormProps {
   hideRemarks?: boolean; // Add this prop
   getFormData?: () => any; // Callback to get form-specific data (amounts, accounts, etc.)
   initialRemarks?: string;
-  initialAttachments?: string[];
+  initialAttachments?: Array<{ name: string; url: string; originalFileName?: string }>;
   initialName?: string;
   initialDesignation?: string;
   initialOrganizationName?: string;
@@ -40,7 +40,8 @@ const BaseConfirmationFormInner = ({
 }: BaseConfirmationFormProps) => {
   const [formData, setFormData] = useState<any>({});
   const [remarks, setRemarks] = useState(initialRemarks);
-  const [attachments, setAttachments] = useState<File[]>([]);
+  const [attachments, setAttachments] = useState<Array<{ name: string; url: string; originalFileName?: string }>>(initialAttachments || []);
+  const [uploadingFiles, setUploadingFiles] = useState<Set<string>>(new Set());
   const [organizationName, setOrganizationName] = useState(initialOrganizationName);
   const [name, setName] = useState(initialName);
   const [designation, setDesignation] = useState(initialDesignation);
@@ -54,7 +55,10 @@ const BaseConfirmationFormInner = ({
     setName(initialName);
     setDesignation(initialDesignation);
     setIsCertified(initialIsCertified);
-  }, [initialRemarks, initialOrganizationName, initialName, initialDesignation, initialIsCertified]);
+    if (initialAttachments) {
+      setAttachments(initialAttachments);
+    }
+  }, [initialRemarks, initialOrganizationName, initialName, initialDesignation, initialIsCertified, initialAttachments]);
 
   const handleSaveDraft = async () => {
     const draftData = {
@@ -64,7 +68,7 @@ const BaseConfirmationFormInner = ({
       name,
       designation,
       isCertified,
-      attachments: attachments.map(f => f.name),
+      attachments: attachments.map(a => ({ name: a.name, url: a.url, originalFileName: a.originalFileName })),
       status: "pending"
     };
     
@@ -83,7 +87,7 @@ const BaseConfirmationFormInner = ({
             ...(getFormData ? getFormData() : {}) // Also merge explicit getFormData if provided
           },
           remarks: remarks,
-          attachments: attachments.map(f => f.name),
+          attachments: attachments.map(a => ({ name: a.name, url: a.url, originalFileName: a.originalFileName })),
           name: name,
           designation: designation,
           organizationName: organizationName,
@@ -121,7 +125,7 @@ const BaseConfirmationFormInner = ({
       name,
       designation,
       isCertified,
-      attachments: attachments.map(f => f.name),
+      attachments: attachments.map(a => ({ name: a.name, url: a.url, originalFileName: a.originalFileName })),
       status: "submitted",
       submittedAt: new Date().toISOString()
     };
@@ -170,7 +174,7 @@ const BaseConfirmationFormInner = ({
             ...(getFormData ? getFormData() : {}) // Also merge explicit getFormData if provided
           },
           remarks: remarks,
-          attachments: attachments.map(f => f.name),
+          attachments: attachments.map(a => ({ name: a.name, url: a.url, originalFileName: a.originalFileName })),
           name: name,
           designation: designation,
           organizationName: organizationName,
@@ -193,10 +197,55 @@ const BaseConfirmationFormInner = ({
     }
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      setAttachments([...attachments, ...Array.from(e.target.files)]);
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    
+    const files = Array.from(e.target.files);
+    
+    for (const file of files) {
+      const fileKey = `${file.name}-${Date.now()}`;
+      setUploadingFiles(prev => new Set(prev).add(fileKey));
+      
+      try {
+        // Create FormData for file upload
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('confirmationId', confirmation.id);
+        
+        const response = await fetch('http://localhost:3002/api/upload-attachment', {
+          method: 'POST',
+          body: formData,
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to upload file');
+        }
+        
+        const result = await response.json();
+        
+        // Add uploaded file to attachments
+        setAttachments(prev => [...prev, {
+          name: result.fileName,
+          url: result.url,
+          originalFileName: result.originalFileName || file.name
+        }]);
+        
+        console.log(`✅ Successfully uploaded: ${result.fileName}`);
+      } catch (error: any) {
+        console.error(`❌ Error uploading ${file.name}:`, error);
+        alert(`Failed to upload ${file.name}: ${error.message}`);
+      } finally {
+        setUploadingFiles(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(fileKey);
+          return newSet;
+        });
+      }
     }
+    
+    // Reset file input
+    e.target.value = '';
   };
 
   const handleRemoveAttachment = (index: number) => {
@@ -242,10 +291,17 @@ const BaseConfirmationFormInner = ({
             />
             {attachments.length > 0 && (
               <div className="space-y-1">
-                {attachments.map((file, index) => (
+                {attachments.map((attachment, index) => (
                   <div key={index} className="flex items-center gap-2 text-sm text-muted-foreground bg-muted p-2 rounded">
                     <Upload className="h-4 w-4" />
-                    <span className="flex-1">{file.name}</span>
+                    <a
+                      href={attachment.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-1 text-primary hover:underline cursor-pointer"
+                    >
+                      {attachment.originalFileName || attachment.name}
+                    </a>
                     <Button
                       size="sm"
                       variant="ghost"
@@ -255,6 +311,11 @@ const BaseConfirmationFormInner = ({
                     </Button>
                   </div>
                 ))}
+              </div>
+            )}
+            {uploadingFiles.size > 0 && (
+              <div className="text-sm text-muted-foreground">
+                Uploading {uploadingFiles.size} file(s)...
               </div>
             )}
           </div>

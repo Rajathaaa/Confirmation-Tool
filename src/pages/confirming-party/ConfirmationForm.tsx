@@ -1200,6 +1200,24 @@ const ConfirmationForm = () => {
     const initialDesignation = templateDetails.confirmingpartydetails?.designation || "";
     const initialOrganizationName = templateDetails.confirmingpartydetails?.organizationName || "";
     
+    // Extract attachments from templateDetails
+    let initialAttachments: Array<{ name: string; url: string; originalFileName?: string }> = [];
+    if (templateDetails.attachments && Array.isArray(templateDetails.attachments)) {
+      initialAttachments = templateDetails.attachments.map((att: any) => {
+        // Handle both old format (string) and new format (object)
+        if (typeof att === 'string') {
+          return { name: att, url: '', originalFileName: att };
+        } else if (typeof att === 'object' && att !== null) {
+          return {
+            name: att.name || att,
+            url: att.url || '',
+            originalFileName: att.originalFileName || att.name || att
+          };
+        }
+        return { name: String(att), url: '', originalFileName: String(att) };
+      });
+    }
+    
     // Extract isCertified from confirmingpartystatement
     let initialIsCertified = false;
     const statement = templateDetails.confirmingpartystatement;
@@ -1215,6 +1233,7 @@ const ConfirmationForm = () => {
         onSubmit={handleSubmit}
         certificationText={getCertificationText()}
         initialRemarks={initialRemarks}
+        initialAttachments={initialAttachments}
         initialName={initialName}
         initialDesignation={initialDesignation}
         initialOrganizationName={initialOrganizationName}
@@ -1903,9 +1922,28 @@ const ConfirmationForm = () => {
             <div className="space-y-2">
               <h4 className="font-semibold">Attachments</h4>
               <ul className="list-disc list-inside space-y-1">
-                {templateDetails.attachments.map((attachment: string, idx: number) => (
-                  <li key={idx} className="text-sm">{attachment}</li>
-                ))}
+                {templateDetails.attachments.map((att: any, idx: number) => {
+                  // Handle both old format (string) and new format (object)
+                  const attachmentName = typeof att === 'string' ? att : (att.originalFileName || att.name || att);
+                  const attachmentUrl = typeof att === 'object' && att !== null ? att.url : '';
+                  
+                  return (
+                    <li key={idx} className="text-sm">
+                      {attachmentUrl ? (
+                        <a
+                          href={attachmentUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary hover:underline"
+                        >
+                          {attachmentName}
+                        </a>
+                      ) : (
+                        <span>{attachmentName}</span>
+                      )}
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           )}

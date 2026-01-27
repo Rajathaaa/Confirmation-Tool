@@ -3982,7 +3982,7 @@ def submit_confirmation():
         try:
             print(f"🔄 Starting templateDetails update for confirmation {confirmation_id}")
             
-            # Get the confirmation entry to find letterId and area
+            # Get the confirmation entry to find letterId
             confirmation_entry = None
             letter_id = None
             for conf in pending_confirmations_data["confirmations"]:
@@ -3998,7 +3998,7 @@ def submit_confirmation():
             else:
                 print(f"  📋 Found letterId: {letter_id}")
                 
-                # Extract area code from letterId (e.g., "OCA_RA_002" -> "OCA")
+                # Extract area code from letterId prefix (everything before first "_")
                 area_code = None
                 if letter_id and "_" in letter_id:
                     area_code = letter_id.split("_")[0]
@@ -5729,15 +5729,17 @@ def get_submitted_confirmation():
 
         print(f"🚀 Getting submitted confirmation: {confirmation_id} for area: {area}")
 
-        # Get area code from sections data
-        sections_data = get_sections_data()
-        area_code = get_area_code_from_sections(sections_data, area)
+        # Extract area code from confirmation_id prefix (everything before first "_")
+        # Example: "TP_RA_001" -> "TP" -> "confirmation_TP.json"
+        area_code = None
+        if confirmation_id and "_" in confirmation_id:
+            area_code = confirmation_id.split("_")[0]
+            print(f"  📍 Extracted area code '{area_code}' from confirmation_id '{confirmation_id}'")
         
         # If area_code is not found, it might be a custom template name
         # We'll search all confirmation files
-        is_custom_template = not area_code
-        if is_custom_template:
-            print(f"⚠️ Area '{area}' not found in sections, treating as custom template. Will search all confirmation files.")
+        if not area_code:
+            print(f"⚠️ Could not extract area code from confirmation_id '{confirmation_id}', will search all confirmation files.")
             area_code = None  # Keep as None to indicate we need to search all files
 
         # Get access token
@@ -5774,12 +5776,11 @@ def get_submitted_confirmation():
         confirmation_key = None
         script_dir = os.path.dirname(os.path.abspath(__file__))
         
-        # List of all possible area codes to search
-        all_area_codes = ["TR", "CCE", "TP", "OCA", "INV", "FA", "INST", "LA", "RPT", "BOR", "LIT", "EAC"]
+        # List of all possible area codes to search (for fallback search)
+        all_area_codes = ["TR", "CCE", "TP", "OCA", "INV", "FA", "INST", "LA", "RPT", "BOR", "LIT", "EAC", "MAT"]
         
-        # If we have a valid area_code, try that file first
-        # Otherwise (custom template), search all files immediately
-        if area_code and area_code in all_area_codes:
+        # If we have an area_code, try that file first (don't restrict to all_area_codes list)
+        if area_code:
             file_name = f"confirmation_{area_code}.json"
             download_url = f"https://graph.microsoft.com/v1.0/drives/{drive_id}/root:/{fy_year}/{folder_name}/{sub_folder_name}/{file_name}:/content"
             
@@ -5796,6 +5797,8 @@ def get_submitted_confirmation():
                     if isinstance(confirmation_data, list):
                         confirmation_data = {entry.get("sample_id", f"temp_{i}"): {k: v for k, v in entry.items() if k != "sample_id"} for i, entry in enumerate(confirmation_data)}
                         print("✅ Converted list format to dict format")
+                    
+                    print(f"  📋 Searching for confirmation in {file_name}, available keys: {list(confirmation_data.keys())[:5]}...")
                     
                     # Search for confirmation in this file
                     for id_var in id_variations:
@@ -5820,6 +5823,8 @@ def get_submitted_confirmation():
                     # Clean up temp file
                     if os.path.exists(temp_file_path):
                         os.remove(temp_file_path)
+                else:
+                    print(f"  ⚠️ File {file_name} not found on SharePoint (status: {download_resp.status_code})")
             except Exception as e:
                 print(f"⚠️ Error reading {file_name}: {str(e)}")
         
@@ -5985,6 +5990,105 @@ def get_sections():
         traceback.print_exc()
         return jsonify({
             'error': 'Failed to get sections data',
+            'message': str(e)
+        }), 500
+
+# ======================================
+# API ENDPOINT: UPLOAD ATTACHMENT FILE
+# ======================================
+@app.route('/api/upload-attachment', methods=['POST'])
+def upload_attachment():
+    try:
+        # Check if file is in request
+        if 'file' not in request.files:
+            return jsonify({
+                'error': 'No file provided',
+                'message': 'File is required'
+            }), 400
+        
+        file = request.files['file']
+        confirmation_id = request.form.get('confirmationId')
+        
+        if not confirmation_id:
+            return jsonify({
+                'error': 'Missing required fields',
+                'message': 'confirmationId is required'
+            }), 400
+        
+        if file.filename == '':
+            return jsonify({
+                'error': 'No file selected',
+                'message': 'Please select a file to upload'
+            }), 400
+        
+        print(f"🚀 Uploading attachment for confirmation: {confirmation_id}")
+        print(f"📁 Original filename: {file.filename}")
+        
+        # Get access token
+        access_token = get_access_token()
+        headers = {"Authorization": f"Bearer {access_token}"}
+        
+        # Get site ID
+        site_resp = requests.get(
+            f"https://graph.microsoft.com/v1.0/sites/{site_hostname}:{site_path}",
+            headers=headers
+        )
+        site_resp.raise_for_status()
+        site_id = site_resp.json()["id"]
+        
+        # Get drive ID
+        drives_resp = requests.get(f"https://graph.microsoft.com/v1.0/sites/{site_id}/drives", headers=headers)
+        drives_resp.raise_for_status()
+        drives = drives_resp.json()["value"]
+        drive_id = next((d["id"] for d in drives if d["name"] == doc_library), None)
+        
+        if not drive_id:
+            raise Exception(f"Library '{doc_library}' not found on site '{site_name}'")
+        
+        # Create filename: <sample_id>_<original_filename>
+        original_filename = file.filename
+        target_filename = f"{confirmation_id}_{original_filename}"
+        
+        # Save file temporarily
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        temp_file_path = os.path.join(script_dir, target_filename)
+        file.save(temp_file_path)
+        
+        try:
+            # Upload file using jugg function
+            file_web_url = jugg(
+                file_path=temp_file_path,
+                reference_value=confirmation_id,
+                folder_name=folder_name,
+                sub_folder_name=sub_folder_name,
+                fy_year=fy_year,
+                section_list=["Confirmation"],
+                headers=headers,
+                site_id=site_id,
+                drive_id=drive_id
+            )
+            
+            print(f"✅ Successfully uploaded attachment: {target_filename}")
+            print(f"🔗 File URL: {file_web_url}")
+            
+            return jsonify({
+                'success': True,
+                'message': 'File uploaded successfully',
+                'fileName': target_filename,
+                'originalFileName': original_filename,
+                'url': file_web_url
+            })
+        finally:
+            # Clean up temp file
+            if os.path.exists(temp_file_path):
+                os.remove(temp_file_path)
+    
+    except Exception as e:
+        print(f"❌ Error uploading attachment: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'error': 'Failed to upload attachment',
             'message': str(e)
         }), 500
 
