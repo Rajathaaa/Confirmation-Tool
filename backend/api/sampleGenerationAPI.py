@@ -4145,16 +4145,59 @@ def submit_confirmation():
                             print(f"  ⚠️ Error loading Confirmation_Template.json: {str(e)}")
                         
                         # If not found in standard templates, try create_template.json for custom templates
+                        # First check local file, then download from SharePoint if not found
                         if not template_details:
                             try:
                                 template_file_name = "create_template.json"
                                 template_file_path = os.path.join(script_dir, template_file_name)
+                                template_data = None
                                 
+                                # First try local file
                                 print(f"  📥 Attempting to load {template_file_name} from local file...")
                                 if os.path.exists(template_file_path):
                                     with open(template_file_path, "r", encoding="utf-8") as f:
                                         template_data = json.load(f)
-                                    print(f"  ✅ Loaded {template_file_name}, checking for area '{confirmation_area}'...")
+                                    print(f"  ✅ Loaded {template_file_name} from local file, checking for area '{confirmation_area}'...")
+                                
+                                # If not found locally, download from SharePoint
+                                if not template_data:
+                                    print(f"  📥 Downloading {template_file_name} from SharePoint...")
+                                    try:
+                                        access_token = get_access_token()
+                                        headers = {"Authorization": f"Bearer {access_token}"}
+
+                                        # Get site ID
+                                        site_resp = requests.get(
+                                            f"https://graph.microsoft.com/v1.0/sites/{site_hostname}:{site_path}",
+                                            headers=headers
+                                        )
+                                        site_resp.raise_for_status()
+                                        site_id = site_resp.json()["id"]
+
+                                        # Get drive ID
+                                        drives_resp = requests.get(f"https://graph.microsoft.com/v1.0/sites/{site_id}/drives", headers=headers)
+                                        drives_resp.raise_for_status()
+                                        drives = drives_resp.json()["value"]
+                                        drive_id = next((d["id"] for d in drives if d["name"] == doc_library), None)
+
+                                        if drive_id:
+                                            # Download create_template.json from SharePoint
+                                            file_path_on_sharepoint = f"{fy_year}/{folder_name}/{sub_folder_name}/{template_file_name}"
+                                            download_url = f"https://graph.microsoft.com/v1.0/drives/{drive_id}/root:/{file_path_on_sharepoint}:/content"
+                                            download_resp = requests.get(download_url, headers=headers)
+                                            
+                                            if download_resp.status_code == 200:
+                                                # Handle binary download
+                                                with open(template_file_path, "wb") as f:
+                                                    f.write(download_resp.content)
+                                                with open(template_file_path, "r", encoding="utf-8") as f:
+                                                    template_data = json.load(f)
+                                                print(f"  ✅ Downloaded {template_file_name} from SharePoint")
+                                    except Exception as download_error:
+                                        print(f"  ⚠️ Error downloading {template_file_name} from SharePoint: {str(download_error)}")
+                                
+                                # Check if template exists in template_data
+                                if template_data:
                                     if confirmation_area in template_data and "templateDetails" in template_data[confirmation_area]:
                                         import copy
                                         template_details = copy.deepcopy(template_data[confirmation_area]["templateDetails"])
@@ -4162,9 +4205,11 @@ def submit_confirmation():
                                     else:
                                         print(f"  ⚠️ Area '{confirmation_area}' not found in {template_file_name} or missing templateDetails")
                                 else:
-                                    print(f"  ⚠️ {template_file_name} not found at {template_file_path}")
+                                    print(f"  ⚠️ {template_file_name} not found locally or in SharePoint")
                             except Exception as e:
                                 print(f"  ⚠️ Error loading create_template.json: {str(e)}")
+                                import traceback
+                                traceback.print_exc()
                         
                         # If template not found, use existing templateDetails or create empty
                         if not template_details:
@@ -5400,6 +5445,7 @@ def create_custom_template():
             "name": "",
             "designation": ""
         }
+        template_json["actions"] = ["SaveAsDraft", "SendToAuditor"]
 
         # Create final template structure
         templates_data = {template_name: {"templateDetails": template_json}}
@@ -5564,22 +5610,80 @@ def get_custom_template():
             print(f"⚠️ Error loading {template_file_name}: {str(e)}")
 
         # If not found in standard templates, try create_template.json for custom templates
+        # First check local file, then download from SharePoint if not found
         if not template_data:
             template_file_name = "create_template.json"
             template_file_path = os.path.join(script_dir, template_file_name)
+            templates_data = None
 
+            # First try local file
             try:
                 if os.path.exists(template_file_path):
                     with open(template_file_path, "r", encoding="utf-8") as f:
                         templates_data = json.load(f)
                     if template_name in templates_data:
                         template_data = templates_data[template_name]
-                        print(f"✅ Successfully retrieved custom template: {template_name} from {template_file_name}")
+                        print(f"✅ Successfully retrieved custom template: {template_name} from local {template_file_name}")
             except Exception as e:
-                print(f"⚠️ Error loading {template_file_name}: {str(e)}")
+                print(f"⚠️ Error loading local {template_file_name}: {str(e)}")
+
+            # If not found locally, download from SharePoint
+            if not template_data:
+                try:
+                    print(f"📥 Downloading {template_file_name} from SharePoint...")
+                    access_token = get_access_token()
+                    headers = {"Authorization": f"Bearer {access_token}"}
+
+                    # Get site ID
+                    site_resp = requests.get(
+                        f"https://graph.microsoft.com/v1.0/sites/{site_hostname}:{site_path}",
+                        headers=headers
+                    )
+                    site_resp.raise_for_status()
+                    site_id = site_resp.json()["id"]
+
+                    # Get drive ID
+                    drives_resp = requests.get(f"https://graph.microsoft.com/v1.0/sites/{site_id}/drives", headers=headers)
+                    drives_resp.raise_for_status()
+                    drives = drives_resp.json()["value"]
+                    drive_id = next((d["id"] for d in drives if d["name"] == doc_library), None)
+
+                    if not drive_id:
+                        print(f"⚠️ Library '{doc_library}' not found on site '{site_name}'")
+                    else:
+                        # Download create_template.json from SharePoint
+                        file_path_on_sharepoint = f"{fy_year}/{folder_name}/{sub_folder_name}/{template_file_name}"
+                        download_url = f"https://graph.microsoft.com/v1.0/drives/{drive_id}/root:/{file_path_on_sharepoint}:/content"
+                        download_resp = requests.get(download_url, headers=headers)
+                        
+                        if download_resp.status_code == 200:
+                            # Handle binary download
+                            with open(template_file_path, "wb") as f:
+                                f.write(download_resp.content)
+                            with open(template_file_path, "r", encoding="utf-8") as f:
+                                templates_data = json.load(f)
+                            
+                            if template_name in templates_data:
+                                template_data = templates_data[template_name]
+                                print(f"✅ Successfully retrieved custom template: {template_name} from SharePoint {template_file_name}")
+                            else:
+                                print(f"⚠️ Template '{template_name}' not found in {template_file_name}")
+                        else:
+                            print(f"⚠️ {template_file_name} not found in SharePoint (status: {download_resp.status_code})")
+                except Exception as e:
+                    print(f"⚠️ Error downloading {template_file_name} from SharePoint: {str(e)}")
+                    import traceback
+                    traceback.print_exc()
 
         # Return template data if found
         if template_data:
+            # Ensure actions field exists in templateDetails for custom templates
+            # Standard templates already have it, but custom templates might not
+            if "templateDetails" in template_data:
+                if "actions" not in template_data["templateDetails"]:
+                    template_data["templateDetails"]["actions"] = ["SaveAsDraft", "SendToAuditor"]
+                    print(f"✅ Added actions field to custom template: {template_name}")
+            
             return jsonify({
                 'success': True,
                 'message': f'Successfully retrieved template: {template_name}',
