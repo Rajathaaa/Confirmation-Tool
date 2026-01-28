@@ -301,7 +301,7 @@ const Index = () => {
       {/* Footer */}
       <footer className="border-t bg-card/50 backdrop-blur-sm py-8">
         <div className="container mx-auto px-4 text-center text-muted-foreground">
-          <p>© 2025 Confirmation Tool. Professional audit confirmation platform.</p>
+          <p>© 2026 Verity Audit Solutions. Professional audit confirmation platform.</p>
         </div>
       </footer>
     </div>

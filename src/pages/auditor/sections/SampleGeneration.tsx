@@ -280,6 +280,7 @@ export const SampleGeneration = () => {
   const [activeArea, setActiveArea] = useState<string>("");
   const [sectionsData, setSectionsData] = useState<SectionsData>({});
   const [isLoadingSections, setIsLoadingSections] = useState(true);
+  const [isLoadingSectionData, setIsLoadingSectionData] = useState<Record<string, boolean>>({}); // Loading state per section
   // State for locked sampling methods and selections
   const [lockedSamplingMethods, setLockedSamplingMethods] = useState<Record<string, { method: string; simpleMethod?: string; locked: boolean }>>({});
   const [lockedSelections, setLockedSelections] = useState<Record<string, Record<string, { recipientName: string; recipientEmail: string; templateName: string }>>>({});
@@ -489,20 +490,30 @@ export const SampleGeneration = () => {
     return `*${elementFootnotes.length + 1}`;
   };
 
-  // Load audit areas when component mounts
+  // Load audit areas only when activeArea is selected (not on mount)
   useEffect(() => {
-    fetchAuditAreas();
-    fetchLockedData();
-  }, []); // Run once on mount
-
-  // Reload audit areas when activeArea changes
-  useEffect(() => {
-    fetchAuditAreas();
-    fetchLockedData();
+    if (activeArea) {
+      // Set loading state for this section
+      setIsLoadingSectionData(prev => ({ ...prev, [activeArea]: true }));
+      
+      // Fetch data for this section
+      Promise.all([
+        fetchAuditAreas(),
+        fetchLockedData()
+      ]).finally(() => {
+        // Clear loading state when done
+        setIsLoadingSectionData(prev => ({ ...prev, [activeArea]: false }));
+      });
+    }
   }, [activeArea]); // Reload when activeArea changes
 
-  // Fetch locked sampling methods and selections
+  // Fetch locked sampling methods and selections - only for the active area
   const fetchLockedData = async () => {
+    // Only fetch if an active area is selected
+    if (!activeArea) {
+      return;
+    }
+
     try {
       // Fetch locked sampling methods from audit_areas.json
       const response = await fetch('http://localhost:3002/api/get-audit-areas');
@@ -1532,8 +1543,13 @@ export const SampleGeneration = () => {
     return getSectionCode(sectionsData, areaName);
   };
 
-  // Fetch audit areas JSON from SharePoint
+  // Fetch audit areas JSON from SharePoint - only for the active area
   const fetchAuditAreas = async (): Promise<void> => {
+    // Only fetch if an active area is selected
+    if (!activeArea) {
+      return;
+    }
+
     try {
       const response = await fetch('http://localhost:3002/api/get-audit-areas');
       if (!response.ok) {
@@ -1542,61 +1558,62 @@ export const SampleGeneration = () => {
       const result = await response.json();
       const auditAreasData = result.data || {};
       
-      console.log('📥 Fetched audit_areas.json from SharePoint:', auditAreasData);
+      // Get the area code for the active area
+      const areaCode = getAreaCode(activeArea);
       
-      // Convert audit areas JSON to sampleSets format
+      if (!areaCode || !auditAreasData[areaCode]) {
+        console.log(`📥 No data found for area: ${activeArea} (code: ${areaCode})`);
+        return;
+      }
+      
+      console.log(`📥 Fetched audit_areas.json from SharePoint for area: ${activeArea} (code: ${areaCode})`);
+      
+      // Convert audit areas JSON to sampleSets format - only for the active area
       const newSampleSets: Record<string, SampleSet[]> = {};
       
-      // Iterate through each area code in the JSON
-      Object.keys(auditAreasData).forEach((areaCode) => {
-        // Find the full area name from sections data
-        const areaName = getAllSections(sectionsData).find(
-          section => getAreaCode(section) === areaCode
-        );
-        
-        if (areaName && auditAreasData[areaCode]) {
-          // Handle both old string array and new object array formats
-          let sampleSetData: Array<{name: string, locked: boolean}> = [];
-          if (Array.isArray(auditAreasData[areaCode])) {
-            sampleSetData = auditAreasData[areaCode].map((item: any) => {
-              if (typeof item === 'string') {
-                // Old format: array of strings
-                return { name: item, locked: false };
-              } else if (typeof item === 'object' && item !== null) {
-                // New format: array of objects like [{"Sample Set Name": {...}}]
-                const setName = Object.keys(item)[0] || "";
-                const setData = item[setName] || {};
-                return { name: setName, locked: setData.locked || false };
-              }
-              return { name: "", locked: false };
-            }).filter((data: {name: string, locked: boolean}) => data.name !== "");
-          }
-          
-          // Convert each sample set name to a SampleSet object
-          const sets: SampleSet[] = sampleSetData.map((data: {name: string, locked: boolean}, index: number) => ({
-            id: `${areaCode}-${index + 1}`, // Generate a unique ID
-            name: data.name,
-            fileName: "",
-            samplingMethod: "random" as const,
-            sampleSize: 0,
-            populationSize: 0,
-            // If locked is true, samples have been generated, so status should be "generated"
-            status: data.locked ? "generated" as const : "pending" as const,
-          }));
-          
-          newSampleSets[areaName] = sets;
+      // Process only the active area
+      if (auditAreasData[areaCode]) {
+        // Handle both old string array and new object array formats
+        let sampleSetData: Array<{name: string, locked: boolean}> = [];
+        if (Array.isArray(auditAreasData[areaCode])) {
+          sampleSetData = auditAreasData[areaCode].map((item: any) => {
+            if (typeof item === 'string') {
+              // Old format: array of strings
+              return { name: item, locked: false };
+            } else if (typeof item === 'object' && item !== null) {
+              // New format: array of objects like [{"Sample Set Name": {...}}]
+              const setName = Object.keys(item)[0] || "";
+              const setData = item[setName] || {};
+              return { name: setName, locked: setData.locked || false };
+            }
+            return { name: "", locked: false };
+          }).filter((data: {name: string, locked: boolean}) => data.name !== "");
         }
-      });
+        
+        // Convert each sample set name to a SampleSet object
+        const sets: SampleSet[] = sampleSetData.map((data: {name: string, locked: boolean}, index: number) => ({
+          id: `${areaCode}-${index + 1}`, // Generate a unique ID
+          name: data.name,
+          fileName: "",
+          samplingMethod: "random" as const,
+          sampleSize: 0,
+          populationSize: 0,
+          // If locked is true, samples have been generated, so status should be "generated"
+          status: data.locked ? "generated" as const : "pending" as const,
+        }));
+        
+        newSampleSets[activeArea] = sets;
+      }
       
       // Merge with existing sampleSets (preserve any local changes)
       setSampleSets(prev => {
         const merged: Record<string, SampleSet[]> = { ...prev };
         
-        // Update each area with data from SharePoint
-        Object.keys(newSampleSets).forEach(areaName => {
+        // Update only the active area with data from SharePoint
+        if (newSampleSets[activeArea]) {
           // Merge sample sets, avoiding duplicates by name
-          const existingSets = merged[areaName] || [];
-          const sharePointSets = newSampleSets[areaName];
+          const existingSets = merged[activeArea] || [];
+          const sharePointSets = newSampleSets[activeArea];
           
           // Create a map of existing sets by name
           const existingByName = new Map(existingSets.map(set => [set.name, set]));
@@ -1611,18 +1628,21 @@ export const SampleGeneration = () => {
             return spSet;
           });
           
-          merged[areaName] = mergedSets;
-        });
+          merged[activeArea] = mergedSets;
+        }
         
         return merged;
       });
       
-      // Also update selectedAreas to include all areas that have sample sets
-      setSelectedAreas(prev => {
-        const allAreas = Object.keys(newSampleSets);
-        const uniqueAreas = Array.from(new Set([...prev, ...allAreas]));
-        return uniqueAreas;
-      });
+      // Also update selectedAreas to include the active area if it has sample sets
+      if (newSampleSets[activeArea] && newSampleSets[activeArea].length > 0) {
+        setSelectedAreas(prev => {
+          if (!prev.includes(activeArea)) {
+            return [...prev, activeArea];
+          }
+          return prev;
+        });
+      }
       
     } catch (error: any) {
       console.error('Error fetching audit areas:', error);
@@ -3290,6 +3310,13 @@ export const SampleGeneration = () => {
               <p className="text-muted-foreground">Select an audit area to get started</p>
             </div>
           </div>
+        ) : isLoadingSectionData[activeArea] ? (
+          <Card className="p-12">
+            <div className="flex flex-col items-center justify-center">
+              <LoadingSpinner size="lg" text={`Loading ${activeArea}...`} />
+              <p className="text-muted-foreground mt-4">Fetching sample sets and data for this section</p>
+            </div>
+          </Card>
         ) : (
           <>
             <div className="flex items-center justify-between">
