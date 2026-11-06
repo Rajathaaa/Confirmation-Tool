@@ -209,7 +209,7 @@ Example request:
 
 The API handles sample ID generation and confirmation record creation, with SharePoint integration for document management.
 
-## 🧪 Available Scripts
+##  Available Scripts
 
 | Command | Description |
 |---|---|
